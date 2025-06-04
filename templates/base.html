@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Madeline cafe{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="پنل مدیریت و ثبت سفارش کافه">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <style>
+        /* فونت فارسی Vazirmatn */
+        @font-face {
+            font-family: Vazirmatn;
+            src: url('{{ url_for("static", filename="fonts/Vazirmatn-Regular.woff2") }}') format('woff2');
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        html,
+        body {
+            font-family: Vazirmatn, Tahoma, Arial, sans-serif;
+            background: #f7f7f7;
+            color: #222;
+            direction: rtl;
+        }
+
+        .navbar {
+            background: #222;
+            color: #fff;
+            padding: 1rem 0;
+            margin-bottom: 2rem;
+        }
+
+        .navbar-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 1rem;
+            width: 100%;
+        }
+
+        .navbar-brand {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #fff;
+            text-decoration: none;
+        }
+
+        .navbar-nav {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            gap: 1rem;
+        }
+
+        .navbar-nav li {
+            display: inline-block;
+        }
+
+        .navbar-nav a {
+            color: #fff;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            transition: background 0.2s;
+        }
+
+        .navbar-nav a.active,
+        .navbar-nav a:hover {
+            background: #007bff;
+            color: #fff;
+        }
+
+        .footer {
+            background: #222;
+            color: #fff;
+            text-align: center;
+            padding: 1.5rem 0 1rem 0;
+            margin-top: 3rem;
+        }
+
+        .logo {
+            height: 40px;
+            vertical-align: middle;
+            margin-left: 0.5rem;
+        }
+
+        .user-info {
+            color: #fff;
+            font-size: 1rem;
+            margin-left: 1rem;
+        }
+
+        .lang-switch {
+            color: #fff;
+            font-size: 1rem;
+            margin-right: 1rem;
+            cursor: pointer;
+        }
+
+        .alert.fade {
+            opacity: 0;
+            transition: opacity 0.7s;
+        }
+
+        /* اسکرول بار زیبا */
+        ::-webkit-scrollbar {
+            width: 8px;
+            background: #eee;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #bbb;
+            border-radius: 4px;
+        }
+
+        /* ریسپانسیو */
+        @media (max-width: 700px) {
+            .container {
+                padding: 0.5rem !important;
+            }
+
+            .navbar .navbar-container {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .navbar-nav {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+        }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+
+<body>
+    {# نمایش هدر فقط اگر مسیر فعلی صفحه لاگین نباشد #}
+    {% if request.endpoint != 'auth.login' %}
+    <nav class="navbar">
+
+        <div class="navbar-container">
+            <a class="navbar-brand" href="{{ url_for('menu.show_menu') }}">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="Cafe Logo" class="logo">
+                Madeline cafe
+            </a>
+            <ul class="navbar-nav">
+                <li><a href="{{ url_for('menu.show_menu') }}" {% if request.endpoint and
+                        request.endpoint.startswith('menu.') %}class="active" {% endif %}>منو</a></li>
+                <li><a href="#" class="open-new-order btn btn-primary" {% if request.endpoint and
+                        request.endpoint.startswith('order.') %}class="active" {% endif %}>ثبت سفارش جدید</a></li>
+                <li><a href="{{ url_for('admin.orders_report') }}" {% if request.endpoint and
+                        request.endpoint.startswith('admin.orders_report') %}class="active" {% endif %}>گزارش
+                        سفارش‌ها</a></li>
+                <li><a href="{{ url_for('admin.settings') }}" {% if request.endpoint and
+                        request.endpoint.startswith('admin.settings') %}class="active" {% endif %}>تنظیمات</a></li>
+                <li><a href="{{ url_for('menu.categories_list') }}" {% if request.endpoint and
+                        request.endpoint.startswith('menu.categories_list') %}class="active" {% endif
+                        %}>دسته‌بندی‌ها</a></li>
+            </ul>
+            <div>
+                {% if current_user.is_authenticated %}
+                <span class="user-info">کاربر: {{ current_user.username }}</span>
+                <a href="{{ url_for('auth.logout') }}" class="btn btn-sm btn-danger">خروج</a>
+                {% else %}
+                <a href="{{ url_for('auth.login') }}" class="btn btn-sm btn-primary">ورود</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+    {% endif %} {# پایان شرط نمایش هدر #}
+
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+
+    {# نمایش فوتر فقط اگر مسیر فعلی صفحه لاگین نباشد #}
+    {% if request.endpoint != 'auth.login' %}
+    <footer class="footer">
+        <div>
+            <span>Madeline cafe &copy; {{ now().year }} | توسعه داده شده با ❤️ توسط تیم شما</span>
+        </div>
+        {# این بخش که شامل لینک‌های سورس پروژه و پشتیبانی بود، حذف شده است #}
+    </footer>
+    {% endif %} {# پایان شرط نمایش فوتر #}
+
+    <!-- فقط یک بار این خط را داشته باشید -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block scripts %}{% endblock %}
+    <!-- پیام‌های فلش به صورت اتوماتیک محو می‌شوند -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.alert').forEach(function (alert) {
+                setTimeout(function () {
+                    alert.classList.add('fade');
+                    setTimeout(function () {
+                        alert.remove();
+                    }, 700);
+                }, 4000);
+            });
+        });
+    </script>
+
+    <!-- مودال‌های عمومی -->
+    <div id="modal-overlay"
+        style="display:none;position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(0,0,0,0.3);z-index:1000;">
+    </div>
+    <div id="modal-dialog"
+        style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border-radius:10px;box-shadow:0 2px 16px rgba(0,0,0,0.2);padding:2rem;z-index:1001;min-width:300px;max-width:90vw;">
+        <div id="modal-content"></div>
+        <button id="modal-close" class="btn btn-secondary btn-sm" style="margin-top:1rem;">بستن</button>
+    </div>
+    <script>
+        // نمایش مودال عمومی
+        function showModal(html) {
+            document.getElementById('modal-content').innerHTML = html;
+            document.getElementById('modal-overlay').style.display = 'block';
+            document.getElementById('modal-dialog').style.display = 'block';
+        }
+        function closeModal() {
+            document.getElementById('modal-overlay').style.display = 'none';
+            document.getElementById('modal-dialog').style.display = 'none';
+        }
+        document.getElementById('modal-close').onclick = closeModal;
+        document.getElementById('modal-overlay').onclick = closeModal;
+    </script>
+    <div id="orderModal" class="modal"
+        style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.4); z-index:9999;">
+        <div class="modal-content"
+            style="background:#fff; border-radius:8px; max-width:700px; margin:5% auto; padding:1rem; position:relative;">
+            <span id="closeModal"
+                style="position:absolute; top:10px; left:10px; cursor:pointer; font-size:20px;">&times;</span>
+            <div id="modal-body">
+                در حال بارگذاری...
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

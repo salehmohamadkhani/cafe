@@ -1,0 +1,1 @@
+This folder is for storing project images (menu items, cafe logo, etc).این پوشه برای ذخیره تصاویر پروژه است.

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="fa">
+
+<head>
+    <meta charset="UTF-8">
+    <title>گزارش سفارش‌ها</title>
+</head>
+
+<body>
+    <h1>لیست سفارش‌ها</h1>
+    <table border="1" cellpadding="8">
+        <thead>
+            <tr>
+                <th>شناسه</th>
+                <th>فاکتور</th>
+                <th>مشتری</th>
+                <th>مبلغ نهایی</th>
+                <th>وضعیت</th>
+                <th>تاریخ</th>
+                <th>عملیات</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in orders %}
+            <tr>
+                <td>{{ order.id }}</td>
+                <td>{{ order.invoice_number }}</td>
+                <td>{{ order.customer.name if order.customer else '---' }}</td>
+                <td>{{ "{:,}".format(order.final_amount) }} تومان</td>
+                <td>{{ order.status }}</td>
+                <td>
+                    {% if order.created_at %}
+                    {{ order.created_at | to_jalali }}
+                    {% else %}
+                    -
+                    {% endif %}
+                </td>
+
+                <td>
+                    <form method="POST" action="{{ url_for('admin.delete_order', order_id=order.id) }}"
+                        onsubmit="return confirm('آیا مطمئنی؟');">
+                        <button type="submit">🗑 حذف</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+
+</html>

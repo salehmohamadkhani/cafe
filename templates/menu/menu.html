@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <title>منوی کافه</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        body {
+            background: #f7f7f7;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 2rem auto;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+            padding: 2rem 2rem 1.5rem 2rem;
+        }
+
+        h1 {
+            color: #fc4a1a;
+            text-align: center;
+            margin-bottom: 2rem;
+            font-size: 2.5rem;
+        }
+
+        .category-block {
+            margin-bottom: 2.5rem;
+        }
+
+        .category-title {
+            color: #f7b733;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid #f7b733;
+            padding-bottom: 0.3rem;
+        }
+
+        .menu-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #f9f9f9;
+            border-radius: 8px;
+            margin-bottom: 0.7rem;
+            padding: 1rem 1.5rem;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+            transition: background 0.2s;
+        }
+
+        .menu-item:hover {
+            background: #fffbe6;
+        }
+
+        /* Styles for inline edit inputs and button */
+        .menu-item input[type="text"],
+        .menu-item input[type="number"] {
+            padding: 0.4rem 0.6rem;
+            font-size: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-right: 0.5rem; /* Add some spacing between inputs */
+            font-family: Vazirmatn, Tahoma, Arial, sans-serif;
+        }
+
+        .menu-item .inline-name {
+            flex-grow: 2; /* Allow name to take more space */
+        }
+        .menu-item .inline-price,
+        .menu-item .inline-stock {
+            width: 100px; /* Fixed width for price and stock */
+        }
+
+        .menu-item .inline-save-btn {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.9rem;
+            cursor: pointer;
+            border: none;
+            border-radius: 4px;
+            background: #28a745; /* Green color for save */
+            color: #fff;
+            transition: background 0.2s;
+            margin-right: 0.5rem; /* Space before delete button */
+        }
+
+        .menu-item .inline-save-btn:hover {
+            background: #218838;
+        }
+
+        /* Styles for the delete button in inline mode */
+        .menu-item .delete-btn {
+            padding: 0.4rem 0.6rem; /* Match inline save button padding */
+            font-size: 0.9rem; /* Match inline save button font size */
+            cursor: pointer;
+            border: none;
+            border-radius: 4px;
+            background: #dc3545; /* Red color for delete */
+            color: #fff;
+            transition: background 0.2s;
+        }
+
+        .menu-item .delete-btn:hover {
+            background: #c82333;
+        }
+
+
+        .item-details {
+            flex-grow: 1;
+            /* Allow details to take available space */
+            display: flex; /* Use flex to align input */
+            align-items: center; /* Vertically align input */
+            margin-left: 1rem;
+            /* Space between details and price/stock */
+        }
+
+        /* Removed old item-name and item-desc styles as they are replaced by input */
+        /*
+        .item-name {
+            font-size: 1.15rem;
+            font-weight: bold;
+            color: #222;
+        }
+
+        .item-desc {
+            color: #888;
+            font-size: 0.95rem;
+            margin-top: 0.2rem;
+        }
+        */
+
+        .item-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem; /* Adjusted gap for inline elements */
+            /* Space between price, stock, save, and delete buttons */
+        }
+
+        /* Removed old item-price and item-stock styles as they are replaced by input */
+        /*
+        .item-price {
+            color: #fc4a1a;
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        .item-stock {
+            color: #007bff;
+            font-size: 1rem;
+        }
+        */
+
+        /* Removed old item-actions styles as buttons are now in item-info */
+        /*
+        .item-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        */
+
+        /* Removed old edit-btn styles as it's replaced by inline inputs + save */
+        /*
+        .edit-btn {
+            background: #ffc107;
+            color: #212529;
+        }
+
+        .edit-btn:hover {
+            background: #e0a800;
+        }
+        */
+
+
+        .no-items {
+            color: #888;
+            font-size: 1.1rem;
+            text-align: center;
+            margin: 1.5rem 0;
+        }
+
+        .search-bar {
+            margin: 1.5rem 0 2rem 0;
+            text-align: center;
+        }
+
+        .search-bar input {
+            width: 60%;
+            max-width: 350px;
+            padding: 0.7rem 1rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1.1rem;
+        }
+
+        .search-results {
+            background: #fff;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            margin: 0 auto 2rem auto;
+            max-width: 500px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            display: none;
+        }
+
+        .search-result-item {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #f1f1f1;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .search-result-item:last-child {
+            border-bottom: none;
+        }
+
+        .search-result-item:hover {
+            background: #f7f7f7;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+            padding-top: 60px;
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            max-width: 500px;
+            position: relative;
+        }
+
+        .close-modal {
+            color: #aaa;
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close-modal:hover,
+        .close-modal:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .modal-content h3 {
+            text-align: center;
+            color: #fc4a1a;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-content form input,
+        .modal-content form select { /* Added select here */
+            width: calc(100% - 22px);
+            /* Adjust for padding and border */
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            /* Include padding and border in element's total width and height */
+            font-family: Vazirmatn, Tahoma, Arial, sans-serif;
+            /* Ensure consistent font */
+        }
+
+        .modal-content form button[type="submit"] {
+            width: 100%;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+
+        .modal-content form button[type="submit"]:hover {
+            background-color: #45a049;
+        }
+
+        .add-item-button-container {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .back-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            text-decoration: none;
+            transition: background-color 0.3s ease;
+        }
+
+        .back-button:hover {
+            background-color: #5a6268;
+        }
+        
+        .category-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            padding: 0.5rem 0;
+        }
+        
+        .category-header button {
+            cursor: pointer;
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            margin-left: 0.3rem;
+        }
+        
+        .inactive-category {
+            opacity: 0.6;
+        }
+    </style>
+</head>
+</head>
+
+<body>
+    <div class="container">
+        <a href="javascript:history.back()" class="back-button">⬅ بازگشت</a>
+        
+        <h1>منوی کافه</h1>
+
+        <div class="add-item-button-container">
+            <button class="btn btn-success" id="add-new-menu-item-btn">+ ثبت آیتم جدید</button>
+            <button class="btn btn-primary" id="add-new-category-btn">+ ثبت دسته‌بندی جدید</button>
+        </div>
+
+
+        <div class="search-bar">
+            <input type="text" id="menu-search" placeholder="جستجو در منو...">
+        </div>
+        <div id="search-results" class="search-results"></div>
+
+        {% for category in categories %}
+        <div class="category-block {% if not category.is_active %}inactive-category{% endif %}">
+            <div class="category-header">
+                <strong>{{ category.name }}</strong>
+                <span style="margin-right: 1rem;">
+                    <button class="edit-category-btn" data-id="{{ category.id }}" data-name="{{ category.name }}" data-order="{{ category.order }}">✏️</button>
+                    <button class="toggle-category-btn" data-id="{{ category.id }}" data-status="{{ category.is_active }}">
+                        {% if category.is_active %}🚫{% else %}✅{% endif %}
+                    </button>
+                    <button class="delete-category-btn" data-id="{{ category.id }}">❌</button>
+                </span>
+            </div>
+            <div class="category-title">{{ category.name }}</div>
+            <ul class="menu-list">
+                {% if category.menu_items %}
+                {% for item in category.menu_items %}
+                <li class="menu-item" data-item-id="{{ item.id }}">
+                    <div class="item-details">
+                        <input class="inline-name" type="text" value="{{ item.name }}">
+                    </div>
+                    <div class="item-info">
+                        <input class="inline-price" type="number" value="{{ item.price }}">
+                        <input class="inline-stock" type="number" value="{{ item.stock }}">
+                        <button class="inline-save-btn" data-id="{{ item.id }}">💾</button>
+                        <button class="delete-btn" data-id="{{ item.id }}">❌</button>
+                    </div>
+                </li>
+                {% endfor %}
+                {% else %}
+                <li class="no-items">آیتمی در این دسته‌بندی وجود ندارد.</li>
+                {% endif %}
+            </ul>
+        </div>
+        {% endfor %}
+
+        {% if categories|length == 0 %}
+        <div class="no-items">هیچ دسته‌بندی‌ای ثبت نشده است.</div>
+        {% endif %}
+    </div>
+
+    <!-- Modal for Add/Edit Menu Item -->
+    <div id="menuItemModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h3 id="modal-title">افزودن آیتم منو</h3>
+            <form id="menu-item-form">
+                <input type="hidden" id="item-id" name="id">
+                <input type="text" id="item-name" name="name" placeholder="نام آیتم" required>
+                <input type="number" id="item-price" name="price" placeholder="قیمت (تومان)" required min="0">
+                <input type="number" id="item-stock" name="stock" placeholder="موجودی" min="0"> <!-- Added min="0" for consistency -->
+                <select id="item-category" name="category_id" required>
+                    <option value="">انتخاب دسته‌بندی</option>
+                    {% for cat in categories %}
+                        <option value="{{ cat.id }}">{{ cat.name }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit">ثبت</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for Add Category -->
+    <div id="categoryModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h3>افزودن دسته‌بندی</h3>
+            <form id="category-form">
+                <input type="text" id="category-name" name="name" placeholder="نام دسته‌بندی" required>
+                <input type="text" id="category-description" name="description" placeholder="توضیحات (اختیاری)">
+                <button type="submit">ثبت دسته‌بندی</button>
+            </form>
+        </div>
+    </div>
+
+
+    <script>
+        // جستجوی سریع آیتم منو (بدون نیاز به رفرش)
+        document.addEventListener('DOMContentLoaded', function () {
+            const searchInput = document.getElementById('menu-search');
+            const resultsDiv = document.getElementById('search-results');
+            let timeout = null;
+            searchInput.addEventListener('input', function () {
+                clearTimeout(timeout);
+                const q = searchInput.value.trim();
+                if (q.length < 2) {
+                    resultsDiv.innerHTML = '';
+                    resultsDiv.style.display = 'none';
+                    return;
+                }
+                timeout = setTimeout(() => {
+                    fetch(`/menu/search?q=${encodeURIComponent(q)}`)
+                        .then(res => res.json())
+                        .then(data => {
+                            resultsDiv.innerHTML = '';
+                            if (data.length === 0) {
+                                resultsDiv.innerHTML = '<div class="search-result-item">آیتمی یافت نشد</div>';
+                            } else {
+                                data.forEach(item => {
+                                    const div = document.createElement('div');
+                                    div.className = 'search-result-item';
+                                    div.innerHTML = `<b>${item.name}</b> <span style="color:#fc4a1a;margin-right:1rem;">${item.price.toLocaleString()} تومان</span>`;
+                                    resultsDiv.appendChild(div);
+                                });
+                            }
+                            resultsDiv.style.display = 'block';
+                        })
+                        .catch(error => {
+                            console.error('Error searching menu:', error);
+                            resultsDiv.innerHTML = '<div class="search-result-item">خطا در جستجو</div>';
+                            resultsDiv.style.display = 'block';
+                        });
+                }, 400);
+            });
+            document.addEventListener('click', function (e) {
+                if (!resultsDiv.contains(e.target) && e.target !== searchInput) {
+                    resultsDiv.style.display = 'none';
+                }
+            });
+
+            // --- Modal Logic for Add/Edit ---
+            const modal = document.getElementById('menuItemModal');
+            const closeModalBtn = modal.querySelector('.close-modal');
+            const form = document.getElementById('menu-item-form');
+            const itemIdInput = document.getElementById('item-id');
+            const itemNameInput = document.getElementById('item-name'); // This is for the modal
+            const itemPriceInput = document.getElementById('item-price'); // This is for the modal
+            const itemStockInput = document.getElementById('item-stock'); // This is for the modal
+            const itemCategorySelect = document.getElementById('item-category'); // For the modal
+            const modalTitle = document.getElementById('modal-title');
+            const addNewItemBtn = document.getElementById('add-new-menu-item-btn');
+
+            // Open modal for adding new item
+            if (addNewItemBtn) {
+                addNewItemBtn.addEventListener('click', function () {
+                    form.reset(); // Clear form
+                    itemIdInput.value = ''; // Ensure ID is empty for new item
+                    modalTitle.textContent = 'افزودن آیتم منو';
+                    itemCategorySelect.value = ''; // Reset category selection
+                    modal.style.display = 'block';
+                });
+            }
+
+
+            // Open modal for editing item (using event delegation on the container)
+            // This part of the script handles the OLD edit buttons (✏️).
+            // You will need new JavaScript logic to handle the .inline-save-btn clicks
+            // and to potentially pre-fill the modal if you still want to use a modal for editing,
+            // or handle the save directly via an API call.
+            // The current request is only for HTML structure change.
+
+            document.querySelector('.container').addEventListener('click', function (e) {
+                // This listener was for the old pencil edit buttons.
+                // It might need to be adapted or removed depending on how inline editing is fully implemented.
+                if (e.target.classList.contains('edit-btn')) { // This is the OLD edit button
+                    const itemElement = e.target.closest('.menu-item'); // This will not work as expected with new structure
+                    if (itemElement) {
+                        // The old way of getting data from data-* attributes:
+                        // const itemId = itemElement.dataset.itemId;
+                        // const itemName = itemElement.dataset.itemName;
+                        // console.log("Old Edit button clicked for item:", itemId, itemName);
+
+                        // If you want to use the modal for editing based on the new structure,
+                        // you'd need to get values from the inputs if the pencil button is re-introduced,
+                        // or handle it differently.
+                        // For now, this specific 'edit-btn' logic might be obsolete if those buttons are gone.
+                    }
+                }
+            });
+        })
+    </script>
+    <script src="{{ url_for('static', filename='js/menu.js') }}"></script>
+</body>
+
+</html>

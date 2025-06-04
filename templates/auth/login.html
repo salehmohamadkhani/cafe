@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+  .login-container {
+    max-width: 400px;
+    margin: 80px auto;
+    background: #f8f9fa;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    font-family: 'Vazirmatn', sans-serif;
+  }
+
+  .login-container h2 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #212529;
+  }
+
+  .form-control {
+    border-radius: 6px;
+  }
+
+  .btn-login {
+    background-color: #198754;
+    color: white;
+    border-radius: 6px;
+    width: 100%;
+  }
+
+  .btn-login:hover {
+    background-color: #157347;
+  }
+
+  label {
+    float: right;
+    margin-bottom: 5px;
+    font-weight: bold;
+  }
+
+  .text-error {
+    color: red;
+    text-align: center;
+    margin-top: 10px;
+  }
+</style>
+
+<div class="login-container">
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="Cafe Logo" class="logo">
+    <h2>ورود به سیستم</h2> {# می‌توانید عنوان را نگه دارید یا حذف کنید #}
+    <form method="POST">
+        {# استفاده از کلاس‌های فرم موجود در style.css یا Bootstrap اگر استفاده می‌شود #}
+        <div class="form-group"> {# یا mb-3 اگر از Bootstrap استفاده می‌کنید #}
+            <label for="username">نام کاربری</label>
+            <input type="text" id="username" name="username" placeholder="نام کاربری" required>
+        </div>
+        <div class="form-group"> {# یا mb-3 #}
+            <label for="password">رمز عبور</label>
+            <input type="password" id="password" name="password" placeholder="رمز عبور" required>
+        </div>
+        <button type="submit" class="btn">ورود</button> {# استفاده از کلاس btn موجود در style.css #}
+    </form>
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <ul class="alert alert-danger" style="list-style: none; padding: 0; margin-top: 1rem;"> {# اضافه کردن کلاس alert برای استایل‌دهی پیام‌ها #}
+        {% for msg in messages %}
+          <li>{{ msg }}</li>
+        {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+    {# نمایش پیام خطا اگر از متغیر error در ویو استفاده می‌کنید #}
+    {% if error %}
+        <div class="alert alert-danger" style="margin-top: 1rem;">{{ error }}</div>
+    {% endif %}
+</div>
+{% endblock %}

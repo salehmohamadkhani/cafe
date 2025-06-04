@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+{% block title %}گزارش سفارش‌ها{% endblock %}
+
+{% block content %}
+<div class="container mt-3">
+    <h1 class="text-center mb-4">گزارش سفارش‌ها</h1>
+
+    <div class="card mb-3">
+        <div class="card-header">
+            <b>فیلتر سفارش‌ها</b>
+        </div>
+        <div class="card-body">
+            <form id="filter-form" class="row g-3">
+                <div class="col-md-2">
+                    <label for="filter-from" class="form-label">از تاریخ:</label>
+                    <input type="date" class="form-control" id="filter-from" name="from_date">
+                </div>
+                <div class="col-md-2">
+                    <label for="filter-to" class="form-label">تا تاریخ:</label>
+                    <input type="date" class="form-control" id="filter-to" name="to_date">
+                </div>
+                <div class="col-md-2">
+                    <label for="filter-status" class="form-label">وضعیت:</label>
+                    <select class="form-control" id="filter-status" name="status">
+                        <option value="">همه</option>
+                        <option value="پرداخت نشده">پرداخت نشده</option>
+                        <option value="پرداخت شده">پرداخت شده</option>
+                        <option value="لغو شده">لغو شده</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="filter-type" class="form-label">نوع سفارش:</label>
+                    <select class="form-control" id="filter-type" name="type">
+                        <option value="">همه</option>
+                        <option value="حضوری">حضوری</option>
+                        <option value="بیرون‌بر">بیرون‌بر</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="filter-customer" class="form-label">مشتری:</label>
+                    <input type="text" class="form-control" id="filter-customer" name="customer" placeholder="نام یا موبایل">
+                </div>
+                <div class="col-md-2">
+                    <label for="filter-invoice" class="form-label">شماره فاکتور:</label>
+                    <input type="text" class="form-control" id="filter-invoice" name="invoice" placeholder="مثلاً 123">
+                </div>
+                <div class="col-12 mt-2 text-end">
+                    <button type="button" class="btn btn-primary" id="filter-btn">اعمال فیلتر</button>
+                    <button type="button" class="btn btn-secondary" id="reset-btn">ریست</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="mb-3 text-end">
+        <button class="btn btn-success" id="export-excel">خروجی اکسل</button>
+        <button class="btn btn-info" id="export-csv">خروجی CSV</button>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <b>لیست سفارش‌ها</b>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-striped table-bordered text-center align-middle mb-0" id="orders-table">
+                    <thead class="table-light">
+                        <tr>
+                            <th>شماره فاکتور</th>
+                            <th>تاریخ</th>
+                            <th>مشتری</th>
+                            <th>نوع</th>
+                            <th>وضعیت</th>
+                            <th>جمع کل</th>
+                            <th>تخفیف</th>
+                            <th>مالیات</th>
+                            <th>مبلغ نهایی</th>
+                            <th>جزئیات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in orders %}
+                        <tr>
+                            <td>{{ order.invoice_number }}</td>
+                            <td>{{ order.created_at.strftime('%Y/%m/%d %H:%M') }}</td>
+                            <td>
+                                {% if order.customer %}
+                                    {{ order.customer.name }}<br>
+                                    <small>{{ order.customer.phone or '' }}</small>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td>{{ order.type }}</td>
+                            <td>
+                                {% if order.status == 'پرداخت شده' %}
+                                    <span class="badge bg-success">{{ order.status }}</span>
+                                {% elif order.status == 'پرداخت نشده' %}
+                                    <span class="badge bg-warning text-dark">{{ order.status }}</span>
+                                {% elif order.status == 'لغو شده' %}
+                                    <span class="badge bg-danger">{{ order.status }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ order.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ "{:,}".format(order.total_amount) }} تومان</td>
+                            <td>{{ "{:,}".format(order.discount or 0) }} تومان</td>
+                            <td>{{ "{:,}".format(order.tax_amount or 0) }} تومان</td>
+                            <td><b>{{ "{:,}".format(order.final_amount) }}</b> تومان</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-info show-details-btn" data-order-id="{{ order.id }}">نمایش</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% if orders|length == 0 %}
+                        <tr>
+                            <td colspan="10" class="text-center text-muted">سفارشی یافت نشد.</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-3">
+        <div class="card-header">
+            <b>خلاصه سفارش‌ها</b>
+        </div>
+        <div class="card-body">
+            <div class="row text-center">
+                <div class="col-md-3 mb-2">
+                    <b>تعداد کل سفارش‌ها:</b> <span id="total-orders">{{ orders|length }}</span>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <b>جمع کل:</b> <span id="sum-total">{{ "{:,}".format(orders|sum(attribute='total_amount')) }}</span> تومان
+                </div>
+                <div class="col-md-3 mb-2">
+                    <b>جمع تخفیف:</b> <span id="sum-discount">{{ "{:,}".format(orders|sum(attribute='discount')) }}</span> تومان
+                </div>
+                <div class="col-md-3 mb-2">
+                    <b>جمع مالیات:</b> <span id="sum-tax">{{ "{:,}".format(orders|sum(attribute='tax_amount')) }}</span> تومان
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for order details -->
+<div id="order-details-modal" style="display:none;position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(0,0,0,0.4);z-index:1000;">
+    <div style="background:#fff;max-width:500px;margin:5% auto;padding:2rem;border-radius:12px;position:relative;">
+        <button onclick="document.getElementById('order-details-modal').style.display='none'" style="position:absolute;top:1rem;left:1rem;" class="btn btn-sm btn-danger">بستن</button>
+        <div id="order-details-content"></div>
+    </div>
+</div>
+
+<style>
+    .badge { font-size: 1rem; padding: 0.5em 1em; }
+    .table th, .table td { vertical-align: middle !important; }
+    .table-responsive { overflow-x: auto; }
+    @media (max-width: 700px) {
+        .container { padding: 1rem 0.5rem; }
+        .card { margin-bottom: 1rem; }
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // فیلتر جدول سفارش‌ها (سمت کلاینت)
+    document.getElementById('filter-btn').onclick = function() {
+        let from = document.getElementById('filter-from').value;
+        let to = document.getElementById('filter-to').value;
+        let status = document.getElementById('filter-status').value;
+        let type = document.getElementById('filter-type').value;
+        let customer = document.getElementById('filter-customer').value.trim();
+        let invoice = document.getElementById('filter-invoice').value.trim();
+        let rows = document.querySelectorAll('#orders-table tbody tr');
+        rows.forEach(row => {
+            let show = true;
+            let tds = row.querySelectorAll('td');
+            if (tds.length < 10) return; // skip empty
+            // تاریخ
+            if (from && tds[1].textContent < from) show = false;
+            if (to && tds[1].textContent > to) show = false;
+            // وضعیت
+            if (status && !tds[4].textContent.includes(status)) show = false;
+            // نوع
+            if (type && !tds[3].textContent.includes(type)) show = false;
+            // مشتری
+            if (customer && !tds[2].textContent.includes(customer)) show = false;
+            // فاکتور
+            if (invoice && !tds[0].textContent.includes(invoice)) show = false;
+            row.style.display = show ? '' : 'none';
+        });
+    };
+    document.getElementById('reset-btn').onclick = function() {
+        document.getElementById('filter-form').reset();
+        document.querySelectorAll('#orders-table tbody tr').forEach(row => row.style.display = '');
+    };
+
+    // نمایش جزئیات سفارش (دمو)
+    document.querySelectorAll('.show-details-btn').forEach(btn => {
+        btn.onclick = function() {
+            let orderId = btn.dataset.orderId;
+            // در پروژه واقعی: AJAX به سرور برای دریافت جزئیات
+            let html = '<b>جزئیات سفارش #' + orderId + '</b><br><br>در اینجا جزئیات آیتم‌ها و پرداخت نمایش داده می‌شود.';
+            document.getElementById('order-details-content').innerHTML = html;
+            document.getElementById('order-details-modal').style.display = 'block';
+        };
+    });
+
+    // خروجی اکسل/CSV (دمو)
+    document.getElementById('export-excel').onclick = function() {
+        alert('خروجی اکسل به زودی فعال می‌شود.');
+    };
+    document.getElementById('export-csv').onclick = function() {
+        alert('خروجی CSV به زودی فعال می‌شود.');
+    };
+});
+</script>
+{% endblock %}

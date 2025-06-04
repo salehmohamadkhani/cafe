@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>داشبورد کافه</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header class="header-logo">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="Cafe Logo">
+    </header>
+    <main class="center-main">
+        {% if current_user.is_authenticated %}
+            <nav class="dashboard-links">
+                <a class="btn" href="/menu">مشاهده منو</a>
+                <button class="btn btn-primary open-new-order">ثبت سفارش جدید</button>
+                <a class="btn" href="/orders">مشاهده سفارش‌ها</a>
+                {% if current_user.role == 'admin' %}
+                    <a class="btn" href="/settings">تنظیمات</a>
+                    <a class="btn" href="/users">مدیریت کاربران</a>
+                {% endif %}
+                <a class="btn btn-danger" href="/auth/logout">خروج</a>
+            </nav>
+        {% else %}
+            <form action="/auth/login" method="post" class="login-form">
+                <input type="text" name="username" placeholder="نام کاربری" required>
+                <input type="password" name="password" placeholder="رمز عبور" required>
+                <button type="submit" class="btn">ورود</button>
+            </form>
+        {% endif %}
+    </main>
+    <!-- Modal -->
+    <div id="orderModal" class="modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.4); z-index:9999;">
+        <div class="modal-content" style="background:#fff; border-radius:8px; max-width:700px; margin:5% auto; padding:1rem; position:relative;">
+            <span id="closeModal" style="position:absolute; top:10px; left:10px; cursor:pointer; font-size:20px;">&times;</span>
+            <div id="modal-body">
+                <!-- اینجا محتوای فرم ثبت سفارش میاد -->
+                در حال بارگذاری...
+            </div>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
