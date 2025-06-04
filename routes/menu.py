@@ -155,13 +155,22 @@ def edit_menu_item(id):
     return render_template('menu/edit_menu_item.html', menu_item=menu_item, categories=categories)
 
 # Modified the delete route to match the requested signature and logic
-@menu_bp.route('/menu/item/delete/<int:item_id>', methods=['POST'])
+# Adjusted route to avoid double '/menu' prefix when blueprint registered
+# Now the endpoint matches the JavaScript call to '/menu/item/delete/<id>'
+@menu_bp.route('/item/delete/<int:item_id>', methods=['POST'])
 @login_required
 
 def delete_menu_item(item_id):
     item = MenuItem.query.get(item_id)
     if not item:
         return jsonify({'success': False, 'message': 'آیتم یافت نشد'}), 404
+        
+    # Prevent deletion if the item has related order items
+    if item.order_items:
+        return (
+            jsonify({'success': False, 'message': 'آیتم در سفارش‌ها استفاده شده و قابل حذف نیست'}),
+            400,
+        )
 
     try:
         db.session.delete(item)
