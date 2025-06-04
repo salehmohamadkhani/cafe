@@ -172,6 +172,13 @@ def delete_menu_item(item_id):
             400,
         )
 
+    # If the item exists in previous orders, only deactivate it
+    # to maintain database integrity without breaking historical data
+    if item.order_items:
+        item.is_active = False
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'آیتم غیرفعال شد'})
+
     try:
         db.session.delete(item)
         db.session.commit()
