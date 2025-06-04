@@ -250,28 +250,18 @@ document.addEventListener('click', function (e) {
                 },
                 body: JSON.stringify({})
             })
-                .then(response => {
-                    // Check if the response is OK (status in the range 200-299)
+                .then(async response => {
+                    const contentType = response.headers.get('content-type');
+                    const data = (contentType && contentType.includes('application/json'))
+                        ? await response.json().catch(() => ({}))
+                        : {};
+
                     if (!response.ok) {
-                        // If not OK, try to read the error message from the response body
-                        // or just throw an error with the status
-                        return response.text().then(text => {
-                            // Log the response text for debugging (it will be the HTML error page)
-                            console.error('Server responded with non-OK status:', response.status, text);
-                            throw new Error(`HTTP error! status: ${response.status}`);
-                        });
+                        const message = data.message || `HTTP error! status: ${response.status}`;
+                        throw new Error(message);
                     }
-                    // Check if the response is JSON before parsing
-                    const contentType = response.headers.get("content-type");
-                    if (contentType && contentType.indexOf("application/json") !== -1) {
-                        return response.json();
-                    } else {
-                        // If not JSON, maybe it's a success with no content or plain text
-                        // Depending on your backend, you might handle this differently.
-                        // For now, assume success if response.ok but not JSON.
-                        console.warn('Server responded with OK status but not JSON content type.');
-                        return {}; // Return an empty object or specific success indicator if needed
-                    }
+
+                    return data;
                 })
                 .then(data => {
                     // Assuming backend returns { success: true } or { success: false, message: '...' }
