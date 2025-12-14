@@ -120,19 +120,26 @@ def create_cafe():
 @master_bp.route('/cafes/<slug>/enter')
 @master_login_required
 def enter_cafe(slug):
-    """ورود به یک کافه خاص - set session و redirect به لاگین اون کافه"""
+    """نمایش اطلاعات لاگین کافه و لینک ورود"""
     cafe = CafeTenant.query.filter_by(slug=slug).first_or_404()
     
     if not cafe.is_active:
         flash('این کافه غیرفعال است.', 'warning')
         return redirect(url_for('master.dashboard'))
     
-    # Store cafe slug in session for tenant context
-    session['tenant_slug'] = cafe.slug
-    session['tenant_db_path'] = cafe.db_path
+    if not os.path.exists(cafe.db_path):
+        flash('دیتابیس کافه یافت نشد.', 'danger')
+        return redirect(url_for('master.dashboard'))
     
-    # Redirect to tenant login page
-    return redirect(url_for('tenant.login', slug=slug))
+    # Get default admin user from tenant DB
+    engine = create_engine(f"sqlite:///{cafe.db_path}")
+    Session = sessionmaker(bind=engine)
+    
+    admin_user = None
+    with Session() as s:
+        admin_user = s.query(TenantUser).filter_by(username='admin', role='admin').first()
+    
+    return render_template('master/cafe_enter.html', cafe=cafe, admin_user=admin_user)
 
 
 @master_bp.route('/cafes/<slug>/users')
