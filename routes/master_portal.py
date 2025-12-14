@@ -8,6 +8,9 @@ from werkzeug.security import check_password_hash
 from models.models import db
 from models.master_models import CafeTenant, MasterUser
 from services.tenant_provisioning import provision_tenant
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from models.models import User as TenantUser
 
 master_bp = Blueprint('master', __name__, url_prefix='/master')
 
