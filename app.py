@@ -121,6 +121,7 @@ def create_app(config_class=Config):
     # Register blueprints
     app.register_blueprint(auth_bp)
     app.register_blueprint(master_bp)
+    app.register_blueprint(tenant_auth_bp)
     app.register_blueprint(menu_bp)
     app.register_blueprint(order_bp)
     app.register_blueprint(dashboard_bp)
