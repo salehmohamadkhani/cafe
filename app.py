@@ -11,6 +11,7 @@ from routes.auth import auth_bp
 from routes.master_portal import master_bp
 from routes.tenant_auth import tenant_auth_bp
 from routes.tenant import tenant_bp
+from routes.tenant_dashboard import tenant_dashboard_bp
 from routes.menu import menu_bp
 from routes.order import order_bp
 from routes.dashboard import dashboard_bp
