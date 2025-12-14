@@ -28,7 +28,7 @@ def get_tenant_db_session(slug: str):
     
     engine = create_engine(f"sqlite:///{cafe.db_path}")
     Session = sessionmaker(bind=engine)
-    return Session(), cafe
+    return Session, cafe
 
 
 @tenant_auth_bp.route('/login', methods=['GET', 'POST'])
