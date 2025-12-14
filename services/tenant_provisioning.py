@@ -130,6 +130,24 @@ def provision_tenant(tenants_dir: str, name: str, slug: str, source_project_dir:
     engine = create_engine(db_uri, future=True)
     db.metadata.create_all(bind=engine)
 
+    # Update config.py in tenant to point to its own database
+    config_py_path = os.path.join(root_dir, 'config.py')
+    if os.path.exists(config_py_path):
+        with open(config_py_path, 'r', encoding='utf-8') as f:
+            config_content = f.read()
+        # Replace instance path to point to tenant's instance
+        config_content = config_content.replace(
+            f"sqlite:///{os.path.join(source_project_dir, 'instance', 'cafe.db')}" if source_project_dir else '',
+            f"sqlite:///{db_path}"
+        )
+        # Also update INSTANCE_DIR
+        config_content = config_content.replace(
+            "INSTANCE_DIR = os.path.join(BASEDIR, 'instance')",
+            f"INSTANCE_DIR = os.path.join(BASEDIR, 'instance')  # Tenant: {slug}"
+        )
+        with open(config_py_path, 'w', encoding='utf-8') as f:
+            f.write(config_content)
+
     # Seed settings row so templates can show cafe name early
     # Also create default admin user
     Session = sessionmaker(bind=engine, future=True)
