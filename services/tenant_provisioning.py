@@ -36,9 +36,9 @@ class ProvisionedTenant:
     db_path: str
 
 
-def provision_tenant(tenants_dir: str, name: str, slug: str) -> ProvisionedTenant:
+def provision_tenant(tenants_dir: str, name: str, slug: str, source_project_dir: str = None) -> ProvisionedTenant:
     """
-    Creates folder structure + a fresh sqlite db for a new cafe tenant.
+    Creates a complete cafe project (full copy of source project) + fresh sqlite db.
     Returns filesystem paths. Does NOT register anything in master DB.
     """
     if not tenants_dir:
@@ -53,6 +53,64 @@ def provision_tenant(tenants_dir: str, name: str, slug: str) -> ProvisionedTenan
         raise ValueError("slug is invalid (use a-z, 0-9, dash)")
 
     root_dir = os.path.join(tenants_dir, slug)
+    
+    # If already exists, raise error
+    if os.path.exists(root_dir):
+        raise ValueError(f"Tenant directory already exists: {root_dir}")
+
+    # Copy entire project structure from source
+    if source_project_dir and os.path.exists(source_project_dir):
+        import shutil
+        
+        # Directories/files to exclude when copying
+        exclude_patterns = {
+            '.git', '__pycache__', '*.pyc', 'venv', '.venv',
+            'instance/*.db', 'instance/secret_key', 'tenants',
+            '*.log', '.autopush.lock'
+        }
+        
+        def should_exclude(path: str) -> bool:
+            path_lower = path.lower()
+            for pattern in exclude_patterns:
+                if pattern in path_lower or path.endswith(pattern.replace('*', '')):
+                    return True
+            return False
+        
+        def copy_tree(src: str, dst: str):
+            os.makedirs(dst, exist_ok=True)
+            for item in os.listdir(src):
+                if item.startswith('.'):
+                    continue
+                src_path = os.path.join(src, item)
+                dst_path = os.path.join(dst, item)
+                
+                if should_exclude(src_path):
+                    continue
+                
+                if os.path.isdir(src_path):
+                    if item not in ['tenants', '.git', 'venv', '.venv']:
+                        copy_tree(src_path, dst_path)
+                else:
+                    if not should_exclude(src_path):
+                        shutil.copy2(src_path, dst_path)
+        
+        copy_tree(source_project_dir, root_dir)
+        
+        # Clean up instance directory (we'll create fresh DB)
+        instance_dir = os.path.join(root_dir, 'instance')
+        if os.path.exists(instance_dir):
+            for item in os.listdir(instance_dir):
+                item_path = os.path.join(instance_dir, item)
+                if item.endswith('.db') or item == 'secret_key':
+                    try:
+                        os.remove(item_path)
+                    except:
+                        pass
+    else:
+        # Fallback: just create basic structure
+        instance_dir = os.path.join(root_dir, 'instance')
+        os.makedirs(instance_dir, exist_ok=True)
+
     instance_dir = os.path.join(root_dir, 'instance')
     os.makedirs(instance_dir, exist_ok=True)
 
