@@ -139,13 +139,7 @@ def enter_cafe(slug):
         flash('دیتابیس کافه یافت نشد.', 'danger')
         return redirect(url_for('master.dashboard'))
     
-    # Get default admin user from tenant DB
-    engine = create_engine(f"sqlite:///{cafe.db_path}")
-    Session = sessionmaker(bind=engine)
-    
-    admin_user = None
-    with Session() as s:
-        # Redirect to tenant login page
+    # Redirect to tenant login page
     return redirect(url_for('tenant_auth.login', slug=slug))
 
 
