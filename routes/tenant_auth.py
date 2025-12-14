@@ -53,12 +53,12 @@ def login(slug):
             return render_template('tenant/login.html', cafe=cafe)
         
         # Connect to tenant DB
-        Session, _ = get_tenant_db_session(slug)
-        if not Session:
+        Session_class, cafe_check = get_tenant_db_session(slug)
+        if not Session_class:
             flash('خطا در اتصال به دیتابیس کافه.', 'danger')
             return render_template('tenant/login.html', cafe=cafe)
         
-        with Session() as s:
+        with Session_class() as s:
             user = s.query(User).filter_by(username=username).first()
             if user and check_password_hash(user.password_hash, password):
                 if not user.is_active:
