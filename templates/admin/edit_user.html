@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block title %}ویرایش کاربر{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width:640px;margin-top:2rem;">
+    <div class="card" style="padding:2rem;border-radius:20px;box-shadow:0 18px 45px rgba(15,23,42,0.08);border:1px solid rgba(226,232,240,0.8);">
+        <h2 style="margin-top:0;">ویرایش کاربر</h2>
+        <p style="color:#6b7280;margin-bottom:1.5rem;">مشخصات کاربر را به‌روزرسانی کنید.</p>
+        <form method="POST" action="{{ url_for('admin.edit_user', user_id=user.id) }}" class="form-grid">
+            <div class="form-group">
+                <label>نام کاربری</label>
+                <input type="text" value="{{ user.username }}" disabled>
+            </div>
+            <div class="form-group">
+                <label for="name">نام و نام خانوادگی</label>
+                <input type="text" id="name" name="name" value="{{ user.name or '' }}">
+            </div>
+            <div class="form-group">
+                <label for="phone">شماره تماس</label>
+                <input type="text" id="phone" name="phone" value="{{ user.phone or '' }}">
+            </div>
+            <div class="form-group">
+                <label for="role">نقش کاربری</label>
+                <select id="role" name="role">
+                    {% for key, role in roles.items() %}
+                    <option value="{{ key }}" {% if user.role == key %}selected{% endif %}>{{ role.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="margin-top:1.8rem;display:flex;gap:1rem;justify-content:flex-end;">
+                <a href="{{ url_for('admin.users_list') }}" class="btn btn-secondary">بازگشت</a>
+                <button type="submit" class="btn btn-primary">ذخیره تغییرات</button>
+            </div>
+        </form>
+        <div style="margin-top:1.5rem;">
+            <h4>سطح دسترسی نقش‌ها</h4>
+            <ul style="padding-right:1rem;">
+                {% for key, role in roles.items() %}
+                <li style="margin-bottom:0.6rem;">
+                    <strong>{{ role.label }}:</strong> {{ role.description }}
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,300 @@
+{% extends 'base.html' %}
+{% block title %}مدیریت کاربران{% endblock %}
+
+{% block head %}
+<style>
+    .users-page {
+        padding: 1.5rem 0 2.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.6rem;
+    }
+
+    .users-hero {
+        background: linear-gradient(135deg, #f97316, #ef4444);
+        color: #fff;
+        border-radius: 18px;
+        padding: 1.9rem 2.2rem;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 1.5rem;
+        box-shadow: 0 20px 50px rgba(249, 115, 22, 0.24);
+    }
+
+    .users-hero h1 {
+        margin: 0;
+        font-size: 1.9rem;
+    }
+
+    .users-hero p {
+        margin: 0.4rem 0 0;
+        color: rgba(255, 255, 255, 0.84);
+    }
+
+    .users-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .users-actions a,
+    .users-actions button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.65rem 1.4rem;
+        border-radius: 12px;
+        border: none;
+        font-weight: 600;
+        text-decoration: none;
+        cursor: pointer;
+        color: #0f172a;
+        background: #fff;
+        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.14);
+        transition: transform 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .users-actions a:hover,
+    .users-actions button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 16px 38px rgba(15, 23, 42, 0.2);
+    }
+
+    .users-toolbar {
+        background: #fff;
+        border-radius: 16px;
+        padding: 1.1rem 1.4rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.85rem;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+    }
+
+    .users-toolbar input {
+        width: 220px;
+        border: 1px solid #d1d5db;
+        border-radius: 10px;
+        padding: 0.55rem 0.75rem;
+        font-size: 0.95rem;
+    }
+
+    .users-table-wrapper {
+        border-radius: 18px;
+        background: #fff;
+        box-shadow: 0 18px 38px rgba(15, 23, 42, 0.08);
+        overflow: hidden;
+    }
+
+    table.users-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    table.users-table thead {
+        background: #f1f5f9;
+    }
+
+    table.users-table th,
+    table.users-table td {
+        padding: 0.85rem 1rem;
+        text-align: center;
+        font-size: 0.92rem;
+    }
+
+    table.users-table th {
+        font-weight: 700;
+        color: #475569;
+    }
+
+    table.users-table tbody tr {
+        border-bottom: 1px solid #e2e8f0;
+        transition: background 0.15s ease;
+    }
+
+    table.users-table tbody tr:hover {
+        background: #f8fafc;
+    }
+
+    .role-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.3rem 0.8rem;
+        border-radius: 999px;
+        font-size: 0.78rem;
+        font-weight: 700;
+    }
+
+    .role-pill.role-admin { background: #fee2e2; color: #b91c1c; }
+    .role-pill.role-cashier { background: #dbeafe; color: #1d4ed8; }
+    .role-pill.role-inventory { background: #ede9fe; color: #6b21a8; }
+    .role-pill.role-procurement { background: #fef3c7; color: #92400e; }
+    .role-pill.role-accountant { background: #cffafe; color: #0e7490; }
+    .role-pill.role-waiter { background: #dcfce7; color: #166534; }
+    .role-pill.role-unknown { background: #e5e7eb; color: #374151; }
+
+    .role-desc {
+        display: block;
+        font-size: 0.75rem;
+        color: #94a3b8;
+        margin-top: 0.25rem;
+    }
+
+    .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.3rem 0.75rem;
+        border-radius: 999px;
+        font-size: 0.78rem;
+        font-weight: 700;
+        background: #e0f2fe;
+        color: #0c4a6e;
+    }
+
+    .action-buttons {
+        display: inline-flex;
+        gap: 0.4rem;
+    }
+
+    .action-buttons a,
+    .action-buttons form button {
+        border: none;
+        border-radius: 8px;
+        padding: 0.4rem 0.8rem;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        text-decoration: none;
+    }
+
+    .action-buttons a {
+        background: #eef2ff;
+        color: #4338ca;
+    }
+
+    .action-buttons form button {
+        background: #fee2e2;
+        color: #b91c1c;
+    }
+
+    .action-buttons a:hover,
+    .action-buttons form button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 14px rgba(59, 130, 246, 0.18);
+    }
+
+    @media (max-width: 900px) {
+        .users-table-wrapper {
+            overflow-x: auto;
+        }
+        table.users-table {
+            min-width: 780px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% set role_definitions = role_definitions or {} %}
+<div class="users-page">
+    <section class="users-hero">
+        <div>
+            <h1>مدیریت کاربران سیستم</h1>
+            <p>کاربران جدید اضافه کنید، نقش‌ها را مدیریت کنید و وضعیت دسترسی را کنترل کنید.</p>
+        </div>
+        <div class="users-actions">
+            <a href="{{ url_for('admin.add_user') }}">افزودن کاربر جدید</a>
+            <a href="{{ url_for('admin.dashboard') }}">بازگشت به داشبورد</a>
+        </div>
+    </section>
+
+    <section class="users-toolbar">
+        <div>
+            <strong>تعداد کاربران:</strong> {{ users|length }}
+        </div>
+        <input type="text" id="user-search" placeholder="جستجو بر اساس نام یا نقش">
+    </section>
+
+    <section class="users-table-wrapper">
+        <table class="users-table" id="users-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>نام</th>
+                    <th>نام کاربری</th>
+                    <th>نقش</th>
+                    <th>شماره تماس</th>
+                    <th>وضعیت</th>
+                    <th>عملیات</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if users %}
+                    {% for user in users %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ user.name or '-' }}</td>
+                        <td>{{ user.username }}</td>
+                        <td>
+                            {% set role_key = user.role or 'waiter' %}
+                            {% set role_meta = role_definitions.get(role_key) %}
+                            <span class="role-pill role-{{ role_key|default('unknown') }}"
+                                  title="{{ role_meta.description if role_meta else 'نقش سفارشی' }}">
+                                {{ role_meta.label if role_meta else role_key }}
+                            </span>
+                            {% if role_meta %}
+                            <span class="role-desc">{{ role_meta.description }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ user.phone or '-' }}</td>
+                        <td>
+                            <span class="status-pill">فعال</span>
+                        </td>
+                        <td>
+                            <div class="action-buttons">
+                                <a href="{{ url_for('admin.edit_user', user_id=user.id) }}">ویرایش</a>
+                                <form method="post" action="{{ url_for('admin.delete_user', user_id=user.id) }}">
+                                    <button type="submit">حذف</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="7" style="text-align:center; padding: 2rem; color:#64748b;">هیچ کاربری ثبت نشده است.</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    const searchInput = document.getElementById('user-search');
+    const rows = Array.from(document.querySelectorAll('#users-table tbody tr'));
+    if (!searchInput) return;
+
+    searchInput.addEventListener('input', function () {
+        const query = searchInput.value.trim().toLowerCase();
+        rows.forEach(row => {
+            const text = row.textContent.trim().toLowerCase();
+            if (!query || text.includes(query)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+})();
+</script>
+{% endblock %}

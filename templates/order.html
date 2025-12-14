@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+{% block title %}ثبت سفارش جدید{% endblock %}
+
+{% block content %}
+<div class="container mt-3">
+    <h1 class="text-center mb-4">ثبت سفارش جدید</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="post" id="order-form" action="{{ url_for('order.create_order') }}">
+        <div class="card mb-3">
+            <div class="card-header">
+                <b>انتخاب آیتم‌های منو</b>
+            </div>
+            <div class="card-body">
+                <div class="row align-items-end">
+                    <div class="col-md-6 mb-2">
+                        <label for="item-select">آیتم منو:</label>
+                        <select id="item-select" class="form-control">
+                            {% for item in menu_items %}
+                            <option value="{{ item.id }}" data-price="{{ item.price }}">{{ item.name }} ({{ "{:,}".format(item.price|int) }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <label for="item-quantity">تعداد:</label>
+                        <input type="number" id="item-quantity" class="form-control" min="1" value="1">
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <button class="btn btn-primary" id="add-item">افزودن به سفارش</button>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <table class="table table-bordered text-center" id="order-items-table">
+                        <thead>
+                            <tr>
+                                <th>نام آیتم</th>
+                                <th>تعداد</th>
+                                <th>قیمت واحد</th>
+                                <th>جمع جزء</th>
+                                <th>حذف</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- آیتم‌های سفارش با جاوااسکریپت اضافه می‌شوند -->
+                        </tbody>
+                    </table>
+                    <div id="order-items-hidden"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header">
+                <b>محاسبه مبلغ سفارش</b>
+            </div>
+            <div class="card-body">
+                <div class="row text-right">
+                    <div class="col-md-3 mb-2">
+                        <b>جمع کل:</b> <span id="order-total">۰</span>                    </div>
+                    <div class="col-md-3 mb-2">
+                        <b>مالیات ({{ tax_percent }}٪):</b> <span id="order-tax-amount">۰</span>                        <input type="hidden" id="order-tax-percent" value="{{ tax_percent }}">
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <b>تخفیف:</b>
+                        <input type="number" id="order-discount" name="discount" class="form-control d-inline-block" style="width:100px;" value="0" min="0">
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <b>مبلغ نهایی:</b> <span id="order-final">۰</span>                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header">
+                <b>اطلاعات سفارش</b>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-2">
+                        <label for="order-type">نوع سفارش:</label>
+                        <select name="type" id="order-type" class="form-control">
+                            <option value="حضوری">حضوری</option>
+                            <option value="بیرون‌بر">بیرون‌بر</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <label for="order-status">وضعیت سفارش:</label>
+                        <select name="status" id="order-status" class="form-control">
+                            <option value="پرداخت نشده">پرداخت نشده</option>
+                            <option value="پرداخت شده">پرداخت شده</option>
+                            <option value="لغو شده">لغو شده</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary btn-block w-100">ثبت سفارش</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <div class="card mt-3">
+        <div class="card-header">
+            <b>راهنما</b>
+        </div>
+        <div class="card-body">
+            <ul>
+                <li>آیتم‌های منو را انتخاب و تعداد را وارد کنید، سپس روی "افزودن به سفارش" بزنید.</li>
+                <li>برای حذف آیتم از سفارش، روی دکمه حذف کنار هر آیتم کلیک کنید.</li>
+                <li>تخفیف و مالیات به صورت خودکار محاسبه می‌شود.</li>
+                <li>پس از تکمیل فرم، روی "ثبت سفارش" کلیک کنید.</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<style>
+    .container {
+        max-width: 900px;
+        margin: 2rem auto;
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+        padding: 2rem 2rem 1.5rem 2rem;
+    }
+    .table th, .table td {
+        vertical-align: middle !important;
+    }
+    .d-inline-block {
+        display: inline-block;
+    }
+    @media (max-width: 700px) {
+        .container {
+            padding: 1rem 0.5rem;
+        }
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let currentOrder = [];
+
+    function renderOrderTable() {
+        const table = document.getElementById('order-items-table');
+        let html = '';
+        let total = 0;
+        currentOrder.forEach((item, idx) => {
+            const subtotal = item.price * item.quantity;
+            total += subtotal;
+            html += `
+                <tr>
+                    <td>${item.name}</td>
+                    <td>${item.quantity}</td>
+                    <td>${item.price.toLocaleString()}</td>
+                    <td>${subtotal.toLocaleString()}</td>
+                    <td><button type="button" class="btn btn-danger btn-sm remove-order-item" data-idx="${idx}">حذف</button></td>
+                </tr>
+            `;
+        });
+        table.querySelector('tbody').innerHTML = html;
+        document.getElementById('order-total').textContent = total.toLocaleString();
+        recalcOrder();
+    }
+
+    function recalcOrder() {
+        let total = 0;
+        currentOrder.forEach(item => {
+            total += item.price * item.quantity;
+        });
+        let discount = parseInt(document.getElementById('order-discount').value, 10) || 0;
+        let taxPercent = parseFloat(document.getElementById('order-tax-percent').value) || 0;
+        let tax = Math.round(total * taxPercent / 100);
+        let final = total + tax - discount;
+        document.getElementById('order-tax-amount').textContent = tax.toLocaleString();
+        document.getElementById('order-final').textContent = final.toLocaleString();
+    }
+
+    document.getElementById('order-discount').addEventListener('input', recalcOrder);
+
+    document.getElementById('add-item-btn').addEventListener('click', function() {
+        const select = document.getElementById('item-select');
+        const itemId = select.value;
+        const itemName = select.options[select.selectedIndex].text.split('(')[0].trim();
+        const itemPrice = parseInt(select.options[select.selectedIndex].getAttribute('data-price'), 10);
+        let quantity = parseInt(document.getElementById('item-quantity').value, 10) || 1;
+        if (!itemId) return;
+        let found = false;
+        for (let i = 0; i < currentOrder.length; i++) {
+            if (currentOrder[i].id == itemId) {
+                currentOrder[i].quantity += quantity;
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            currentOrder.push({
+                id: itemId,
+                name: itemName,
+                price: itemPrice,
+                quantity: quantity
+            });
+        }
+        renderOrderTable();
+    });
+
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('remove-order-item')) {
+            const idx = parseInt(e.target.dataset.idx, 10);
+            currentOrder.splice(idx, 1);
+            renderOrderTable();
+        }
+    });
+
+    document.getElementById('order-form').addEventListener('submit', function(e) {
+        if (currentOrder.length === 0) {
+            alert('لطفاً حداقل یک آیتم به سفارش اضافه کنید.');
+            e.preventDefault();
+            return false;
+        }
+        // آیتم‌ها را به صورت hidden input اضافه می‌کنیم
+        const itemsDiv = document.getElementById('order-items-hidden');
+        itemsDiv.innerHTML = '';
+        currentOrder.forEach(item => {
+            let inputId = document.createElement('input');
+            inputId.type = 'hidden';
+            inputId.name = 'item';
+            inputId.value = item.id;
+            itemsDiv.appendChild(inputId);
+
+            let inputQty = document.createElement('input');
+            inputQty.type = 'hidden';
+            inputQty.name = 'quantity';
+            inputQty.value = item.quantity;
+            itemsDiv.appendChild(inputQty);
+        });
+    });
+});
+</script>
+<script>
+document.querySelectorAll('.open-new-order').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        modal.style.display = 'block';
+        modalBody.innerHTML = 'در حال بارگذاری...';
+        fetch('/order/new')
+            .then(res => res.text())
+            .then(html => {
+                modalBody.innerHTML = html;
+                // اینجا تابع را فراخوانی می‌کنیم
+                bindCreateOrderEvents();
+            })
+            .catch(err => {
+                modalBody.innerHTML = 'خطا در بارگذاری.';
+                console.error(err);
+            });
+    });
+});
+</script>
+{% endblock %}

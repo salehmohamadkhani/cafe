@@ -1,0 +1,492 @@
+{% extends 'base.html' %}
+{% block title %}گزارش مشتریان و باشگاه مشتریان{% endblock %}
+
+{% block head %}
+<style>
+    /* Full-width layout for customer report page */
+    body:has(.customer-report-page) {
+        background: var(--color-bg, #f7f8fa);
+    }
+
+    body:has(.customer-report-page) .container {
+        max-width: none;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+    }
+
+    body:has(.customer-report-page) .footer {
+        background: transparent;
+    }
+
+    .customer-report-page {
+        padding: 1.5rem 1.5rem 2.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .customer-report-hero {
+        background: linear-gradient(135deg, #9333ea, #7c3aed);
+        color: #fff;
+        border-radius: 18px;
+        padding: 1.9rem 2.2rem;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 1.5rem;
+        box-shadow: 0 18px 40px rgba(124, 58, 237, 0.25);
+    }
+
+    .customer-report-hero h1 {
+        margin: 0;
+        font-size: 1.8rem;
+    }
+
+    .customer-report-hero p {
+        margin: 0.4rem 0 0;
+        color: rgba(255, 255, 255, 0.85);
+    }
+
+    .hero-stats {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        align-items: center;
+    }
+
+    .hero-stat {
+        background: rgba(255, 255, 255, 0.18);
+        padding: 0.6rem 1.3rem;
+        border-radius: 14px;
+        display: flex;
+        flex-direction: column;
+        min-width: 150px;
+        text-align: center;
+    }
+
+    .hero-stat span:first-child {
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.9);
+    }
+
+    .hero-stat span:last-child {
+        font-size: 1.2rem;
+        font-weight: 800;
+    }
+
+    .leaderboard-card {
+        background: #fff;
+        border-radius: 18px;
+        padding: 1.6rem;
+        box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+        display: flex;
+        flex-direction: column;
+        gap: 1.2rem;
+    }
+
+    .sms-automation-card {
+        background: #fff;
+        border-radius: 18px;
+        padding: 1.4rem 1.6rem;
+        box-shadow: 0 10px 26px rgba(15, 23, 42, 0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .sms-automation-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+
+    .sms-automation-header h3 {
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #111827;
+    }
+
+    .sms-automation-header p {
+        margin: 0;
+        font-size: 0.9rem;
+        color: #6b7280;
+    }
+
+    .sms-automation-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 0.9rem 1rem;
+        align-items: flex-start;
+    }
+
+    .sms-field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+        font-size: 0.9rem;
+    }
+
+    .sms-field label {
+        font-weight: 600;
+        color: #4b5563;
+    }
+
+    .sms-field input,
+    .sms-field select,
+    .sms-field textarea {
+        border-radius: 10px;
+        border: 1px solid #e5e7eb;
+        padding: 0.55rem 0.75rem;
+        font-size: 0.9rem;
+    }
+
+    .sms-preview {
+        background: #f9fafb;
+        border-radius: 12px;
+        padding: 0.75rem 0.9rem;
+        font-size: 0.88rem;
+        color: #374151;
+        border: 1px dashed #e5e7eb;
+    }
+
+    .sms-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.6rem;
+        margin-top: 0.3rem;
+        flex-wrap: wrap;
+    }
+
+    .sms-actions button {
+        border: none;
+        border-radius: 999px;
+        padding: 0.5rem 1.2rem;
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .sms-actions .primary {
+        background: linear-gradient(135deg, #6366f1, #4f46e5);
+        color: #fff;
+        box-shadow: 0 10px 24px rgba(99, 102, 241, 0.28);
+    }
+
+    .sms-actions .ghost {
+        background: #f3f4f6;
+        color: #374151;
+    }
+
+    .leaderboard-header {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .leaderboard-header h3 {
+        margin: 0;
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #1f2937;
+    }
+
+    .leaderboard-toggle {
+        background: #f3f4f6;
+        padding: 0.35rem;
+        border-radius: 999px;
+        display: inline-flex;
+        gap: 0.35rem;
+    }
+
+    .leaderboard-toggle button {
+        border: none;
+        background: transparent;
+        border-radius: 999px;
+        padding: 0.45rem 1.1rem;
+        font-weight: 600;
+        color: #4b5563;
+        cursor: pointer;
+        transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+    }
+
+    .leaderboard-toggle button.active {
+        background: linear-gradient(135deg, #6366f1, #4f46e5);
+        color: #fff;
+        box-shadow: 0 8px 20px rgba(99, 102, 241, 0.25);
+    }
+
+    .leaderboard-table-wrapper {
+        overflow-x: auto;
+        border-radius: 16px;
+    }
+
+    table.leaderboard-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 0.75rem;
+        min-width: 720px;
+    }
+
+    table.leaderboard-table thead th {
+        font-size: 0.85rem;
+        font-weight: 600;
+        text-align: center;
+        color: #6b7280;
+        padding-bottom: 0.8rem;
+    }
+
+    table.leaderboard-table tbody tr {
+        background: #f9fafb;
+        border-radius: 16px;
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+        transition: transform 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    table.leaderboard-table tbody tr:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+    }
+
+    table.leaderboard-table td {
+        padding: 0.95rem;
+        text-align: center;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #111827;
+    }
+
+    table.leaderboard-table td:first-child {
+        border-top-right-radius: 16px;
+        border-bottom-right-radius: 16px;
+        color: #4f46e5;
+    }
+
+    table.leaderboard-table td:nth-child(2) {
+        text-align: right;
+        padding-right: 1.35rem;
+        font-weight: 700;
+    }
+
+    table.leaderboard-table td:last-child {
+        border-top-left-radius: 16px;
+        border-bottom-left-radius: 16px;
+    }
+
+    .badge-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.28rem 0.65rem;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .badge-orders {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .badge-amount {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .badge-last {
+        background: #eef2ff;
+        color: #4338ca;
+    }
+
+    .badge-phone {
+        background: #e5e7eb;
+        color: #374151;
+    }
+
+    @media (max-width: 768px) {
+        .customer-report-hero {
+            padding: 1.5rem;
+        }
+
+        table.leaderboard-table {
+            min-width: 640px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="customer-report-page">
+    <section class="customer-report-hero">
+        <div>
+            <h1>گزارش مشتریان و باشگاه مشتریان</h1>
+            <p>برترین مشتریان بر اساس تعداد سفارش و مبلغ خرید را مشاهده کنید و برنامه‌های وفاداری خود را هدفمند کنید.</p>
+        </div>
+        <div class="hero-stats">
+            <div class="hero-stat">
+                <span>تعداد مشتریان فعال</span>
+                <span>{{ totals.customers }}</span>
+            </div>
+            <div class="hero-stat">
+                <span>کل سفارش‌های ثبت شده</span>
+                <span>{{ totals.orders }}</span>
+            </div>
+            <div class="hero-stat">
+                <span>جمع مبالغ خرید</span>
+                <span>{{ "{:,}".format(totals.revenue) }}</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="sms-automation-card">
+        <div class="sms-automation-header">
+            <div>
+                <h3>پنل پیامکی باشگاه مشتریان</h3>
+                <p>به‌صورت ماهانه، برای برترین مشتریان کش‌بک یا بن تخفیف ارسال کنید.</p>
+            </div>
+        </div>
+        <form class="sms-automation-form" onsubmit="return false;">
+            <div class="sms-automation-grid">
+                <div class="sms-field">
+                    <label for="sms-top-count">تعداد مشتری برتر هر ماه</label>
+                    <input id="sms-top-count" type="number" min="1" value="10">
+                </div>
+                <div class="sms-field">
+                    <label for="sms-reward-amount">مبلغ پاداش برای هر نفر </label>
+                    <input id="sms-reward-amount" type="number" min="0" value="50000">
+                </div>
+                <div class="sms-field">
+                    <label for="sms-reward-type">نوع پاداش</label>
+                    <select id="sms-reward-type">
+                        <option value="cashback">کش‌بک روی کیف پول</option>
+                        <option value="voucher">بن تخفیف روی فاکتور بعدی</option>
+                    </select>
+                </div>
+                <div class="sms-field">
+                    <label for="sms-run-schedule">زمان‌بندی اجرا</label>
+                    <select id="sms-run-schedule">
+                        <option value="monthly_first">اول هر ماه</option>
+                        <option value="monthly_last">آخر هر ماه</option>
+                        <option value="manual">فقط اجرای دستی</option>
+                    </select>
+                </div>
+            </div>
+            <div class="sms-field" style="margin-top:0.6rem;">
+                <label for="sms-message-template">متن پیامک</label>
+                <textarea id="sms-message-template" rows="2">سلام {{name}} عزیز 🙌
+شما جزو {{top_n}} مشتری برتر این ماه هستید. یک {{reward_type}} به مبلغ {{amount}} برای شما در نظر گرفته شد.</textarea>
+                <div class="sms-preview">
+                    نمونه پیام برای مشتری: «سلام مهدی عزیز 🙌 شما جزو 10 مشتری برتر این ماه هستید. یک بن تخفیف به مبلغ 50,000 برای شما در نظر گرفته شد.»
+                </div>
+            </div>
+            <div class="sms-actions">
+                <button type="button" class="ghost">ذخیره تنظیمات (به‌زودی)</button>
+                <button type="button" class="primary">اجرای دستی بر اساس تنظیمات</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="leaderboard-card">
+        <div class="leaderboard-header">
+            <h3>جدول رتبه‌بندی مشتریان</h3>
+            <div class="leaderboard-toggle">
+                <button type="button" class="toggle-btn active" data-mode="orders">بر اساس تعداد سفارش</button>
+                <button type="button" class="toggle-btn" data-mode="amount">بر اساس مبلغ خرید</button>
+            </div>
+        </div>
+
+        <div class="leaderboard-table-wrapper">
+            <table class="leaderboard-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>مشتری</th>
+                        <th>شماره تماس</th>
+                        <th>تاریخ تولد</th>
+                        <th>تعداد سفارش</th>
+                        <th>جمع خرید</th>
+                        <th>آخرین سفارش</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboard-body">
+                    {% if top_by_orders %}
+                        {% for item in top_by_orders %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td>{{ item.name }}</td>
+                            <td>{{ item.phone }}</td>
+                            <td><span class="badge-pill badge-birth">{{ item.birth_date_jalali or '-' }}</span></td>
+                            <td><span class="badge-pill badge-orders">{{ item.order_count }}</span></td>
+                            <td><span class="badge-pill badge-amount">{{ "{:,}".format(item.total_amount) }}</span></td>
+                            <td><span class="badge-pill badge-last">{{ item.last_order_jalali or '-' }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="7" style="text-align:center; color:#6b7280; font-weight:600;">داده‌ای برای نمایش وجود ندارد.</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    (function() {
+        const ordersData = {{ top_by_orders|tojson }};
+        const amountData = {{ top_by_amount|tojson }};
+        const tbody = document.getElementById('leaderboard-body');
+        const buttons = document.querySelectorAll('.toggle-btn');
+
+        function formatNumber(num) {
+            const value = Number(num) || 0;
+            return value.toLocaleString('fa-IR');
+        }
+
+        function renderRows(data) {
+            if (!tbody) return;
+            if (!data || data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#6b7280; font-weight:600;">داده‌ای برای نمایش وجود ندارد.</td></tr>`;
+                return;
+            }
+
+            const rows = data.map((item, index) => {
+                return `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td>${item.name}</td>
+                        <td>${item.phone}</td>
+                        <td><span class="badge-pill badge-birth">${item.birth_date_jalali || '-'}</span></td>
+                        <td><span class="badge-pill badge-orders">${formatNumber(item.order_count)}</span></td>
+                        <td><span class="badge-pill badge-amount">${formatNumber(item.total_amount)}</span></td>
+                        <td><span class="badge-pill badge-last">${item.last_order_jalali || '-'}</span></td>
+                    </tr>
+                `;
+            }).join('');
+
+            tbody.innerHTML = rows;
+        }
+
+        buttons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                buttons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const mode = btn.dataset.mode;
+                renderRows(mode === 'amount' ? amountData : ordersData);
+            });
+        });
+
+        renderRows(ordersData);
+    })();
+</script>
+{% endblock %}
+

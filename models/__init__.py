@@ -1,0 +1,1 @@
+from .models import db, Category, MenuItem, Order, OrderItem, Settings# این فایل برای شناسایی پوشه models به عنوان یک پکیج پایتون است.from .models import db

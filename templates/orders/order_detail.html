@@ -1,0 +1,779 @@
+{% extends 'base.html' %}
+
+{% block title %}جزئیات سفارش #{{ order.invoice_number }}{% endblock %}
+
+{% block head %}
+<style>
+    /* Full screen برای صفحه جزئیات سفارش */
+    body:has(.order-detail-wrapper) {
+        overflow-x: hidden;
+    }
+    
+    body:has(.order-detail-wrapper) .container {
+        width: 100%;
+        max-width: none;
+        margin: 0;
+        padding: 0;
+    }
+    
+    body:has(.order-detail-wrapper) .navbar {
+        margin-bottom: 0;
+    }
+    
+    body:has(.order-detail-wrapper) .footer {
+        display: none;
+    }
+    
+    .order-detail-wrapper {
+        margin: 0;
+        padding: 1.5rem;
+        width: 100%;
+        min-height: 100vh;
+        background: var(--color-bg);
+    }
+
+    .order-header {
+        background: linear-gradient(135deg, #4f46e5, #4338ca);
+        color: #fff;
+        border-radius: 16px;
+        padding: 1.5rem 2rem;
+        margin-bottom: 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .order-header-left {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .order-header h1 {
+        margin: 0;
+        font-size: 1.5rem;
+    }
+
+    .order-badge {
+        background: rgba(255, 255, 255, 0.2);
+        padding: 0.4rem 0.9rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .order-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .order-actions a, .order-actions button {
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        text-decoration: none;
+        font-size: 0.9rem;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-back {
+        background: rgba(255, 255, 255, 0.2);
+        color: #fff;
+    }
+
+    .btn-back:hover {
+        background: rgba(255, 255, 255, 0.3);
+    }
+
+    .btn-invoice {
+        background: #fff;
+        color: #4338ca;
+    }
+
+    .btn-invoice:hover {
+        background: #f0f0f0;
+    }
+
+    .btn-edit {
+        background: #f59e0b;
+        color: #fff;
+    }
+
+    .btn-edit:hover {
+        background: #d97706;
+    }
+
+    .main-card {
+        background: #fff;
+        border-radius: 16px;
+        padding: 2rem;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 2rem;
+        margin-bottom: 2rem;
+        padding-bottom: 2rem;
+        border-bottom: 2px solid #f0f0f0;
+    }
+
+    .info-section h3 {
+        margin: 0 0 1rem 0;
+        font-size: 1rem;
+        color: #6b7280;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .info-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.6rem 0;
+        border-bottom: 1px solid #f5f5f5;
+    }
+
+    .info-item:last-child {
+        border-bottom: none;
+    }
+
+    .info-label {
+        color: #6b7280;
+        font-size: 0.9rem;
+    }
+
+    .info-value {
+        color: #111827;
+        font-weight: 600;
+        font-size: 0.95rem;
+    }
+
+    .summary-box {
+        background: linear-gradient(135deg, #eef2ff, #e0e7ff);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-top: 1rem;
+    }
+
+    .summary-total {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 1rem;
+        margin-top: 1rem;
+        border-top: 2px solid #c7d2fe;
+    }
+
+    .summary-total-label {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #4338ca;
+    }
+
+    .summary-total-value {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: #4338ca;
+    }
+
+    .items-section {
+        margin-top: 2rem;
+    }
+
+    .items-section h3 {
+        margin: 0 0 1.5rem 0;
+        font-size: 1.2rem;
+        color: #111827;
+        font-weight: 700;
+    }
+
+    .items-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .items-table thead {
+        background: #f9fafb;
+    }
+
+    .items-table th {
+        padding: 1rem;
+        text-align: right;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #6b7280;
+        border-bottom: 2px solid #e5e7eb;
+    }
+
+    .items-table td {
+        padding: 1rem;
+        text-align: right;
+        border-bottom: 1px solid #f3f4f6;
+    }
+
+    .items-table tbody tr:hover {
+        background: #f9fafb;
+    }
+
+    .items-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .item-name {
+        font-weight: 600;
+        color: #111827;
+    }
+
+    .item-price {
+        color: #059669;
+        font-weight: 600;
+    }
+
+    .edit-actions {
+        display: none;
+    }
+
+    .edit-actions button {
+        padding: 0.4rem 0.8rem;
+        margin: 0 0.2rem;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .btn-edit-item {
+        background: #3b82f6;
+        color: #fff;
+    }
+
+    .btn-delete-item {
+        background: #ef4444;
+        color: #fff;
+    }
+
+    #add-item-section {
+        display: none;
+        margin-top: 1.5rem;
+        padding: 1.5rem;
+        background: #f9fafb;
+        border-radius: 12px;
+        border: 2px dashed #d1d5db;
+    }
+
+    #add-item-section h4 {
+        margin: 0 0 1rem 0;
+        color: #374151;
+    }
+
+    .add-item-form {
+        display: flex;
+        gap: 1rem;
+        align-items: end;
+        flex-wrap: wrap;
+    }
+
+    .add-item-form > div {
+        flex: 1;
+        min-width: 200px;
+    }
+
+    .add-item-form label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+        color: #6b7280;
+        font-weight: 600;
+    }
+
+    .add-item-form select,
+    .add-item-form input {
+        width: 100%;
+        padding: 0.6rem;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 0.9rem;
+    }
+
+    .add-item-form button {
+        padding: 0.6rem 1.5rem;
+        background: #10b981;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    #edit-order-info {
+        display: none;
+        margin-top: 2rem;
+        padding-top: 2rem;
+        border-top: 2px solid #f0f0f0;
+    }
+
+    #edit-order-info h3 {
+        margin: 0 0 1.5rem 0;
+        font-size: 1.2rem;
+        color: #111827;
+        font-weight: 700;
+    }
+
+    .edit-form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .edit-form-item label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+        color: #6b7280;
+        font-weight: 600;
+    }
+
+    .edit-form-item input,
+    .edit-form-item select {
+        width: 100%;
+        padding: 0.6rem;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 0.9rem;
+    }
+
+    .btn-save {
+        padding: 0.7rem 2rem;
+        background: #10b981;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 1rem;
+    }
+
+    .item-name-edit,
+    .item-qty-edit {
+        display: none;
+    }
+
+    @media (max-width: 768px) {
+        .order-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .order-actions {
+            width: 100%;
+        }
+
+        .order-actions a,
+        .order-actions button {
+            flex: 1;
+            text-align: center;
+        }
+
+        .info-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .main-card {
+            padding: 1.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="order-detail-wrapper">
+    <div class="order-header">
+        <div class="order-header-left">
+            <h1>سفارش #{{ order.invoice_number }}</h1>
+            <span class="order-badge">وضعیت: {{ order.status }}</span>
+            <span class="order-badge">نوع: {{ order.type }}</span>
+        </div>
+        <div class="order-actions">
+            <a href="{{ url_for('order.orders_list') }}" class="btn-back">بازگشت</a>
+            <a href="{{ url_for('order.print_invoice', order_id=order.id) }}" class="btn-invoice" target="_blank">فاکتور</a>
+            <button id="toggle-edit-mode" class="btn-edit">ویرایش</button>
+        </div>
+    </div>
+
+    <div class="main-card">
+        <div class="info-grid">
+            <div class="info-section">
+                <h3>اطلاعات مشتری</h3>
+                <div class="info-item">
+                    <span class="info-label">نام:</span>
+                    <span class="info-value">{{ order.customer.name if order.customer else 'نامشخص' }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">شماره تماس:</span>
+                    <span class="info-value">{{ order.customer.phone if order.customer and order.customer.phone else '-' }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">تاریخ ثبت:</span>
+                    <span class="info-value">{{ order.created_at.strftime('%Y-%m-%d %H:%M') if order.created_at else '-' }}</span>
+                </div>
+            </div>
+
+            <div class="info-section">
+                <h3>اطلاعات پرداخت</h3>
+                <div class="info-item">
+                    <span class="info-label">روش پرداخت:</span>
+                    <span class="info-value">{{ order.payment_method or 'نامشخص' }}</span>
+                </div>
+                {% if order.paid_at %}
+                <div class="info-item">
+                    <span class="info-label">تاریخ پرداخت:</span>
+                    <span class="info-value">{{ order.paid_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="info-section">
+                <h3>خلاصه مالی</h3>
+                <div class="info-item">
+                    <span class="info-label">جمع سفارش:</span>
+                    <span class="info-value">{{ "{:,}".format(order.total_amount) }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">تخفیف:</span>
+                    <span class="info-value">{{ "{:,}".format(order.discount) }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">مالیات:</span>
+                    <span class="info-value">{{ "{:,}".format(order.tax_amount) }}</span>
+                </div>
+                <div class="summary-box">
+                    <div class="summary-total">
+                        <span class="summary-total-label">مبلغ نهایی:</span>
+                        <span class="summary-total-value">{{ "{:,}".format(order.final_amount) }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="items-section">
+            {% set active_items = order.order_items|selectattr('is_deleted', 'equalto', false)|list %}
+            {% set deleted_items = order.order_items|selectattr('is_deleted', 'equalto', true)|list %}
+            <h3>آیتم‌های سفارش ({{ active_items|length }})</h3>
+            {% if order.order_items %}
+            <div class="table-responsive">
+                <table class="items-table" id="order-items-table">
+                    <thead>
+                        <tr>
+                            <th>نام آیتم</th>
+                            <th>تعداد</th>
+                            <th>قیمت واحد</th>
+                            <th>جمع</th>
+                            <th class="edit-actions" style="display: none;">عملیات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in order.order_items %}
+                        {% if not item.is_deleted %}
+                        <tr data-item-id="{{ item.id }}">
+                            <td>
+                                <span class="item-name-display item-name">{{ item.menu_item.name }}</span>
+                                <select class="item-name-edit" style="width: 100%;" data-item-id="{{ item.id }}">
+                                    <option value="{{ item.menu_item_id }}" selected>{{ item.menu_item.name }}</option>
+                                    {% for menu_item in menu_items %}
+                                    {% if menu_item.id != item.menu_item_id %}
+                                    <option value="{{ menu_item.id }}">{{ menu_item.name }} - {{ "{:,}".format(menu_item.price) }}</option>
+                                    {% endif %}
+                                    {% endfor %}
+                                </select>
+                            </td>
+                            <td>
+                                <span class="item-qty-display">{{ item.quantity }}</span>
+                                <input type="number" class="item-qty-edit" style="width: 80px; text-align: center; padding: 0.4rem;" 
+                                    value="{{ item.quantity }}" min="1" data-item-id="{{ item.id }}">
+                            </td>
+                            <td class="item-price">{{ "{:,}".format(item.unit_price) }}</td>
+                            <td class="item-price item-total-price">{{ "{:,}".format(item.total_price) }}</td>
+                            <td class="edit-actions" style="display: none;">
+                                <button class="btn-edit-item" data-item-id="{{ item.id }}">ویرایش</button>
+                                <button class="btn-delete-item" data-item-id="{{ item.id }}">حذف</button>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            {% if deleted_items|length > 0 %}
+            <div style="margin-top: 2rem;">
+                <h4 style="color: #dc3545; margin-bottom: 1rem;">آیتم‌های حذف شده ({{ deleted_items|length }})</h4>
+                <div class="table-responsive">
+                    <table class="items-table" style="opacity: 0.7;">
+                        <thead>
+                            <tr>
+                                <th>نام آیتم</th>
+                                <th>تعداد</th>
+                                <th>قیمت واحد</th>
+                                <th>جمع</th>
+                                <th>دلیل حذف</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in deleted_items %}
+                            <tr style="text-decoration: line-through; color: #6c757d;" data-item-id="{{ item.id }}">
+                                <td>{{ item.menu_item.name }}</td>
+                                <td>{{ item.quantity }}</td>
+                                <td>{{ "{:,}".format(item.unit_price) }}</td>
+                                <td>{{ "{:,}".format(item.total_price) }}</td>
+                                <td style="color: #dc3545; font-weight: 600;">{{ item.removal_reason or 'بدون دلیل' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+
+            <div id="add-item-section">
+                <h4>افزودن آیتم جدید</h4>
+                <div class="add-item-form">
+                    <div>
+                        <label>انتخاب آیتم:</label>
+                        <select id="new-item-select">
+                            <option value="">-- انتخاب کنید --</option>
+                            {% for menu_item in menu_items %}
+                            <option value="{{ menu_item.id }}">{{ menu_item.name }} - {{ "{:,}".format(menu_item.price) }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label>تعداد:</label>
+                        <input type="number" id="new-item-quantity" value="1" min="1">
+                    </div>
+                    <div>
+                        <button id="btn-add-item">افزودن</button>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <p style="color: #6b7280; text-align: center; padding: 2rem;">هیچ آیتمی برای این سفارش ثبت نشده است.</p>
+            {% endif %}
+        </div>
+
+        <div id="edit-order-info">
+            <h3>ویرایش اطلاعات سفارش</h3>
+            <div class="edit-form-grid">
+                <div class="edit-form-item">
+                    <label>تخفیف :</label>
+                    <input type="number" id="edit-discount" value="{{ order.discount }}" min="0">
+                </div>
+                <div class="edit-form-item">
+                    <label>وضعیت:</label>
+                    <select id="edit-status">
+                        <option value="پرداخت نشده" {% if order.status == 'پرداخت نشده' %}selected{% endif %}>پرداخت نشده</option>
+                        <option value="پرداخت شده" {% if order.status == 'پرداخت شده' %}selected{% endif %}>پرداخت شده</option>
+                        <option value="لغو شده" {% if order.status == 'لغو شده' %}selected{% endif %}>لغو شده</option>
+                    </select>
+                </div>
+                <div class="edit-form-item">
+                    <label>نوع سفارش:</label>
+                    <select id="edit-type">
+                        <option value="حضوری" {% if order.type == 'حضوری' %}selected{% endif %}>حضوری</option>
+                        <option value="بیرون‌بر" {% if order.type == 'بیرون‌بر' %}selected{% endif %}>بیرون‌بر</option>
+                    </select>
+                </div>
+            </div>
+            <button id="btn-save-order-info" class="btn-save">ذخیره تغییرات</button>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let editMode = false;
+    const orderId = {{ order.id }};
+    
+    const toggleEditBtn = document.getElementById('toggle-edit-mode');
+    const editActions = document.querySelectorAll('.edit-actions');
+    const addItemSection = document.getElementById('add-item-section');
+    const editOrderInfo = document.getElementById('edit-order-info');
+    
+    toggleEditBtn.addEventListener('click', function() {
+        editMode = !editMode;
+        
+        if (editMode) {
+            this.textContent = 'لغو ویرایش';
+            editActions.forEach(el => el.style.display = 'table-cell');
+            if (addItemSection) addItemSection.style.display = 'block';
+            if (editOrderInfo) editOrderInfo.style.display = 'block';
+            
+            document.querySelectorAll('.item-name-display').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.item-name-edit').forEach(el => el.style.display = 'block');
+            document.querySelectorAll('.item-qty-display').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.item-qty-edit').forEach(el => el.style.display = 'inline-block');
+        } else {
+            this.textContent = 'ویرایش';
+            editActions.forEach(el => el.style.display = 'none');
+            if (addItemSection) addItemSection.style.display = 'none';
+            if (editOrderInfo) editOrderInfo.style.display = 'none';
+            
+            document.querySelectorAll('.item-name-display').forEach(el => el.style.display = 'inline');
+            document.querySelectorAll('.item-name-edit').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.item-qty-display').forEach(el => el.style.display = 'inline');
+            document.querySelectorAll('.item-qty-edit').forEach(el => el.style.display = 'none');
+        }
+    });
+    
+    document.querySelectorAll('.btn-edit-item').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const itemId = this.getAttribute('data-item-id');
+            const row = document.querySelector(`tr[data-item-id="${itemId}"]`);
+            const select = row.querySelector('.item-name-edit');
+            const input = row.querySelector('.item-qty-edit');
+            
+            const menuItemId = select.value;
+            const quantity = parseInt(input.value);
+            
+            if (!menuItemId || quantity <= 0) {
+                alert('لطفاً مقادیر معتبر وارد کنید.');
+                return;
+            }
+            
+            fetch(`/order/item/${itemId}/update`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    menu_item_id: menuItemId,
+                    quantity: quantity
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    row.querySelector('.item-name-display').textContent = data.order_item.name;
+                    row.querySelector('.item-unit-price').textContent = data.order_item.unit_price.toLocaleString() + '';
+                    row.querySelector('.item-total-price').textContent = data.order_item.total_price.toLocaleString() + '';
+                    row.querySelector('.item-qty-display').textContent = data.order_item.quantity;
+                    
+                    const infoItems = document.querySelectorAll('.info-item');
+                    if (infoItems[2]) infoItems[2].querySelector('.info-value').textContent = data.order.total_amount.toLocaleString() + '';
+                    if (infoItems[4]) infoItems[4].querySelector('.info-value').textContent = data.order.tax_amount.toLocaleString() + '';
+                    const summaryTotal = document.querySelector('.summary-total-value');
+                    if (summaryTotal) summaryTotal.textContent = data.order.final_amount.toLocaleString() + '';
+                    
+                    alert('آیتم با موفقیت ویرایش شد.');
+                    location.reload();
+                } else {
+                    alert('خطا: ' + (data.message || 'خطای نامشخص'));
+                }
+            })
+            .catch(err => {
+                console.error('Error:', err);
+                alert('خطا در ویرایش آیتم');
+            });
+        });
+    });
+    
+    document.querySelectorAll('.btn-delete-item').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const itemId = this.getAttribute('data-item-id');
+            
+            fetch(`/order/item/${itemId}/delete`, {
+                method: 'POST'
+            })
+            .then(() => {
+                location.reload();
+            })
+            .catch(err => {
+                console.error('Error:', err);
+                alert('خطا در حذف آیتم');
+            });
+        });
+    });
+    
+    const btnAddItem = document.getElementById('btn-add-item');
+    if (btnAddItem) {
+        btnAddItem.addEventListener('click', function() {
+            const menuItemId = document.getElementById('new-item-select').value;
+            const quantity = parseInt(document.getElementById('new-item-quantity').value);
+            
+            if (!menuItemId || quantity <= 0) {
+                alert('لطفاً آیتم و تعداد را انتخاب کنید.');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('menu_item_id', menuItemId);
+            formData.append('quantity', quantity);
+            
+            fetch(`/order/${orderId}/add_item`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(() => {
+                location.reload();
+            })
+            .catch(err => {
+                console.error('Error:', err);
+                alert('خطا در افزودن آیتم');
+            });
+        });
+    }
+    
+    const btnSaveOrderInfo = document.getElementById('btn-save-order-info');
+    if (btnSaveOrderInfo) {
+        btnSaveOrderInfo.addEventListener('click', function() {
+            const discount = parseInt(document.getElementById('edit-discount').value) || 0;
+            const status = document.getElementById('edit-status').value;
+            const type = document.getElementById('edit-type').value;
+            
+            fetch(`/order/${orderId}/update`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    discount: discount,
+                    status: status,
+                    type: type
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    const infoItems = document.querySelectorAll('.info-item');
+                    if (infoItems[2]) infoItems[2].querySelector('.info-value').textContent = data.order.total_amount.toLocaleString() + '';
+                    if (infoItems[3]) infoItems[3].querySelector('.info-value').textContent = data.order.discount.toLocaleString() + '';
+                    if (infoItems[4]) infoItems[4].querySelector('.info-value').textContent = data.order.tax_amount.toLocaleString() + '';
+                    const summaryTotal = document.querySelector('.summary-total-value');
+                    if (summaryTotal) summaryTotal.textContent = data.order.final_amount.toLocaleString() + '';
+                    
+                    const statusBadge = document.querySelector('.order-badge strong');
+                    if (statusBadge && data.order.status) {
+                        statusBadge.textContent = data.order.status;
+                    }
+                    
+                    alert('اطلاعات سفارش با موفقیت به‌روزرسانی شد.');
+                    location.reload();
+                } else {
+                    alert('خطا در به‌روزرسانی');
+                }
+            })
+            .catch(err => {
+                console.error('Error:', err);
+                alert('خطا در به‌روزرسانی اطلاعات');
+            });
+        });
+    }
+});
+</script>
+
+{% endblock %}

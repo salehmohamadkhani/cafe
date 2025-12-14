@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+{% block title %}مدیریت منو{% endblock %}
+
+{% block content %}
+<div class="container mt-2">
+    <h1 class="text-center">مدیریت منو</h1>
+    <div class="row mb-2">
+        <div class="col text-right">
+            <a href="{{ url_for('menu.add_menu_item') }}" class="btn btn-success">افزودن آیتم جدید</a>
+        </div>
+        <div class="col text-left">
+            <form method="get" action="{{ url_for('menu.show_menu') }}" class="form-inline">
+                <input type="text" name="q" class="form-control" placeholder="جستجو در منو..." value="{{ request.args.get('q', '') }}">
+                <button type="submit" class="btn btn-info ml-2">جستجو</button>
+            </form>
+        </div>
+    </div>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <div class="card">
+        <div class="card-header">
+            <span>آیتم‌های منو</span>
+        </div>
+        <div class="card-body">
+            <table class="table table-striped text-center">
+                <thead>
+                    <tr>
+                        <th>ردیف</th>
+                        <th>نام آیتم</th>
+                        <th>قیمت </th>
+                        <th>توضیحات</th>
+                        <th>وضعیت</th>
+                        <th>عملیات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for item in menu_items %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ item.name }}</td>
+                        <td>{{ "{:,}".format(item.price|int) }}</td>
+                        <td>{{ item.description or '-' }}</td>
+                        <td>
+                            {% if item.is_active %}
+                                <span class="badge badge-success">فعال</span>
+                            {% else %}
+                                <span class="badge badge-danger">غیرفعال</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('menu.menu_item_detail', item_id=item.id) }}" class="btn btn-sm btn-info">جزئیات</a>
+                            <a href="{{ url_for('menu.edit_menu_item', item_id=item.id) }}" class="btn btn-sm btn-warning">ویرایش</a>
+                            <form action="{{ url_for('menu.delete_menu_item', item_id=item.id) }}" method="post" style="display:inline;">
+                                <button type="submit" class="btn btn-sm btn-danger delete-menu-item">حذف</button>
+                            </form>
+                            <form action="{{ url_for('menu.toggle_menu_item', item_id=item.id) }}" method="post" style="display:inline;">
+                                {% if item.is_active %}
+                                <button type="submit" class="btn btn-sm btn-secondary toggle-menu-item" data-item-id="{{ item.id }}">غیرفعال کردن</button>
+                                {% else %}
+                                <button type="submit" class="btn btn-sm btn-success toggle-menu-item" data-item-id="{{ item.id }}">فعال کردن</button>
+                                {% endif %}
+                            </form>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="6">آیتمی یافت نشد.</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card mt-2">
+        <div class="card-header">
+            <span>آمار منو</span>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col">
+                    <div class="card text-center">
+                        <div class="card-header">تعداد کل آیتم‌ها</div>
+                        <div class="card-body">
+                            <span style="font-size:2rem;">{{ menu_items|length }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card text-center">
+                        <div class="card-header">آیتم‌های فعال</div>
+                        <div class="card-body">
+                            <span style="font-size:2rem;">{{ menu_items|selectattr('is_active')|list|length }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card text-center">
+                        <div class="card-header">آیتم‌های غیرفعال</div>
+                        <div class="card-body">
+                            <span style="font-size:2rem;">{{ menu_items|rejectattr('is_active')|list|length }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-2">
+        <div class="card-header">
+            <span>راهنمای مدیریت منو</span>
+        </div>
+        <div class="card-body">
+            <ul>
+                <li>برای افزودن آیتم جدید روی دکمه <b>افزودن آیتم جدید</b> کلیک کنید.</li>
+                <li>برای ویرایش یا حذف هر آیتم از دکمه‌های مربوطه استفاده کنید.</li>
+                <li>برای فعال یا غیرفعال کردن آیتم‌ها از دکمه‌های وضعیت استفاده کنید.</li>
+                <li>آیتم‌های غیرفعال در منوی مشتری نمایش داده نمی‌شوند.</li>
+                <li>برای جستجوی سریع آیتم‌ها از کادر جستجو استفاده کنید.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="card mt-2">
+        <div class="card-header">
+            <span>جستجوی سریع آیتم منو (AJAX)</span>
+        </div>
+        <div class="card-body">
+            <input type="text" id="menu-search" class="form-control" placeholder="نام آیتم را وارد کنید...">
+            <div id="menu-search-results" class="search-results"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // راه‌اندازی حذف آیتم و دسته‌بندی با تایید
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.delete-menu-item, .delete-category').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                // تایید حذف حذف شد؛ عملیات مستقیم انجام می‌شود
+            });
+        });
+        // جستجوی سریع آیتم منو (AJAX)
+        const searchInput = document.getElementById('menu-search');
+        const resultsDiv = document.getElementById('menu-search-results');
+        let timeout = null;
+        if (searchInput && resultsDiv) {
+            searchInput.addEventListener('input', function() {
+                clearTimeout(timeout);
+                const q = searchInput.value.trim();
+                if (q.length < 2) {
+                    resultsDiv.innerHTML = '';
+                    resultsDiv.style.display = 'none';
+                    return;
+                }
+                timeout = setTimeout(() => {
+                    fetch(`/menu/menu/search?q=${encodeURIComponent(q)}`)
+                        .then(res => res.json())
+                        .then(data => {
+                            resultsDiv.innerHTML = '';
+                            if (data.length === 0) {
+                                resultsDiv.innerHTML = '<div class="no-result">آیتمی یافت نشد</div>';
+                            } else {
+                                data.forEach(item => {
+                                    const div = document.createElement('div');
+                                    div.className = 'menu-search-result';
+                                    div.textContent = `${item.name} (${item.price.toLocaleString()})`;
+                                    resultsDiv.appendChild(div);
+                                });
+                            }
+                            resultsDiv.style.display = 'block';
+                        });
+                }, 400);
+            });
+            document.addEventListener('click', function(e) {
+                if (!resultsDiv.contains(e.target) && e.target !== searchInput) {
+                    resultsDiv.style.display = 'none';
+                }
+            });
+        }
+    });
+</script>
+
+<style>
+    .search-results {
+        position: absolute;
+        background: #fff;
+        border: 1px solid #e0e0e0;
+        border-radius: 5px;
+        max-height: 200px;
+        overflow-y: auto;
+        width: 100%;
+        z-index: 10;
+        display: none;
+        margin-top: 2px;
+    }
+    .menu-search-result {
+        padding: 0.5rem 1rem;
+        cursor: pointer;
+        border-bottom: 1px solid #f1f1f1;
+        transition: background 0.2s;
+    }
+    .menu-search-result:last-child {
+        border-bottom: none;
+    }
+    .menu-search-result:hover {
+        background: #f7f7f7;
+    }
+    .badge-success {
+        background: #28a745;
+        color: #fff;
+        padding: 0.3em 0.8em;
+        border-radius: 1em;
+        font-size: 0.95em;
+    }
+    .badge-danger {
+        background: #dc3545;
+        color: #fff;
+        padding: 0.3em 0.8em;
+        border-radius: 1em;
+        font-size: 0.95em;
+    }
+    .float-left {
+        float: left;
+    }
+</style>
+{% endblock %}

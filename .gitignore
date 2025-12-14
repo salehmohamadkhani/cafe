@@ -1,0 +1,72 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+.venv/
+ENV/
+env/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+instance/*.db
+instance/*.backup
+
+# Do not commit generated runtime secrets
+instance/secret_key
+
+# Multi-tenant data (generated at runtime)
+tenants/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+*.bat
+*.zip
+New folder/
+*.txt
+!requirements*.txt
+!DEPLOYMENT.md
+!deploy_instructions.md
+
+# Logs
+*.log
+/var/log/
+
+# Temporary files
+*.tmp
+*.bak
+
+# Local SSH artifacts / sensitive connection data
+ssh_session.xml
+

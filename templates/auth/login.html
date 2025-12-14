@@ -1,0 +1,176 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+  .auth-container {
+    max-width: 450px;
+    margin: 60px auto;
+    background: var(--color-surface, #ffffff);
+    padding: 2.5rem;
+    border-radius: var(--radius-lg, 16px);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+    font-family: 'Vazirmatn', sans-serif;
+  }
+
+  .auth-container .logo {
+    display: block;
+    margin: 0 auto 1.5rem;
+    height: 60px;
+    width: auto;
+  }
+
+  .auth-container h2 {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    color: var(--text-body, #2A2E34);
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+
+  .auth-container .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .auth-container .form-group:last-of-type {
+    margin-bottom: 1.5rem;
+  }
+
+  .auth-container .form-group label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-body, #2A2E34);
+    text-align: right;
+  }
+
+  .auth-container .form-group input {
+    width: 100%;
+    border-radius: var(--radius-md, 12px);
+    border: 1.5px solid var(--color-border, #e2e8f0);
+    padding: 0.85rem 1rem;
+    font-size: 0.95rem;
+    font-family: 'Vazirmatn', sans-serif;
+    background: var(--color-bg, #F7F8FA);
+    color: var(--text-body, #2A2E34);
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+    direction: rtl;
+  }
+
+  .auth-container .form-group input:focus {
+    border-color: var(--color-primary, #1F3A5F);
+    box-shadow: 0 0 0 3px rgba(31, 58, 95, 0.12), 0 2px 8px rgba(31, 58, 95, 0.1);
+    outline: none;
+    background: #ffffff;
+  }
+
+  .auth-container .form-group input:hover {
+    border-color: var(--color-primary-light, #2d4f82);
+  }
+
+  .auth-container .btn {
+    width: 100%;
+    padding: 0.85rem;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: var(--radius-md, 12px);
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .auth-container .btn-primary {
+    background: var(--color-primary, #1F3A5F);
+    color: #ffffff;
+  }
+
+  .auth-container .btn-primary:hover {
+    background: #2d4f82;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(31, 58, 95, 0.25);
+  }
+
+  .auth-container .alert {
+    margin-top: 1rem;
+    padding: 0.85rem 1rem;
+    border-radius: var(--radius-md, 12px);
+    font-size: 0.9rem;
+    text-align: right;
+  }
+
+  .auth-container .alert-danger {
+    background: #FEE2E2;
+    color: #991B1B;
+    border: 1px solid #FECACA;
+  }
+
+  .auth-container .alert ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .auth-container .alert li {
+    margin-bottom: 0.5rem;
+  }
+
+  .auth-container .alert li:last-child {
+    margin-bottom: 0;
+  }
+
+  .auth-links {
+    text-align: center;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--color-border, #e2e8f0);
+  }
+
+  .auth-links a {
+    color: var(--color-primary, #1F3A5F);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.9rem;
+    transition: color 0.2s ease;
+  }
+
+  .auth-links a:hover {
+    color: #2d4f82;
+    text-decoration: underline;
+  }
+</style>
+
+<div class="auth-container">
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="Cafe Logo" class="logo">
+    <h2>ورود به سیستم</h2>
+    <form method="POST">
+        <div class="form-group">
+            <label for="username">نام کاربری</label>
+            <input type="text" id="username" name="username" placeholder="نام کاربری خود را وارد کنید" required autocomplete="username">
+        </div>
+        <div class="form-group">
+            <label for="password">رمز عبور</label>
+            <input type="password" id="password" name="password" placeholder="رمز عبور خود را وارد کنید" required autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn btn-primary">ورود</button>
+    </form>
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="alert alert-danger">
+          <ul>
+        {% for msg in messages %}
+          <li>{{ msg }}</li>
+        {% endfor %}
+        </ul>
+        </div>
+      {% endif %}
+    {% endwith %}
+    {% if error %}
+        <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+    <div class="auth-links">
+        <a href="{{ url_for('auth.register') }}">حساب کاربری ندارید؟ ثبت نام کنید</a>
+    </div>
+</div>
+{% endblock %}

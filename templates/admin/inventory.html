@@ -1,0 +1,1578 @@
+{% extends 'base.html' %}
+{% block title %}انبارداری{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}?v={{ cache_bust() }}">
+<style>
+    body:has(.inventory-shell) {
+        background: var(--color-bg);
+    }
+
+    body:has(.inventory-shell) .container {
+        width: 100%;
+        max-width: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    body:has(.inventory-shell) .footer {
+        background: transparent;
+        color: var(--text-secondary);
+    }
+
+    .inventory-shell {
+        padding: clamp(1rem, 2vw, 1.5rem);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-3);
+        min-height: calc(100vh - 120px);
+    }
+
+    .inventory-hero {
+        background: linear-gradient(140deg, #1f3a5f, #335691 65%, #4f8bda);
+        color: #fff;
+        border-radius: var(--radius-lg);
+        padding: var(--space-3);
+        box-shadow: var(--card-shadow);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-2);
+    }
+
+    .inventory-hero h1 {
+        margin: 0.25rem 0 0.4rem;
+    }
+
+    .inventory-hero__grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+        gap: 0.85rem;
+    }
+
+    .hero-stat {
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        border-radius: 18px;
+        padding: 1rem;
+        background: rgba(0, 0, 0, 0.15);
+    }
+
+    .hero-stat span {
+        opacity: 0.75;
+        font-size: 0.85rem;
+    }
+
+    .hero-stat strong {
+        display: block;
+        margin-top: 0.35rem;
+        font-size: 1.6rem;
+    }
+
+    .stats-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .stats-chip {
+        padding: 0.45rem 1rem;
+        border-radius: 999px;
+        border: 1px solid var(--color-border);
+        background: var(--color-surface);
+        font-weight: 600;
+        font-size: 0.85rem;
+        color: var(--text-heading);
+    }
+
+    .stats-chip.success {
+        background: rgba(39, 179, 118, 0.12);
+        border-color: rgba(39, 179, 118, 0.35);
+        color: #1f7a4a;
+    }
+
+    .stats-chip.warning {
+        background: rgba(242, 181, 68, 0.15);
+        border-color: rgba(242, 181, 68, 0.4);
+        color: #a75d04;
+    }
+
+    .inventory-layout {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+        gap: var(--space-3);
+        align-items: flex-start;
+    }
+
+    @media (max-width: 960px) {
+        .inventory-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .inventory-panel .panel-header {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .inventory-panel h3 {
+        margin: 0;
+        color: var(--text-heading);
+    }
+
+    .panel-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .panel-toolbar__filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: flex-end;
+        width: 100%;
+    }
+
+    .panel-toolbar__dates {
+        display: flex;
+        gap: 0.75rem;
+        align-items: flex-end;
+    }
+
+    .panel-field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+    }
+
+    .panel-label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-body);
+    }
+
+    .panel-toolbar__search {
+        flex: 1;
+        min-width: 200px;
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+    }
+
+    .panel-toolbar__search label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-body);
+        visibility: hidden;
+        height: 0;
+    }
+
+    .panel-toolbar__actions {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+    }
+
+    .panel-counter {
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        padding: 0.6rem 1rem;
+        min-width: 140px;
+        background: var(--color-surface-alt);
+    }
+
+    .panel-counter span {
+        display: block;
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+    }
+
+    .panel-counter strong {
+        font-size: 1.2rem;
+        color: var(--text-heading);
+    }
+
+    .panel-search {
+        flex: 1 1 420px;
+        min-width: 240px;
+    }
+
+    .panel-search .ds-input {
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    @media (max-width: 720px) {
+        .panel-search {
+            flex: 1 1 100%;
+            min-width: 0;
+        }
+
+        .filter-group {
+            width: 100%;
+            justify-content: flex-start;
+            flex-wrap: wrap;
+        }
+    }
+
+    .filter-group {
+        display: flex;
+        gap: 0.4rem;
+    }
+
+    .filter-group button {
+        border-radius: 999px;
+        border: 1px solid var(--color-border);
+        background: var(--color-surface);
+        font-weight: 600;
+        padding: 0.35rem 1rem;
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .filter-group button.active {
+        background: rgba(31, 58, 95, 0.12);
+        border-color: var(--color-primary);
+        color: var(--color-primary);
+    }
+
+    .inventory-panel .ds-table-wrapper {
+        overflow-x: auto;
+        border-radius: var(--radius-md);
+        padding-bottom: 0.25rem;
+    }
+
+    .inventory-meta {
+        background: var(--color-surface-alt);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        padding: 0.75rem 1rem;
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        margin-bottom: 1rem;
+    }
+
+    .inventory-page .badge-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.2rem 0.7rem;
+        border-radius: 999px;
+        font-weight: 600;
+        font-size: 0.8rem;
+    }
+
+    .inventory-page .badge-unit {
+        background: rgba(31, 58, 95, 0.08);
+        color: var(--color-primary);
+    }
+
+    .inventory-page .badge-price {
+        background: rgba(242, 181, 68, 0.16);
+        color: var(--color-warning);
+    }
+
+    .inventory-page .badge-stock-ok {
+        background: rgba(39, 179, 118, 0.14);
+        color: var(--color-success);
+    }
+
+    .inventory-page .badge-stock-low {
+        background: rgba(228, 72, 72, 0.14);
+        color: var(--color-danger);
+    }
+
+    /* Inventory tables: responsive + dark-mode friendly */
+    .inventory-page .inventory-table {
+        table-layout: auto;
+        min-width: 980px;
+        background: var(--color-surface);
+        color: var(--text-body);
+    }
+
+    .inventory-page .inventory-table tbody tr:nth-child(even) {
+        background: var(--color-surface-alt);
+    }
+
+    .inventory-page .inventory-table th,
+    .inventory-page .inventory-table td {
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    @media (max-width: 700px) {
+        .inventory-page .inventory-table {
+            min-width: 920px;
+        }
+    }
+
+    .inventory-page .btn-soft {
+        padding: 0.4rem 0.9rem;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--color-border);
+        background: var(--color-surface);
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .inventory-page .btn-soft.primary {
+        border-color: #3b82f6;
+        color: #1d4ed8;
+        background: rgba(59, 130, 246, 0.15);
+    }
+
+    .inventory-page .btn-soft.danger {
+        border-color: #ef4444;
+        color: #b91c1c;
+        background: rgba(239, 68, 68, 0.12);
+    }
+
+    .inventory-empty {
+        text-align: center;
+        padding: 2rem 1rem;
+        color: var(--text-secondary);
+        font-weight: 600;
+    }
+
+    /* Toast notifications (low stock alerts) */
+    .ds-toast-stack {
+        position: fixed;
+        bottom: 1.25rem;
+        right: 1.25rem;
+        z-index: 2500;
+        display: flex;
+        flex-direction: column;
+        gap: 0.65rem;
+        width: min(380px, calc(100vw - 2rem));
+        pointer-events: none;
+    }
+
+    .ds-toast {
+        pointer-events: auto;
+        background: var(--color-surface);
+        color: var(--text-body);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-md);
+        padding: 0.85rem 0.95rem;
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .ds-toast--warning {
+        border-color: rgba(242, 181, 68, 0.55);
+    }
+
+    .ds-toast__icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(242, 181, 68, 0.18);
+        color: var(--color-warning);
+        flex: 0 0 auto;
+        font-weight: 900;
+    }
+
+    .ds-toast__content {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .ds-toast__title {
+        margin: 0;
+        font-size: 0.95rem;
+        font-weight: 800;
+        color: var(--text-heading);
+        line-height: 1.2;
+    }
+
+    .ds-toast__message {
+        margin: 0.35rem 0 0;
+        font-size: 0.88rem;
+        color: var(--text-secondary);
+        line-height: 1.45;
+        overflow-wrap: anywhere;
+    }
+
+    .ds-toast__close {
+        border: none;
+        background: transparent;
+        color: var(--text-secondary);
+        cursor: pointer;
+        padding: 0.1rem 0.25rem;
+        font-size: 1.1rem;
+        line-height: 1;
+        flex: 0 0 auto;
+    }
+
+    .ds-toast__close:hover {
+        color: var(--text-heading);
+    }
+
+    .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.55);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        z-index: 999;
+        backdrop-filter: blur(2px);
+    }
+
+    .modal-card {
+        width: min(560px, calc(100% - 2rem));
+        background: var(--color-surface);
+        border-radius: 32px;
+        padding: clamp(1.5rem, 3vw, 2.4rem);
+        box-shadow: var(--card-shadow);
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-2);
+        border: 1px solid rgba(15, 23, 42, 0.08);
+    }
+
+    .modal-card h4 {
+        margin: 0;
+        color: var(--text-heading);
+    }
+
+    .modal-close {
+        position: absolute;
+        left: 1rem;
+        top: 1rem;
+        font-size: 1.4rem;
+        color: var(--text-secondary);
+        cursor: pointer;
+    }
+
+    .modal-form {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .modal-form__grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 0.9rem 1rem;
+    }
+
+    .modal-form__grid .form-field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+    }
+
+    .modal-form__grid .form-field.full {
+        grid-column: 1 / -1;
+    }
+
+    .modal-form__actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="inventory-shell ds-page inventory-page">
+    <div id="inventory-toast-stack" class="ds-toast-stack" aria-live="polite" aria-atomic="true"></div>
+    <section class="ds-section inventory-hero">
+        <div>
+            <p class="panel-eyebrow">ماژول انبارداری</p>
+            <h1>کنترل موجودی و خرید مواد اولیه</h1>
+            <p>سریع‌ترین مسیر برای پایش موجودی، ثبت خرید و مراقبت از حداقل‌های انبار.</p>
+        </div>
+        <div class="inventory-hero__grid">
+            <article class="hero-stat">
+                <span>مواد فعال</span>
+                <strong>{{ summary_cards.materials_count }}</strong>
+            </article>
+            <article class="hero-stat">
+                <span>ثبت خریدهای اخیر</span>
+                <strong>{{ summary_cards.recent_purchases }}</strong>
+            </article>
+            <article class="hero-stat">
+                <span>تأمین‌کنندگان</span>
+                <strong>{{ summary_cards.vendor_count }}</strong>
+            </article>
+            <article class="hero-stat">
+                <span>ارزش خریدها</span>
+                <strong>{{ "{:,.0f}".format(summary_cards.total_purchase_value) }} ریال</strong>
+            </article>
+        </div>
+    </section>
+
+    <section class="ds-section">
+        <div class="section-heading">
+            <div>
+                <h3>شاخص‌های کلیدی</h3>
+                <p>نمای کلی از ارزش خرید و وضعیت مواد فعال.</p>
+            </div>
+            <div class="stats-chips">
+                <span class="stats-chip secondary">مواد فعال: {{ summary_cards.materials_count }}</span>
+                <span class="stats-chip success">مواد ثبت‌شده: {{ materials|length }}</span>
+                <span class="stats-chip warning">خریدهای این دوره: {{ purchases|length }}</span>
+            </div>
+        </div>
+        <div class="ds-stats-grid">
+            <article class="stat-card stat-card--primary">
+                <span class="stat-card__badge">جمع هزینه خرید</span>
+                <div class="stat-card__value">{{ "{:,.0f}".format(summary_cards.total_purchase_value) }}</div>
+                <div class="stat-card__meta">ارزش کل خریدهای ثبت‌شده</div>
+            </article>
+            <article class="stat-card stat-card--warning">
+                <span class="stat-card__badge">مواد اولیه ثبت‌شده</span>
+                <div class="stat-card__value">{{ summary_cards.materials_count }}</div>
+                <div class="stat-card__meta">مواد فعال در سیستم انبارداری</div>
+            </article>
+            <article class="stat-card stat-card--danger">
+                <span class="stat-card__badge">ثبت خرید</span>
+                <div class="stat-card__value">{{ summary_cards.recent_purchases }}</div>
+                <div class="stat-card__meta">کل خریدهای ذخیره‌شده</div>
+            </article>
+            <article class="stat-card stat-card--success">
+                <span class="stat-card__badge">تأمین‌کنندگان</span>
+                <div class="stat-card__value">{{ summary_cards.vendor_count }}</div>
+                <div class="stat-card__meta">بر اساس اطلاعات ثبت‌شده</div>
+            </article>
+        </div>
+    </section>
+
+    <div class="inventory-layout">
+        <!-- جدول مواد اولیه -->
+        <section class="ds-section inventory-panel">
+            <header class="panel-header">
+                <div>
+                    <p class="panel-eyebrow">مواد اولیه</p>
+                    <h3>لیست مواد و وضعیت موجودی</h3>
+                    <p>ثبت تغییرات موجودی، کنترل حداقل و هشدار کمبود.</p>
+                </div>
+                <button type="button" class="ds-button primary" id="open-raw-modal">+ افزودن ماده</button>
+            </header>
+            <div class="panel-toolbar">
+                <div class="panel-counter">
+                    <span>مواد ثبت‌شده</span>
+                    <strong>{{ materials|length }}</strong>
+                </div>
+                <div class="panel-search">
+                    <input type="text" id="material-search" class="ds-input" placeholder="جستجو در مواد اولیه...">
+                </div>
+                <div class="filter-group">
+                    <button class="filter-btn active" data-filter="all">همه</button>
+                    <button class="filter-btn" data-filter="low">کم موجودی</button>
+                    <button class="filter-btn" data-filter="ok">موجودی کافی</button>
+                </div>
+            </div>
+            <div class="ds-table-wrapper">
+                <table class="inventory-table materials-table">
+                    <thead>
+                        <tr>
+                            <th>کد</th>
+                            <th>نام ماده اولیه</th>
+                            <th>واحد پایه</th>
+                            <th>قیمت هر واحد پایه</th>
+                            <th>موجودی فعلی</th>
+                            <th>حداقل موجودی</th>
+                            <th>تاریخ ثبت</th>
+                            <th>عملیات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if materials %}
+                        {% for material in materials %}
+                        <tr class="material-row" data-material-id="{{ material.id }}"
+                            data-material-name="{{ material.name|lower }}" data-material-unit="{{ material.unit }}"
+                            data-material-stock="{{ material_stock_by_id.get(material.id, material.current_stock) if material_stock_by_id else material.current_stock }}"
+                            data-material-min-stock="{{ material.min_stock or 0 }}">
+
+                            {# 1) کد #}
+                            <td class="material-code">
+                                {{ material.code or material.id }}
+                            </td>
+
+                            {# 2) نام ماده اولیه (نمایش + input ویرایش) #}
+                            <td class="material-name">
+                                <span class="display-value material-name-display">
+                                    {{ material.name }}
+                                </span>
+                                <input type="text" class="material-name-edit ds-input" value="{{ material.name }}"
+                                    style="display:none;">
+                            </td>
+
+                            {# 3) واحد پایه (badge + select برای ویرایش) #}
+                            <td class="material-unit">
+                                <span class="display-value material-unit-display">
+                                    <span class="badge-pill badge-unit">
+                                        {{ material.unit }}
+                                    </span>
+                                </span>
+                                <select class="material-unit-edit ds-select" style="display:none;">
+                                    {% for unit in raw_material_units %}
+                                    <option value="{{ unit }}" {% if unit==material.unit %}selected{% endif %}>
+                                        {{ unit }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+
+                            {# 4) قیمت هر واحد پایه (بر اساس آخرین خرید) #}
+                            <td class="material-base-unit-price">
+                                {% if material.base_unit_price %}
+                                <span class="badge-pill badge-price">
+                                    {{ "{:,.0f}".format(material.base_unit_price) }} / {{ material.unit }}
+                                </span>
+                                {% else %}
+                                <span style="color: var(--text-secondary, #9ca3af);">-</span>
+                                {% endif %}
+                            </td>
+
+                            {# 5) موجودی فعلی (badge سبز / قرمز بر اساس min_stock) #}
+                            <td class="material-stock">
+                                {% set stock = material_stock_by_id.get(material.id, material.current_stock) if
+                                material_stock_by_id else material.current_stock %}
+                                {% set is_low_stock = material.min_stock and stock < material.min_stock %} <span
+                                    class="display-value material-stock-display">
+                                    <span
+                                        class="badge-pill {{ 'badge-stock-low' if is_low_stock else 'badge-stock-ok' }}">
+                                        {{ '%.2f'|format(stock or 0) }} {{ material.unit }}
+                                    </span>
+                                    </span>
+                            </td>
+
+                            {# 6) حداقل موجودی (نمایش + input ویرایش) #}
+                            <td class="material-min-stock">
+                                <span class="display-value material-min-stock-display">
+                                    {% if material.min_stock %}
+                                    {{ '%.2f'|format(material.min_stock) }}
+                                    {% else %}
+                                    <span style="color: var(--text-secondary, #9ca3af);">-</span>
+                                    {% endif %}
+                                </span>
+                                <input type="number" class="material-min-stock-edit ds-input"
+                                    value="{{ material.min_stock or '' }}" step="0.01" min="0"
+                                    placeholder="حداقل موجودی" style="display:none;">
+                            </td>
+
+                            {# 7) تاریخ ثبت #}
+                            <td class="material-created-at">
+                                {{ material.created_at.strftime('%Y-%m-%d') if material.created_at else '' }}
+                            </td>
+
+                            {# 8) عملیات (ویرایش / ذخیره / لغو / حذف) #}
+                            <td class="material-actions">
+                                <div class="material-actions-inner">
+                                    <button type="button" class="btn-soft primary btn-edit-material"
+                                        data-material-id="{{ material.id }}">
+                                        ویرایش
+                                    </button>
+                                    <button type="button" class="btn-soft primary btn-save-material"
+                                        data-material-id="{{ material.id }}" style="display:none;">
+                                        ذخیره
+                                    </button>
+                                    <button type="button" class="btn-soft btn-cancel-material-edit"
+                                        data-material-id="{{ material.id }}" style="display:none;">
+                                        لغو
+                                    </button>
+                                    <button type="button" class="btn-soft danger btn-delete-material"
+                                        data-material-id="{{ material.id }}">
+                                        حذف
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="8" class="inventory-empty">
+                                هیچ ماده‌ای ثبت نشده است.
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+
+            </div>
+        </section>
+
+        <!-- جدول خریدها -->
+        <section class="ds-section inventory-panel">
+            <header class="panel-header">
+                <div>
+                    <p class="panel-eyebrow">خریدها</p>
+                    <h3>آخرین خریدهای ثبت‌شده</h3>
+                    <p>جزئیات خرید، فروشنده و قیمت تمام‌شده.</p>
+                </div>
+                <button type="button" class="ds-button primary" id="open-purchase-modal">+ ثبت خرید جدید</button>
+            </header>
+            <div class="panel-toolbar panel-toolbar--purchases">
+                <form method="get" class="panel-toolbar__filters panel-toolbar__filters--purchases">
+                    <div class="panel-toolbar__dates">
+                        <div class="panel-field">
+                            <label for="start-date" class="panel-label">از تاریخ</label>
+                            <input type="date" id="start-date" name="start_date" class="ds-input"
+                                value="{{ request.args.get('start_date', '') }}">
+                        </div>
+                        <div class="panel-field">
+                            <label for="end-date" class="panel-label">تا تاریخ</label>
+                            <input type="date" id="end-date" name="end_date" class="ds-input"
+                                value="{{ request.args.get('end_date', '') }}">
+                        </div>
+                    </div>
+
+                    <div class="panel-toolbar__search">
+                        <input type="text" id="purchase-search" class="ds-input" placeholder="جستجو در خریدها..."
+                            value="{{ request.args.get('q', '') }}" name="q">
+                    </div>
+
+                    <div class="panel-toolbar__actions">
+                        <button type="submit" class="ds-button primary">اعمال فیلتر</button>
+                        {% if request.args.get('start_date') or request.args.get('end_date') or request.args.get('q') %}
+                        <a href="{{ url_for('admin.inventory_dashboard') }}" class="ds-button ghost">حذف فیلتر</a>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+            <div class="ds-table-wrapper">
+                <table class="inventory-table purchases-table">
+                    <thead>
+                        <tr>
+                            <th>تاریخ خرید</th>
+                            <th>نام ماده اولیه</th>
+                            <th>مقدار خرید</th>
+                            <th>واحد</th>
+                            <th>قیمت کل </th>
+                            <th>قیمت واحد </th>
+                            <th>فروشنده</th>
+                            <th>توضیحات</th>
+                            <th>عملیات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if purchases %}
+                        {% for purchase in purchases %}
+                        <tr class="purchase-row" data-purchase-id="{{ purchase.id }}"
+                            data-purchase-date="{{ purchase.purchase_date.strftime('%Y-%m-%d') if purchase.purchase_date else '' }}"
+                            data-purchase-material="{{ purchase.raw_material.name|lower if purchase.raw_material else '' }}"
+                            data-purchase-vendor="{{ (purchase.vendor_name or '')|lower }}"
+                            data-purchase-note="{{ (purchase.note or '')|lower }}">
+                            <td>{{ purchase.purchase_date.strftime('%Y-%m-%d') if purchase.purchase_date else '-' }}
+                            </td>
+                            <td>{{ purchase.raw_material.name if purchase.raw_material else '-' }}</td>
+                            <td>{{ "{:,.2f}".format(purchase.quantity) }}</td>
+                            <td><span class="badge-pill badge-unit">{{ purchase.unit }}</span></td>
+                            <td>{{ "{:,.0f}".format(purchase.total_price) }}</td>
+                            <td><span class="badge-pill badge-price">{{ "{:,.0f}".format(purchase.unit_price) }}</span>
+                            </td>
+                            <td>
+                                {{ purchase.vendor_name or '-' }}
+                                {% if purchase.vendor_phone %}<br><small>{{ purchase.vendor_phone }}</small>{% endif %}
+                            </td>
+                            <td>{{ purchase.note or '-' }}</td>
+                            <td>
+                                <div class="purchase-actions">
+                                    <button type="button" class="btn-soft primary btn-edit-purchase"
+                                        data-purchase-id="{{ purchase.id }}">ویرایش</button>
+                                    <button type="button" class="btn-soft danger btn-delete-purchase"
+                                        data-purchase-id="{{ purchase.id }}">حذف</button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="9" class="inventory-empty">خریدی ثبت نشده است.</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+</div>
+
+<div id="inventory-modal-backdrop" class="modal-backdrop">
+    <div class="modal-card" id="inventory-raw-modal" style="display:none;">
+        <span class="modal-close" data-close="inventory-raw-modal">×</span>
+        <h4>ثبت ماده اولیه جدید</h4>
+        <form class="modal-form" id="raw-material-form">
+            <div class="modal-form__grid">
+                <div class="form-field">
+                    <label for="raw-name">نام ماده اولیه</label>
+                    <input type="text" class="ds-input" id="raw-name" required>
+                </div>
+                <div class="form-field">
+                    <label for="raw-unit">واحد پایه</label>
+                    <select id="raw-unit" class="ds-select" required>
+                        {% for unit in raw_material_units %}
+                        <option value="{{ unit }}" {% if unit=='gr' %}selected{% endif %}>{{ unit }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-field full">
+                    <label for="raw-min-stock">حداقل موجودی (اختیاری)</label>
+                    <input type="number" class="ds-input" id="raw-min-stock" step="0.01" min="0"
+                        placeholder="مقدار حداقل موجودی">
+                </div>
+            </div>
+            <div class="modal-form__actions">
+                <button type="button" class="ds-button ghost modal-close-btn">لغو</button>
+                <button type="submit" class="ds-button primary">ثبت ماده اولیه</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="modal-card" id="inventory-purchase-modal" style="display:none;">
+        <span class="modal-close" data-close="inventory-purchase-modal">×</span>
+        <h4>ثبت خرید / ورود موجودی</h4>
+        <form class="modal-form" id="purchase-form">
+            <div class="modal-form__grid">
+                <div class="form-field full">
+                    <label for="purchase-raw">انتخاب ماده اولیه</label>
+                    <select id="purchase-raw" class="ds-select" required>
+                        <option value="">یکی از مواد اولیه را انتخاب کنید</option>
+                        {% for material in materials %}
+                        <option value="{{ material.id }}">{{ material.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label for="purchase-date">تاریخ خرید</label>
+                    <input type="date" class="ds-input" id="purchase-date">
+                </div>
+                <div class="form-field">
+                    <label for="purchase-quantity">مقدار</label>
+                    <input type="number" class="ds-input" id="purchase-quantity" step="0.01" required>
+                </div>
+                <div class="form-field">
+                    <label for="purchase-unit">واحد</label>
+                    <select id="purchase-unit" class="ds-select" required>
+                        {% for unit in raw_material_units %}
+                        <option value="{{ unit }}" {% if unit=='gr' %}selected{% endif %}>{{ unit }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label for="purchase-price">قیمت کل </label>
+                    <input type="number" class="ds-input" id="purchase-price" step="1" required>
+                </div>
+                <div class="form-field">
+                    <label for="purchase-vendor">نام فروشنده</label>
+                    <input type="text" class="ds-input" id="purchase-vendor">
+                </div>
+                <div class="form-field">
+                    <label for="purchase-phone">شماره فروشنده</label>
+                    <input type="text" class="ds-input" id="purchase-phone">
+                </div>
+                <div class="form-field full">
+                    <label for="purchase-note">توضیحات</label>
+                    <textarea id="purchase-note" class="ds-textarea" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="modal-form__actions">
+                <button type="button" class="ds-button ghost modal-close-btn">لغو</button>
+                <button type="submit" class="ds-button primary">ثبت خرید</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    (function () {
+        // Make raw_material_units available to JS
+        const RAW_MATERIAL_UNITS = {{ raw_material_units| tojson
+    }};
+
+    const backdrop = document.getElementById('inventory-modal-backdrop');
+    const rawModal = document.getElementById('inventory-raw-modal');
+    const purchaseModal = document.getElementById('inventory-purchase-modal');
+    const openRawBtn = document.getElementById('open-raw-modal');
+    const openPurchaseBtn = document.getElementById('open-purchase-modal');
+    const toastStack = document.getElementById('inventory-toast-stack');
+
+    const LOW_STOCK_STATE_KEY = 'inventoryLowStockState_v1';
+    function readLowStockState() {
+        try {
+            return JSON.parse(localStorage.getItem(LOW_STOCK_STATE_KEY) || '{}') || {};
+        } catch (e) {
+            return {};
+        }
+    }
+    function writeLowStockState(state) {
+        try {
+            localStorage.setItem(LOW_STOCK_STATE_KEY, JSON.stringify(state || {}));
+        } catch (e) {
+            // ignore
+        }
+    }
+    function isLowStock(stock, minStock) {
+        const s = Number(stock || 0);
+        const m = Number(minStock || 0);
+        return m > 0 && s <= m;
+    }
+    function getRowLowStockInfo(row) {
+        const id = row?.dataset?.materialId;
+        const name = (row?.dataset?.materialNameRaw || row?.querySelector?.('.material-name-display')?.textContent || '').trim();
+        const stock = parseFloat(row?.dataset?.materialStock || '0') || 0;
+        const minStock = parseFloat(row?.dataset?.materialMinStock || '0') || 0;
+        return { id, name, stock, minStock, low: isLowStock(stock, minStock) };
+    }
+
+    function showToast({ title, message, variant = 'warning', timeout = 6500 } = {}) {
+        if (!toastStack) return;
+        const toast = document.createElement('div');
+        toast.className = `ds-toast ds-toast--${variant}`;
+        toast.innerHTML = `
+            <div class="ds-toast__icon">!</div>
+            <div class="ds-toast__content">
+                <p class="ds-toast__title">${title || 'هشدار موجودی'}</p>
+                <p class="ds-toast__message">${message || ''}</p>
+            </div>
+            <button type="button" class="ds-toast__close" aria-label="بستن">×</button>
+        `;
+        const closeBtn = toast.querySelector('.ds-toast__close');
+        if (closeBtn) closeBtn.addEventListener('click', () => toast.remove());
+        toastStack.appendChild(toast);
+        if (timeout && timeout > 0) {
+            setTimeout(() => {
+                if (toast && toast.parentNode) toast.remove();
+            }, timeout);
+        }
+    }
+
+    function checkLowStockAndToast({ initial = false } = {}) {
+        const rows = Array.from(document.querySelectorAll('.material-row'));
+        if (!rows.length) return;
+
+        const previousState = readLowStockState();
+        const state = { ...previousState };
+        const lowNow = [];
+        const newlyLow = [];
+
+        rows.forEach(row => {
+            const info = getRowLowStockInfo(row);
+            if (!info.id) return;
+            const prevLow = state[info.id]?.low === true;
+            if (info.low) lowNow.push(info);
+            if (info.low && !prevLow) newlyLow.push(info);
+            state[info.id] = { low: !!info.low, t: Date.now() };
+        });
+
+        // First time: show one summary toast (avoid spamming)
+        if (initial && Object.keys(previousState).length === 0 && lowNow.length > 0) {
+            const sample = lowNow.slice(0, 3).map(x => `«${x.name || x.id}»`).join('، ');
+            const more = lowNow.length > 3 ? ` و ${lowNow.length - 3} مورد دیگر` : '';
+            showToast({
+                title: 'هشدار: موجودی به حداقل رسیده',
+                message: `${lowNow.length} ماده اولیه به حداقل موجودی رسیده‌اند. ${sample}${more}`,
+            });
+            writeLowStockState(state);
+            return;
+        }
+
+        newlyLow.slice(0, 3).forEach(info => {
+            showToast({
+                title: 'هشدار: موجودی به حداقل رسید',
+                message: `ماده اولیه «${info.name || info.id}» به حداقل موجودی رسید.`,
+            });
+        });
+        if (newlyLow.length > 3) {
+            showToast({
+                title: 'هشدار موجودی',
+                message: `${newlyLow.length} ماده اولیه به حداقل موجودی رسیدند.`,
+                timeout: 5500,
+            });
+        }
+
+        writeLowStockState(state);
+    }
+
+    function openModal(modal) {
+        if (!backdrop || !modal) return;
+        backdrop.style.display = 'flex';
+        rawModal.style.display = 'none';
+        purchaseModal.style.display = 'none';
+        modal.style.display = 'block';
+    }
+
+    function closeModal() {
+        if (!backdrop) return;
+        backdrop.style.display = 'none';
+    }
+
+    if (openRawBtn) openRawBtn.addEventListener('click', () => openModal(rawModal));
+    if (openPurchaseBtn) {
+        openPurchaseBtn.addEventListener('click', () => {
+            const purchaseForm = document.getElementById('purchase-form');
+            if (purchaseForm) {
+                purchaseForm.dataset.editMode = 'false';
+                purchaseForm.dataset.purchaseId = '';
+                purchaseForm.reset();
+
+                // Reset modal title
+                const modalTitle = document.querySelector('#inventory-purchase-modal h4');
+                if (modalTitle) modalTitle.textContent = 'ثبت خرید / ورود موجودی';
+            }
+            openModal(purchaseModal);
+        });
+    }
+    if (backdrop) {
+        backdrop.addEventListener('click', (event) => {
+            if (event.target === backdrop) closeModal();
+        });
+    }
+    document.querySelectorAll('.modal-close').forEach(btn => btn.addEventListener('click', closeModal));
+    document.querySelectorAll('.modal-close-btn').forEach(btn => btn.addEventListener('click', closeModal));
+
+    // Function to append a new material row to the table
+    function appendMaterialRow(material) {
+        const tbody = document.querySelector('.materials-table tbody');
+        if (!tbody) return;
+
+        // Remove empty row message if it exists
+        const emptyRow = tbody.querySelector('.inventory-empty');
+        if (emptyRow && emptyRow.closest('tr')) {
+            emptyRow.closest('tr').remove();
+        }
+
+        const tr = document.createElement('tr');
+        tr.classList.add('material-row');
+        tr.dataset.materialId = material.id;
+        tr.dataset.materialName = (material.name || '').toLowerCase();
+        tr.dataset.materialUnit = material.unit || '';
+        tr.dataset.materialStock = material.current_stock || 0;
+        tr.dataset.materialMinStock = material.min_stock || 0;
+
+        const isLowStock = material.min_stock && material.current_stock < material.min_stock;
+        const stockClass = isLowStock ? 'badge-stock-low' : 'badge-stock-ok';
+        const stockValue = Number(material.current_stock || 0).toFixed(2);
+        const minStockValue = Number(material.min_stock || 0).toFixed(2);
+        const createdDate = material.created_at ? new Date(material.created_at).toISOString().split('T')[0] : '';
+
+        const minStockBadge = material.min_stock
+            ? `<span class="badge-pill badge-price">${minStockValue} ${material.unit || ''}</span>`
+            : '<span style="color: var(--text-secondary, #9ca3af);">-</span>';
+
+        const unitOptions = RAW_MATERIAL_UNITS.map(unit =>
+            `<option value="${unit}" ${unit === material.unit ? 'selected' : ''}>${unit}</option>`
+        ).join('');
+
+        tr.innerHTML = `
+            <td class="material-code">${material.code || material.id || ''}</td>
+            <td class="material-name">
+                <span class="display-value material-name-display">
+                    ${material.name || ''}
+                </span>
+                <input
+                    type="text"
+                    class="material-name-edit ds-input"
+                    value="${material.name || ''}"
+                    style="display:none;"
+                >
+            </td>
+            <td class="material-unit">
+                <span class="display-value material-unit-display">
+                    <span class="badge-pill badge-unit">${material.unit || ''}</span>
+                </span>
+                <select class="material-unit-edit ds-select" style="display:none;">
+                    ${unitOptions}
+                </select>
+            </td>
+            <td class="material-base-unit-price">
+                <span style="color: var(--text-secondary, #9ca3af);">-</span>
+            </td>
+            <td class="material-stock">
+                <span class="display-value material-stock-display">
+                    <span class="badge-pill ${stockClass}">
+                        ${stockValue} ${material.unit || ''}
+                    </span>
+                </span>
+            </td>
+            <td class="material-min-stock">
+                <span class="display-value material-min-stock-display">
+                    ${minStockBadge}
+                </span>
+                <input
+                    type="number"
+                    class="material-min-stock-edit ds-input"
+                    value="${material.min_stock || 0}"
+                    step="0.01"
+                    min="0"
+                    style="display:none;"
+                >
+            </td>
+            <td class="material-created-at">${createdDate}</td>
+            <td class="material-actions">
+                <div class="material-actions-inner">
+                    <button type="button" class="btn-soft primary btn-edit-material" data-material-id="${material.id}">ویرایش</button>
+                    <button type="button" class="btn-soft primary btn-save-material" data-material-id="${material.id}" style="display:none;">ذخیره</button>
+                    <button type="button" class="btn-soft btn-cancel-material-edit" data-material-id="${material.id}" style="display:none;">لغو</button>
+                    <button type="button" class="btn-soft danger btn-delete-material" data-material-id="${material.id}">حذف</button>
+                </div>
+            </td>
+        `;
+
+        // Debug: verify cell count
+        console.log('material row cells:', tr.cells.length);
+
+        tbody.insertBefore(tr, tbody.firstChild);
+
+        // Attach event handlers to the new row
+        if (typeof attachMaterialRowEventHandlers === 'function') {
+            attachMaterialRowEventHandlers(tr);
+        }
+
+        // اعمال مجدد فیلتر بعد از اضافه کردن ردیف جدید
+        if (typeof applyMaterialFilters === 'function') {
+            applyMaterialFilters();
+        }
+        // بررسی هشدار حداقل موجودی برای ردیف‌های جدید/به‌روزرسانی‌شده
+        checkLowStockAndToast({ initial: false });
+    }
+
+    const rawForm = document.getElementById('raw-material-form');
+    if (rawForm) rawForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        const payload = {
+            name: document.getElementById('raw-name').value,
+            unit: document.getElementById('raw-unit').value,
+            min_stock: document.getElementById('raw-min-stock').value || null
+        };
+        fetch('/admin/inventory/raw-materials', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        }).then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Close modal and reset form
+                    closeModal();
+                    rawForm.reset();
+
+                    // Create material object from response
+                    const newMaterial = {
+                        id: data.material.id,
+                        name: data.material.name,
+                        unit: data.material.unit,
+                        current_stock: 0,
+                        min_stock: data.material.min_stock ? parseFloat(data.material.min_stock) : null,
+                        created_at: data.material.created_at || new Date().toISOString()
+                    };
+
+                    // Add row to table
+                    appendMaterialRow(newMaterial);
+                } else {
+                    alert(data.message || 'ثبت ماده اولیه با خطا مواجه شد.');
+                }
+            })
+            .catch(() => alert('در ثبت ماده اولیه خطایی رخ داد.'));
+    });
+
+    const purchaseForm = document.getElementById('purchase-form');
+    if (purchaseForm) {
+        purchaseForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const isEditMode = this.dataset.editMode === 'true';
+            const purchaseId = this.dataset.purchaseId;
+
+            const payload = {
+                raw_material_id: document.getElementById('purchase-raw').value,
+                purchase_date: document.getElementById('purchase-date').value,
+                quantity: document.getElementById('purchase-quantity').value,
+                unit: document.getElementById('purchase-unit').value,
+                total_price: document.getElementById('purchase-price').value,
+                vendor_name: document.getElementById('purchase-vendor').value,
+                vendor_phone: document.getElementById('purchase-phone').value,
+                note: document.getElementById('purchase-note').value
+            };
+
+            const url = isEditMode
+                ? `/admin/inventory/purchases/${purchaseId}`
+                : '/admin/inventory/purchases';
+            const method = isEditMode ? 'PUT' : 'POST';
+
+            fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        window.location.reload();
+                    } else {
+                        alert(data.message || (isEditMode ? 'ویرایش خرید با خطا مواجه شد.' : 'ثبت خرید با خطا مواجه شد.'));
+                    }
+                })
+                .catch(() => alert(isEditMode ? 'در ویرایش خرید خطایی رخ داد.' : 'در ثبت خرید خطایی رخ داد.'));
+        });
+    }
+
+    // Function to toggle edit mode for a material row
+    function toggleMaterialEditMode(row, editing) {
+        const displays = row.querySelectorAll('.display-value');
+        const edits = row.querySelectorAll('.material-name-edit, .material-unit-edit, .material-min-stock-edit');
+        const editBtn = row.querySelector('.btn-edit-material');
+        const saveBtn = row.querySelector('.btn-save-material');
+        const cancelBtn = row.querySelector('.btn-cancel-material-edit');
+        const deleteBtn = row.querySelector('.btn-delete-material');
+
+        displays.forEach(el => el.style.display = editing ? 'none' : '');
+        edits.forEach(el => el.style.display = editing ? '' : 'none');
+        if (editBtn) editBtn.style.display = editing ? 'none' : '';
+        if (deleteBtn) deleteBtn.style.display = editing ? 'none' : '';
+        if (saveBtn) saveBtn.style.display = editing ? '' : 'none';
+        if (cancelBtn) cancelBtn.style.display = editing ? '' : 'none';
+    }
+
+    // Function to attach event handlers to a material row
+    function attachMaterialRowEventHandlers(row) {
+        const editBtn = row.querySelector('.btn-edit-material');
+        const saveBtn = row.querySelector('.btn-save-material');
+        const cancelBtn = row.querySelector('.btn-cancel-material-edit');
+        const deleteBtn = row.querySelector('.btn-delete-material');
+        const nameInput = row.querySelector('.material-name-edit');
+        const unitSelect = row.querySelector('.material-unit-edit');
+        const minStockInput = row.querySelector('.material-min-stock-edit');
+
+        if (editBtn) {
+            editBtn.addEventListener('click', () => {
+                toggleMaterialEditMode(row, true);
+            });
+        }
+
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => {
+                // Restore original values
+                if (nameInput) nameInput.value = row.dataset.materialNameRaw || '';
+                if (unitSelect) unitSelect.value = row.dataset.materialUnit || '';
+                if (minStockInput) minStockInput.value = row.dataset.materialMinStock || '';
+                toggleMaterialEditMode(row, false);
+            });
+        }
+
+        if (saveBtn) {
+            saveBtn.addEventListener('click', () => {
+                const materialId = row.dataset.materialId;
+                if (!materialId) return;
+
+                const payload = {
+                    name: (nameInput?.value || '').trim(),
+                    unit: unitSelect?.value || row.dataset.materialUnit,
+                    min_stock: minStockInput?.value || null
+                };
+
+                if (!payload.name) {
+                    alert('نام ماده اولیه را وارد کنید.');
+                    return;
+                }
+
+                saveBtn.disabled = true;
+                fetch(`/admin/inventory/raw-materials/${materialId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            // Update data attributes
+                            row.dataset.materialName = payload.name.toLowerCase();
+                            row.dataset.materialNameRaw = payload.name;
+                            row.dataset.materialUnit = payload.unit;
+                            row.dataset.materialMinStock = payload.min_stock || '0';
+
+                            // Update display values
+                            const nameDisplay = row.querySelector('.material-name-display');
+                            const unitDisplay = row.querySelector('.material-unit-display .badge-unit');
+                            const minStockDisplay = row.querySelector('.material-min-stock-display');
+
+                            if (nameDisplay) nameDisplay.textContent = payload.name;
+                            if (unitDisplay) unitDisplay.textContent = payload.unit;
+                            if (minStockDisplay) {
+                                const minStock = parseFloat(payload.min_stock || 0);
+                                if (minStock > 0) {
+                                    minStockDisplay.innerHTML = `<span class="badge-pill badge-price">${minStock.toFixed(2)} ${payload.unit}</span>`;
+                                } else {
+                                    minStockDisplay.innerHTML = '<span style="color: var(--text-secondary, #9ca3af);">-</span>';
+                                }
+                            }
+
+                            toggleMaterialEditMode(row, false);
+                            // اگر با این تغییر، موجودی به حداقل رسید، toast نمایش بده
+                            checkLowStockAndToast({ initial: false });
+                        } else {
+                            alert(data.message || 'در به‌روزرسانی ماده اولیه خطایی رخ داد.');
+                        }
+                    })
+                    .catch(() => alert('در به‌روزرسانی ماده اولیه خطایی رخ داد.'))
+                    .finally(() => {
+                        saveBtn.disabled = false;
+                    });
+            });
+        }
+
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', () => {
+                const materialId = row.dataset.materialId;
+                if (!materialId) return;
+                if (!confirm('آیا از حذف این ماده اولیه مطمئن هستید؟')) return;
+
+                deleteBtn.disabled = true;
+                fetch(`/admin/inventory/raw-materials/${materialId}`, {
+                    method: 'DELETE'
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            window.location.reload();
+                        } else {
+                            alert(data.message || 'در حذف ماده اولیه خطایی رخ داد.');
+                            deleteBtn.disabled = false;
+                        }
+                    })
+                    .catch(() => {
+                        alert('در حذف ماده اولیه خطایی رخ داد.');
+                        deleteBtn.disabled = false;
+                    });
+            });
+        }
+    }
+
+    // Attach handlers to existing rows on page load
+    let materialRows = Array.from(document.querySelectorAll('.material-row'));
+    materialRows.forEach(attachMaterialRowEventHandlers);
+
+    const materialSearchInput = document.getElementById('material-search');
+    const materialToolbar = materialSearchInput ? materialSearchInput.closest('.panel-toolbar') : null;
+    const materialFilterButtons = materialToolbar ? Array.from(materialToolbar.querySelectorAll('.filter-btn')) : [];
+    const shownCountEl = document.getElementById('shown-count');
+    const totalCountEl = document.getElementById('total-count');
+    if (totalCountEl) totalCountEl.textContent = materialRows.length;
+
+    function refreshMaterialRows() {
+        materialRows = Array.from(document.querySelectorAll('.material-row'));
+    }
+
+    function applyMaterialFilters() {
+        // همیشه قبل از فیلتر، لیست ردیف‌ها را به‌روز کن
+        refreshMaterialRows();
+
+        const query = materialSearchInput ? materialSearchInput.value.trim().toLowerCase() : '';
+        const activeFilter =
+            materialFilterButtons.find(btn => btn.classList.contains('active'))?.dataset.filter || 'all';
+
+        let visible = 0;
+
+        materialRows.forEach(row => {
+            // سرچ روی کل متن ردیف (کد، نام ماده، واحد، موجودی، حداقل، توضیحات و...)
+            const rowText = row.textContent.toLowerCase();
+
+            const stock = parseFloat(row.dataset.materialStock || '0') || 0;
+            const minStock = parseFloat(row.dataset.materialMinStock || '0') || 0;
+
+            const isLow = minStock > 0 && stock <= minStock;
+
+            // فیلتر وضعیت موجودی
+            const passesFilter =
+                activeFilter === 'all' ||
+                (activeFilter === 'low' && isLow) ||
+                (activeFilter === 'ok' && (minStock === 0 || !isLow));
+
+            // فیلتر سرچ روی متن کامل ردیف
+            const passesSearch = !query || rowText.includes(query);
+
+            if (passesFilter && passesSearch) {
+                row.classList.remove('is-hidden');
+                visible += 1;
+            } else {
+                row.classList.add('is-hidden');
+            }
+
+        });
+
+        if (shownCountEl) {
+            shownCountEl.textContent = visible;
+        }
+    }
+
+    // دکمه‌های فیلتر مواد اولیه
+    materialFilterButtons.forEach(btn => {
+        btn.addEventListener('click', function (e) {
+            e.preventDefault();
+            materialFilterButtons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            applyMaterialFilters();
+        });
+    });
+
+    // سرچ مواد اولیه
+    if (materialSearchInput) {
+        materialSearchInput.addEventListener('input', applyMaterialFilters);
+        materialSearchInput.addEventListener('keyup', applyMaterialFilters);
+    }
+
+    // اعمال فیلتر اولیه
+    applyMaterialFilters();
+    // نمایش هشدار اولیه (اگر قبلاً هیچ state ذخیره نشده باشد، یک خلاصه نمایش می‌دهد)
+    checkLowStockAndToast({ initial: true });
+
+    // ----- خریدها: سرچ -----
+    const purchaseSearchInput = document.getElementById('purchase-search');
+    const purchasesShownCountEl = document.getElementById('purchases-shown-count');
+    const purchasesTotalCountEl = document.getElementById('purchases-total-count');
+
+    function applyPurchaseFilter() {
+        const query = purchaseSearchInput ? purchaseSearchInput.value.trim().toLowerCase() : '';
+
+        // هر بار که فیلتر اعمال می‌شود، ردیف‌ها را از DOM دوباره می‌خوانیم
+        const rows = Array.from(document.querySelectorAll('.purchase-row'));
+
+        let visible = 0;
+
+        rows.forEach(row => {
+            // سرچ روی متن کامل ردیف: تاریخ، نام ماده، مقدار، واحد، قیمت، فروشنده، شماره، توضیحات و...
+            const rowText = row.textContent.toLowerCase();
+
+            const show = !query || rowText.includes(query);
+
+            if (show) {
+                row.classList.remove('is-hidden');
+                visible += 1;
+            } else {
+                row.classList.add('is-hidden');
+            }
+        });
+
+        if (purchasesShownCountEl) {
+            purchasesShownCountEl.textContent = visible;
+        }
+        if (purchasesTotalCountEl) {
+            purchasesTotalCountEl.textContent = rows.length;
+        }
+    }
+
+    if (purchaseSearchInput) {
+        purchaseSearchInput.addEventListener('input', applyPurchaseFilter);
+        purchaseSearchInput.addEventListener('keyup', applyPurchaseFilter);
+    }
+
+    // اعمال فیلتر اولیه خریدها
+    applyPurchaseFilter();
+
+    // Purchase edit and delete handlers
+    document.addEventListener('click', function (e) {
+        // Delete purchase
+        if (e.target.classList.contains('btn-delete-purchase')) {
+            const purchaseId = e.target.dataset.purchaseId;
+            if (!purchaseId) return;
+
+            if (!confirm('آیا از حذف این خرید مطمئن هستید؟')) return;
+
+            e.target.disabled = true;
+            fetch(`/admin/inventory/purchases/${purchaseId}`, {
+                method: 'DELETE'
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        window.location.reload();
+                    } else {
+                        alert(data.message || 'در حذف خرید خطایی رخ داد.');
+                        e.target.disabled = false;
+                    }
+                })
+                .catch(() => {
+                    alert('در حذف خرید خطایی رخ داد.');
+                    e.target.disabled = false;
+                });
+        }
+
+        // Edit purchase
+        if (e.target.classList.contains('btn-edit-purchase')) {
+            const purchaseId = e.target.dataset.purchaseId;
+            if (!purchaseId) return;
+
+            const row = e.target.closest('.purchase-row');
+            if (!row) return;
+
+            // Get purchase data from row
+            const cells = row.querySelectorAll('td');
+            const purchaseDate = cells[0]?.textContent?.trim() || '';
+            const materialName = cells[1]?.textContent?.trim() || '';
+            const quantity = cells[2]?.textContent?.replace(/,/g, '').trim() || '';
+            const unit = cells[3]?.querySelector('.badge-unit')?.textContent?.trim() || '';
+            const totalPrice = cells[4]?.textContent?.replace(/,/g, '').trim() || '';
+            const unitPrice = cells[5]?.querySelector('.badge-price')?.textContent?.replace(/,/g, '').trim() || '';
+            const vendorCell = cells[6];
+            let vendorName = '';
+            let vendorPhone = '';
+            if (vendorCell) {
+                const vendorText = vendorCell.textContent?.trim() || '';
+                const phoneElement = vendorCell.querySelector('small');
+                if (phoneElement) {
+                    vendorPhone = phoneElement.textContent?.trim() || '';
+                    vendorName = vendorText.replace(vendorPhone, '').trim();
+                } else {
+                    vendorName = vendorText;
+                }
+            }
+            const note = cells[7]?.textContent?.trim() || '';
+
+            // Find material ID from select options
+            const materialSelect = document.getElementById('purchase-raw');
+            let materialId = '';
+            if (materialSelect) {
+                for (let option of materialSelect.options) {
+                    if (option.textContent.trim() === materialName) {
+                        materialId = option.value;
+                        break;
+                    }
+                }
+            }
+
+            // Fill form with purchase data
+            if (document.getElementById('purchase-raw')) document.getElementById('purchase-raw').value = materialId;
+            if (document.getElementById('purchase-date')) document.getElementById('purchase-date').value = purchaseDate;
+            if (document.getElementById('purchase-quantity')) document.getElementById('purchase-quantity').value = quantity;
+            if (document.getElementById('purchase-unit')) document.getElementById('purchase-unit').value = unit;
+            if (document.getElementById('purchase-price')) document.getElementById('purchase-price').value = totalPrice;
+            if (document.getElementById('purchase-vendor')) document.getElementById('purchase-vendor').value = vendorName === '-' ? '' : vendorName;
+            if (document.getElementById('purchase-phone')) document.getElementById('purchase-phone').value = vendorPhone || '';
+            if (document.getElementById('purchase-note')) document.getElementById('purchase-note').value = note === '-' ? '' : note;
+
+            // Update form to edit mode
+            const purchaseForm = document.getElementById('purchase-form');
+            if (purchaseForm) {
+                purchaseForm.dataset.editMode = 'true';
+                purchaseForm.dataset.purchaseId = purchaseId;
+
+                // Update modal title
+                const modalTitle = document.querySelector('#inventory-purchase-modal h4');
+                if (modalTitle) modalTitle.textContent = 'ویرایش خرید / ورود موجودی';
+            }
+
+            // Open modal
+            openModal(purchaseModal);
+        }
+    });
+    
+    }) ();
+</script>
+{% endblock %}
