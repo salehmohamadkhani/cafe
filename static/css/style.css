@@ -1,0 +1,904 @@
+/* ====== Reset & Base ====== */
+html,
+body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    background: #f7f7f7;
+    /* پس‌زمینه روشن‌تر برای صفحه لاگین */
+    font-family: Tahoma, Vazirmatn, Arial, sans-serif;
+    direction: rtl;
+    /* padding به body اضافه نمی‌شود، به container اصلی اضافه می‌شود */
+}
+
+/* استایل برای container اصلی محتوا که در base.html استفاده می‌شود */
+.container {
+    max-width: 1200px;
+    /* یا هر مقدار مناسب دیگر */
+    margin: 0 auto;
+    padding: 1rem;
+    /* padding داخلی */
+    box-sizing: border-box;
+    /* اضافه کردن padding بالا و پایین به container اصلی برای فاصله از هدر و فوتر ثابت */
+    padding-top: 48px;
+    /* ارتفاع جدید هدر */
+    padding-bottom: 50px;
+    /* ارتفاع تقریبی فوتر */
+}
+
+/* استایل خاص برای container داخل navbar */
+.navbar .container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-width: 100% !important;
+    /* تمام عرض */
+    margin: 0 !important;
+    /* حذف margin auto */
+    padding: 0 1rem !important;
+    /* اضافه کردن padding افقی */
+}
+
+
+/* ====== Layout: Dashboard ====== */
+.dashboard-container {
+    display: flex;
+    width: 100%;
+    /* min-height دیگر نیازی نیست چون sidebar و content ارتفاع خود را از top/bottom یا margin می‌گیرند */
+    /* min-height: calc(100vh - 70px - 50px); */
+}
+
+/* Sidebar */
+.sidebar {
+    /* استایل‌های جدید برای چسباندن سایدبار */
+    position: fixed;
+    right: 0;
+    top: 48px;
+    /* ارتفاع جدید هدر */
+    bottom: 50px;
+    /* ارتفاع تقریبی فوتر */
+    width: 250px;
+    /* عرض سایدبار */
+    background: #f9d5a7;
+    padding: 1rem;
+    box-sizing: border-box;
+    overflow-y: auto;
+    /* اضافه کردن اسکرول در صورت نیاز */
+    border-radius: 0;
+    /* حذف گردی گوشه‌ها */
+    z-index: 999;
+    /* اطمینان از قرارگیری روی محتوا */
+
+    /* استایل‌های داخلی سایدبار (اختیاری، بسته به نیاز) */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+
+    /* حذف استایل‌های flex که دیگر در .dashboard-container استفاده نمی‌شوند */
+    /* flex-shrink: 0; */
+    /* border-radius: 10px; */
+    /* به 0 تغییر یافت */
+}
+
+.sidebar a {
+    display: block;
+    color: #333;
+    margin-bottom: 0.75rem;
+    text-decoration: none;
+    font-weight: bold;
+    border-radius: 6px;
+    transition: color 0.2s, background 0.2s;
+    padding: 0.75rem 1rem;
+}
+
+.sidebar a:hover,
+.sidebar a.active {
+    background-color: #fff;
+    color: #007bff;
+    font-weight: bold;
+}
+
+.add-button {
+    width: 100%;
+    font-size: 2rem;
+    background: #ff9800;
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    height: 56px;
+    cursor: pointer;
+    margin-top: 1rem;
+    transition: background 0.2s;
+}
+
+.add-button:hover {
+    background: #ffb74d;
+}
+
+/* لوگوی داخل هدر */
+.navbar-brand .logo {
+    height: 40px;
+    /* ارتفاع لوگو در هدر */
+    vertical-align: middle;
+    margin-left: 0.5rem;
+}
+
+/* ====== Orders Grid & Cards ====== */
+.orders-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+    padding: 1rem;
+    box-sizing: border-box;
+    overflow-y: auto;
+    background: #f5f5f5;
+    /* اضافه کردن margin-left برای فاصله از سایدبار ثابت */
+    margin-left: 250px;
+    /* عرض سایدبار */
+}
+
+.order-card {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform 0.2s;
+}
+
+.order-card:hover {
+    transform: translateY(-4px) scale(1.02);
+}
+
+.order-card .header {
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 1.1rem;
+}
+
+.order-card p,
+.order-card div {
+    margin: 0.25rem 0;
+    font-size: 0.97rem;
+}
+
+.order-card .status,
+.paid,
+.unpaid {
+    font-weight: bold;
+    margin-top: 0.5rem;
+}
+
+.paid {
+    color: #388e3c;
+}
+
+.unpaid {
+    color: #d32f2f;
+}
+
+.order-card .actions {
+    margin-top: 1rem;
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.order-card .actions .btn {
+    flex: 1;
+    margin: 0 0.25rem;
+    padding: 0.5rem;
+    font-size: 0.9rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+}
+
+.order-card .actions .btn-primary {
+    background-color: #4caf50;
+    color: #fff;
+}
+
+.order-card .actions .btn-warning {
+    background-color: #ff9800;
+    color: #fff;
+}
+
+.order-card .actions .btn-danger {
+    background-color: #f44336;
+    color: #fff;
+}
+
+.order-card .actions .btn:hover {
+    opacity: 0.85;
+}
+
+/* ====== Utility Classes ====== */
+.text-center {
+    text-align: center;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.text-left {
+    text-align: left;
+}
+
+.mt-2 {
+    margin-top: 2rem;
+}
+
+.mb-2 {
+    margin-bottom: 2rem;
+}
+
+.pt-2 {
+    padding-top: 2rem;
+}
+
+.pb-2 {
+    padding-bottom: 2rem;
+}
+
+/* ====== Table Styles ====== */
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 2rem;
+}
+
+.table th,
+.table td {
+    border: 1px solid #e0e0e0;
+    padding: 0.75rem 1rem;
+    text-align: right;
+}
+
+.table th {
+    background: #f1f1f1;
+    font-weight: bold;
+}
+
+.table-striped tr:nth-child(even) {
+    background: #fafafa;
+}
+
+/* ====== Alert Styles ====== */
+.alert {
+    padding: 1rem 1.5rem;
+    border-radius: 5px;
+    margin-bottom: 1.5rem;
+    font-size: 1rem;
+}
+
+.alert-success {
+    background: #e6f9e6;
+    color: #1e7e34;
+    border: 1px solid #b7e4b7;
+}
+
+.alert-danger {
+    background: #fdeaea;
+    color: #a71d2a;
+    border: 1px solid #f5b7b7;
+}
+
+.alert-warning {
+    background: #fffbe6;
+    color: #856404;
+    border: 1px solid #ffe082;
+}
+
+/* ====== Form Styles ====== */
+input,
+select,
+textarea {
+    font-family: Vazirmatn, Tahoma, Arial, sans-serif;
+    font-size: 1rem;
+    padding: 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+    width: 100%;
+    box-sizing: border-box;
+    transition: border-color 0.2s;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    border-color: #007bff;
+    outline: none;
+}
+
+label {
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+/* ====== Button Styles ====== */
+.btn {
+    background: #007bff;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 0.9rem 2.5rem;
+    font-size: 1.1rem;
+    cursor: pointer;
+    text-decoration: none;
+    text-align: center;
+    transition: background 0.2s;
+    min-width: 220px;
+    /* حفظ حداقل عرض برای دکمه‌ها */
+}
+
+.btn:hover,
+.btn:focus {
+    background: #0056b3;
+}
+
+.btn-danger {
+    background: #dc3545;
+}
+
+.btn-danger:hover,
+.btn-danger:focus {
+    background: #a71d2a;
+}
+
+/* ====== Add-to-order Button ====== */
+.add-to-order-btn {
+    color: #007bff;
+    background: #f0f8ff;
+    border: 1px solid #007bff;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+    width: 100%;
+    transition: background 0.2s, color 0.2s;
+}
+
+.add-to-order-btn:hover {
+    background: #007bff;
+    color: #fff;
+}
+
+/* ====== Remove Bootstrap/Grid Conflicts ====== */
+/* حذف هرگونه تعریف .row و .col که با Bootstrap تداخل دارد */
+.row,
+.col,
+.col-3,
+.col-6 {
+    all: unset;
+}
+
+/* ====== Misc ====== */
+hr {
+    border: none;
+    border-top: 1px solid #e0e0e0;
+    margin: 2rem 0;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+.header-logo {
+    width: 100vw;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 1.5rem 2rem 1rem 2rem;
+    box-sizing: border-box;
+}
+
+.header-logo img {
+    height: 60px;
+}
+
+.center-main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: calc(100vh - 100px);
+}
+
+.dashboard-links {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+    align-items: center;
+}
+
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+    align-items: center;
+    background: #fafafa;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+    padding: 2.5rem 2rem;
+    min-width: 260px;
+}
+
+.login-form input {
+    font-size: 1.1rem;
+    padding: 0.7rem 1rem;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    width: 220px;
+    background: #fff;
+    outline: none;
+    transition: border 0.2s;
+}
+
+.login-form input:focus {
+    border: 1.5px solid #007bff;
+}
+
+.customer-fields {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 1rem;
+    align-items: flex-end;
+}
+
+.customer-field {
+    display: flex;
+    flex-direction: column;
+    min-width: 160px;
+}
+
+.customer-field label {
+    margin-bottom: 0.3rem;
+    font-size: 1rem;
+}
+
+.customer-fields {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 1rem;
+    align-items: flex-end;
+}
+
+.customer-field {
+    display: flex;
+    flex-direction: column;
+    min-width: 160px;
+}
+
+.customer-field label {
+    margin-bottom: 0.3rem;
+    font-size: 1rem;
+}
+
+.modal-content {
+    max-width: 900px !important;
+    width: 90vw !important;
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+    padding: 1.5rem 2rem !important;
+}
+
+.modal-content {
+    max-width: 900px !important;
+    width: 90vw !important;
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+    padding: 1.5rem 2rem !important;
+}
+
+.customer-fields {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 1rem;
+    align-items: flex-end;
+}
+
+.customer-field {
+    display: flex;
+    flex-direction: column;
+    min-width: 160px;
+}
+
+.customer-field label {
+    margin-bottom: 0.3rem;
+    font-size: 1rem;
+}
+
+.customer-fields-row {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    align-items: flex-end;
+}
+
+.customer-field {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.customer-field label {
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+
+.customer-field input {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+}
+
+/* Customer fields styling */
+.customer-fields-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.customer-field {
+    flex: 1;
+    min-width: 30%;
+}
+
+.customer-field label {
+    font-weight: bold;
+    margin-bottom: 4px;
+    display: block;
+}
+
+.customer-field input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+}
+
+.customer-field input:hover {
+    border-color: #aaa;
+}
+
+.customer-field input:focus {
+    border-color: #007bff;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+/* Discount and tax row styling */
+.discount-tax-row {
+    display: flex;
+    flex-direction: row;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.discount-tax-row .form-group {
+    flex: 1;
+}
+
+.discount-tax-row label {
+    font-weight: bold;
+    margin-bottom: 4px;
+    display: block;
+}
+
+.discount-tax-row input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+}
+
+/* Order form container styling */
+.order-form-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* Order items list styling */
+#order-items-list {
+    margin-top: 1rem;
+}
+
+.order-items-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+.order-items-table th,
+.order-items-table td {
+    padding: 8px;
+    text-align: right;
+    border-bottom: 1px solid #ddd;
+}
+
+.order-items-table th {
+    font-weight: bold;
+    background-color: #f8f9fa;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+
+    .customer-fields-row,
+    .discount-tax-row {
+        flex-direction: column;
+    }
+
+    .customer-field,
+    .discount-tax-row .form-group {
+        min-width: 100%;
+    }
+}
+
+/* ====== Fixed Header and Footer ====== */
+.navbar {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 1000;
+    height: 48px;
+    padding: 0.2rem 0.5rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    display: flex;
+    align-items: center;
+}
+
+.footer {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    z-index: 1000;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* کلاس جدید برای دکمه‌های داخل هدر */
+.btn-header {
+    padding: 0.3rem 1rem;
+    font-size: 0.9rem;
+    min-width: auto;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    height: auto;
+}
+
+/* ریسپانسیو */
+@media (max-width: 700px) {
+    .container {
+        padding: 0.5rem !important;
+        padding-top: 48px !important;
+        padding-bottom: 50px !important;
+    }
+
+    .navbar .container {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .navbar-nav {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .sidebar {
+        width: 100%;
+        position: static;
+        top: auto;
+        bottom: auto;
+        margin-left: 0;
+        border-radius: 0;
+    }
+
+    .menu-item-card {
+        width: 100%;
+        min-height: 150px;
+        padding: 1rem;
+        background-color: #ffffff;
+        border: 1px solid #e0e0e0;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        transition: all 0.2s ease-in-out;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        text-align: center;
+    }
+
+    .menu-item-card:hover {
+        background-color: #007bff;
+        color: white;
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(0, 123, 255, 0.3);
+    }
+
+    .menu-item-card .item-name {
+        font-size: 20px;
+        font-weight: bold;
+        margin-bottom: 0.3rem;
+    }
+
+    .menu-item-card .item-price,
+    .menu-item-card .item-stock {
+        font-size: 14px;
+        font-weight: 500;
+        color: #555;
+    }
+
+    .menu-item-card:hover .item-price,
+    .menu-item-card:hover .item-stock {
+        color: white;
+    }
+
+    .order-form-container {
+        padding: 1rem;
+        background: #f9f9f9;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+    }
+
+    .form-row {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .form-summary p {
+        margin: 0.3rem 0;
+        font-weight: bold;
+    }
+
+    .btn-block {
+        display: block;
+        width: 100%;
+        margin-top: 1rem;
+    }
+
+
+    .customer-field {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+    }
+
+    .customer-field label {
+        font-weight: bold;
+        margin-bottom: 4px;
+    }
+
+    .customer-field input {
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+    }
+
+    /* Add hover and focus states for better UX */
+    .customer-field input:hover {
+        border-color: #aaa;
+    }
+
+    /* Add this at the bottom of the file */
+    .discount-tax-row {
+        display: flex;
+        flex-direction: row;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .discount-tax-row .form-group {
+        flex: 1;
+    }
+
+    /* Optional: Add these for better alignment and responsiveness */
+    .discount-tax-row label {
+        font-weight: bold;
+        margin-bottom: 4px;
+        display: block;
+    }
+
+    .discount-tax-row input {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+    }
+
+    /* For smaller screens */
+    @media (max-width: 768px) {
+        .discount-tax-row {
+            flex-wrap: wrap;
+        }
+    }
+}
+
+.menu-items-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 3px;
+    /* فاصله بین کارت‌ها فقط ۳ پیکسل */
+}
+
+.menu-item-card {
+    width: 140px;
+    height: 140px;
+    max-width: 140px;
+    min-width: 140px;
+    min-height: 140px;
+    max-height: 140px;
+    padding: 0;
+    /* حذف فاصله داخلی */
+    margin: 0;
+    /* حذف فاصله خارجی اضافی (فقط gap اعمال می‌شود) */
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.04);
+    transition: all 0.2s ease-in-out;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    font-size: 14px;
+}
+
+.menu-item-card .item-name {
+    font-size: 15px;
+    font-weight: bold;
+    margin-bottom: 2px;
+}
+
+.menu-item-card .item-price,
+.menu-item-card .item-stock {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 0;
+}
+
+.menu-item-card:hover {
+    background-color: #007bff;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 123, 255, 0.2);
+}
+
+.menu-item-card:hover .item-price,
+.menu-item-card:hover .item-stock {
+    color: white;
+}
