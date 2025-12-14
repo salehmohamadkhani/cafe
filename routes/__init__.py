@@ -1,0 +1,1 @@
+# Register blueprints here if needed in future# این فایل برای شناسایی پوشه routes به عنوان یک پکیج پایتون است.

@@ -1,0 +1,2917 @@
+:root {
+    --color-primary: #1F3A5F;
+    --color-primary-light: #3A5078;
+    --color-secondary: #4AA8FF;
+    --color-accent1: #6A4E36;
+    --color-accent2: #F1E7D0;
+    --color-success: #27B376;
+    --color-warning: #F2B544;
+    --color-danger: #E44848;
+    --color-bg: #F7F8FA;
+    --color-surface: #FFFFFF;
+    --color-surface-alt: #FDFDFE;
+    --color-border: #D8DDE3;
+    --text-heading: #2A2E34;
+    --text-body: #2A2E34;
+    --text-secondary: #6B7380;
+    --color-muted: #6B7380;
+    --color-disabled: #C8CDD4;
+    --navbar-bg: #1F3A5F;
+    --navbar-hover: #3A5078;
+    --navbar-text: #FFFFFF;
+    --card-shadow: 0 6px 18px rgba(31, 58, 95, 0.08);
+
+    --radius-sm: 6px;
+    --radius-md: 12px;
+    --radius-lg: 18px;
+
+    --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.06);
+    --shadow-sm: 0 4px 8px rgba(15, 23, 42, 0.08);
+    --shadow-md: 0 12px 24px rgba(15, 23, 42, 0.08);
+
+    --space-1: 0.5rem;
+    --space-2: 1rem;
+    --space-3: 1.5rem;
+    --space-4: 2rem;
+
+    --font-sans: Vazirmatn, Tahoma, "Segoe UI", sans-serif;
+}
+
+[data-theme="dark"] {
+    --color-primary: #2D4F82;
+    --color-primary-light: #61B5FF;
+    --color-secondary: #61B5FF;
+    --color-accent1: #4F3A28;
+    --color-accent2: #E6D9BC;
+    --color-success: #2ECF8F;
+    --color-warning: #F4C25C;
+    --color-danger: #FF6666;
+    --color-bg: #111418;
+    --color-surface: #1A1E23;
+    --color-surface-alt: #1F242A;
+    --color-border: #2A3038;
+    --text-heading: #F5F6F7;
+    --text-body: #F5F6F7;
+    --text-secondary: #B3B9C2;
+    --color-muted: #B3B9C2;
+    --color-disabled: #3F454F;
+    --navbar-bg: #152233;
+    --navbar-hover: #2D4F82;
+    --navbar-text: #F5F6F7;
+    --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+}
+
+body {
+    background: var(--color-bg);
+    color: var(--text-body);
+    font-family: var(--font-sans);
+    transition: background 0.25s ease, color 0.25s ease;
+}
+
+a {
+    color: var(--color-secondary);
+}
+
+.navbar {
+    background: var(--navbar-bg);
+    color: var(--navbar-text);
+    border-bottom: 1px solid var(--color-border);
+    transition: background 0.25s ease;
+}
+
+.navbar-nav a {
+    color: var(--navbar-text);
+}
+
+.navbar-nav a.active,
+.navbar-nav a:hover {
+    background: var(--navbar-hover);
+    color: #fff;
+}
+
+.navbar .btn {
+    background: var(--color-danger);
+}
+
+.footer {
+    background: var(--navbar-bg);
+    color: var(--navbar-text);
+}
+
+.table-card,
+.takeaway-order-card,
+.financial-card,
+.ds-card,
+.recent-orders .order-item,
+.unpaid-orders .order-item {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    color: var(--text-body);
+    box-shadow: var(--card-shadow);
+}
+
+.table-info,
+.table-orders-list,
+.takeaway-order-header,
+.detail-item,
+.payment-method {
+    background: var(--color-surface-alt);
+    border: 1px solid var(--color-border);
+}
+
+.table-status {
+    color: var(--color-success);
+    background: rgba(39, 179, 118, 0.12);
+}
+
+.table-status.occupied {
+    color: var(--color-warning);
+    background: rgba(242, 181, 68, 0.15);
+}
+
+.takeaway-status.paid {
+    color: var(--color-success);
+}
+
+.takeaway-status.unpaid {
+    color: var(--color-warning);
+}
+
+.btn,
+.btn-primary,
+.btn-success,
+.btn-warning,
+.btn-danger,
+.btn-info,
+.btn-secondary {
+    border: none;
+    color: #fff;
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-xs);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn-primary {
+    background: var(--color-primary);
+}
+
+.btn-success {
+    background: var(--color-success);
+}
+
+.btn-warning,
+.btn-new-takeaway {
+    background: var(--color-warning);
+    color: #fff;
+}
+
+.btn-danger,
+.btn.btn-danger {
+    background: var(--color-danger);
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+.btn:disabled {
+    background: var(--color-disabled);
+    cursor: not-allowed;
+}
+
+.ds-page {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.ds-section {
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    padding: var(--space-3);
+    box-shadow: var(--card-shadow);
+    border: 1px solid var(--color-border);
+}
+
+.ds-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.ds-grid {
+    display: grid;
+    gap: var(--space-2);
+}
+
+.ds-grid.cols-2 {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.ds-grid.cols-3 {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.ds-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--space-2);
+}
+
+.stat-card {
+    border-radius: var(--radius-lg);
+    padding: 1.4rem 1.6rem;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    box-shadow: var(--shadow-md);
+    position: relative;
+    overflow: hidden;
+    min-height: 150px;
+}
+
+.stat-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    opacity: 0.08;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.4), transparent);
+    pointer-events: none;
+}
+
+.stat-card__badge {
+    align-self: flex-start;
+    padding: 0.25rem 0.9rem;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.2);
+    position: relative;
+    z-index: 1;
+}
+
+.stat-card__value {
+    font-size: 2rem;
+    font-weight: 800;
+    position: relative;
+    z-index: 1;
+}
+
+.stat-card__meta {
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.85);
+    position: relative;
+    z-index: 1;
+}
+
+.stat-card__trend {
+    font-size: 0.85rem;
+    position: relative;
+    z-index: 1;
+}
+
+.stat-card--primary {
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
+}
+
+.stat-card--success {
+    background: linear-gradient(135deg, var(--color-success), #1f8a5b);
+}
+
+.stat-card--warning {
+    background: linear-gradient(135deg, var(--color-warning), #d08b2f);
+    color: #402400;
+}
+
+.stat-card--warning .stat-card__badge,
+.stat-card--warning .stat-card__meta,
+.stat-card--warning .stat-card__trend {
+    color: rgba(64, 36, 0, 0.85);
+    background: rgba(255, 249, 240, 0.7);
+}
+
+.stat-card--danger {
+    background: linear-gradient(135deg, var(--color-danger), #b53030);
+}
+
+.stat-card--neutral {
+    background: var(--color-surface);
+    color: var(--text-heading);
+    border: 1px solid var(--color-border);
+}
+
+.stat-card--neutral .stat-card__badge {
+    background: rgba(31, 58, 95, 0.1);
+    color: var(--color-primary);
+}
+
+.stat-card--neutral .stat-card__meta,
+.stat-card--neutral .stat-card__trend {
+    color: var(--text-secondary);
+}
+
+.ds-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--text-heading);
+    margin-bottom: var(--space-1);
+}
+
+.ds-subtitle {
+    color: var(--color-muted);
+    font-size: 0.95rem;
+}
+
+.ds-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: var(--text-heading);
+}
+
+.ds-card-value {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--text-heading);
+}
+
+.ds-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    background: var(--color-primary-light);
+    color: #fff;
+}
+
+.ds-badge.success {
+    background: var(--color-success);
+}
+
+.ds-badge.warning {
+    background: var(--color-warning);
+}
+
+.ds-badge.danger {
+    background: var(--color-danger);
+}
+
+.ds-button {
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 0.7rem 1.3rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: var(--shadow-xs);
+    font-family: var(--font-sans);
+}
+
+.ds-button.primary {
+    background: var(--color-primary);
+    color: #fff;
+}
+
+.ds-button.secondary {
+    background: var(--color-primary-light);
+    color: #fff;
+}
+
+.ds-button.success {
+    background: var(--color-success);
+    color: #fff;
+}
+
+.ds-button.danger {
+    background: var(--color-danger);
+    color: #fff;
+}
+
+.ds-button.ghost {
+    background: transparent;
+    border: 1px solid var(--color-border);
+    color: var(--color-primary);
+}
+
+.ds-button:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+.ds-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.ds-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-body);
+}
+
+.ds-input,
+.ds-select,
+.ds-textarea {
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+    padding: 0.65rem 0.85rem;
+    font-family: var(--font-sans);
+    font-size: 0.95rem;
+    background: var(--color-surface);
+    transition: border 0.2s ease, box-shadow 0.2s ease;
+    color: var(--text-body);
+}
+
+.ds-input:focus,
+.ds-select:focus,
+.ds-textarea:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+    outline: none;
+}
+
+.ds-textarea {
+    min-height: 110px;
+    resize: vertical;
+}
+
+.ds-page:not(.inventory-page) .ds-table-wrapper {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+.ds-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--color-surface);
+    color: var(--text-body);
+}
+
+.ds-table thead {
+    background: var(--color-primary-light);
+    color: #fff;
+}
+
+.ds-table th,
+.ds-table td {
+    padding: 0.85rem 1rem;
+    text-align: right;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.ds-table tbody tr:hover {
+    background: rgba(37, 99, 235, 0.08);
+}
+
+/* === Inventory page: shared table style for materials & purchases === */
+.inventory-page .inventory-table {
+    width: 100%;
+    border-collapse: collapse;
+    border-spacing: 0;
+    table-layout: fixed;
+    /* ستون‌ها هم‌تراز بمانند */
+    background: #fff;
+}
+
+.inventory-page .inventory-table thead {
+    background: var(--color-primary);
+    color: #fff;
+}
+
+.inventory-page .inventory-table th,
+.inventory-page .inventory-table td {
+    padding: 0.6rem 0.75rem;
+    font-size: 0.85rem;
+    text-align: center;
+    border-bottom: 1px solid var(--color-border-subtle);
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.inventory-page .inventory-table th:first-child,
+.inventory-page .inventory-table td:first-child {
+    border-radius: 0;
+}
+
+.inventory-page .inventory-table tbody tr:nth-child(even) {
+    background: #f9fafb;
+}
+
+/* ردیف‌های فیلتر‌شده (برای سرچ) */
+.inventory-page .inventory-table .is-hidden {
+    display: none !important;
+}
+
+/* دکمه‌های عملیات در سلول آخر، بدون به‌هم‌ریختن جدول */
+.inventory-page td.material-actions,
+.inventory-page td .purchase-actions {
+    padding-inline: 0.3rem;
+}
+
+.inventory-page .material-actions-inner,
+.inventory-page .purchase-actions {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.35rem;
+    flex-wrap: nowrap;
+}
+
+.ds-pill {
+    display: inline-flex;
+    padding: 0.3rem 0.9rem;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.05);
+    color: var(--text-body);
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+[data-theme="dark"] .ds-pill {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.ds-color-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: var(--space-2);
+}
+
+.ds-color-swatch {
+    border-radius: var(--radius-md);
+    padding: var(--space-2);
+    min-height: 110px;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: var(--shadow-xs);
+}
+
+.ds-modal-preview {
+    display: flex;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+}
+
+.ds-modal-frame {
+    flex: 1;
+    min-width: 280px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    padding: var(--space-2);
+    background: var(--color-surface);
+}
+
+.ds-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.ds-list li {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px dashed var(--color-border);
+    padding-bottom: 0.2rem;
+    color: var(--text-body);
+}
+
+.ds-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.ds-chip {
+    padding: 0.35rem 0.9rem;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    background: rgba(15, 23, 42, 0.08);
+    color: var(--text-body);
+}
+
+.ds-layout-preview {
+    display: grid;
+    grid-template-columns: 200px 1fr 260px;
+    gap: var(--space-2);
+}
+
+.ds-layout-block {
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-2);
+    text-align: center;
+    color: var(--color-muted);
+    background: rgba(15, 23, 42, 0.03);
+    font-weight: 600;
+}
+
+@media (max-width: 900px) {
+    .ds-layout-preview {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ==== MODALS: table & takeaway – فقط برای داشبورد کافه ==== */
+
+.table-modal {
+    display: none;
+    /* جاوااسکریپت موقع باز شدن می‌ذاره flex */
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    background: rgba(9, 12, 16, 0.75);
+    /* بک‌گراند تیره پشت مودال */
+    backdrop-filter: blur(6px);
+    padding: 1.5rem;
+    overflow-y: auto;
+
+    /* مودال خودش flex-container میشه تا کارت وسط/بالا قرار بگیره */
+    display: none;
+    align-items: flex-start;
+    /* اگر می‌خوای وسط صفحه باشه کن: center */
+    justify-content: center;
+}
+
+.table-modal-content {
+    background: #ffffff;
+    border-radius: 1.2rem;
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.25);
+    padding: 1.5rem 1.8rem;
+    max-width: 900px;
+    width: 100%;
+}
+
+/* دکمه بستن کوچک گوشه بالا */
+.table-modal-close {
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    border: none;
+    background: transparent;
+    font-size: 1.1rem;
+    cursor: pointer;
+}
+
+/* در موبایل کمی فاصله‌ها کمتر شود */
+@media (max-width: 768px) {
+    .table-modal {
+        padding: 1rem;
+        align-items: flex-start;
+    }
+
+    .table-modal-content {
+        padding: 1.2rem 1.2rem;
+        border-radius: 0.9rem;
+    }
+}
+
+/* ===== TABLE MODAL LAYOUT ===== */
+
+/* به‌روزرسانی max-width برای مودال میز و takeaway */
+#table-modal .table-modal-content,
+#takeaway-modal .table-modal-content {
+    max-width: 1200px;
+    width: 100%;
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 20px 60px rgba(15, 23, 42, 0.3);
+    overflow: hidden;
+}
+
+/* Layout دو ستونه برای بدنه مودال */
+#table-modal .table-modal-body,
+#takeaway-modal .table-modal-body {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+/* ستون راست: اطلاعات میز و takeaway */
+#table-modal .table-info-panel,
+#takeaway-modal .table-info-panel {
+    width: 48%;
+    min-width: 500px;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    background: linear-gradient(135deg, var(--color-surface) 0%, var(--color-surface-alt) 100%);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 12px 30px rgba(31, 58, 95, 0.15);
+    border: 1px solid var(--color-border);
+    padding: 1.25rem;
+}
+
+/* فاصله‌گذاری بخش‌های ستون راست */
+#table-modal .customer-info-section,
+#table-modal .table-items-section,
+#table-modal .table-summary,
+#takeaway-modal .customer-info-section,
+#takeaway-modal .table-items-section,
+#takeaway-modal .table-summary {
+    margin-bottom: 1rem;
+}
+
+#table-modal .customer-info-section:last-child,
+#table-modal .table-items-section:last-child,
+#table-modal .table-summary:last-child,
+#takeaway-modal .customer-info-section:last-child,
+#takeaway-modal .table-items-section:last-child,
+#takeaway-modal .table-summary:last-child {
+    margin-bottom: 0;
+}
+
+/* تایپوگرافی هدرهای بخش‌ها */
+#table-modal .customer-info-section h4,
+#table-modal .table-items-section h4,
+#takeaway-modal .customer-info-section h4,
+#takeaway-modal .table-items-section h4 {
+    margin-bottom: 1rem;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--color-primary-light);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+#table-modal .customer-info-section h4::before,
+#table-modal .table-items-section h4::before,
+#takeaway-modal .customer-info-section h4::before,
+#takeaway-modal .table-items-section h4::before {
+    content: '';
+    width: 4px;
+    height: 18px;
+    background: var(--color-primary);
+    border-radius: 2px;
+}
+
+/* استایل فرم‌ها */
+#table-modal .form-group,
+#takeaway-modal .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin-bottom: 0.75rem;
+}
+
+#table-modal .form-group:last-child,
+#takeaway-modal .form-group:last-child {
+    margin-bottom: 0;
+}
+
+#table-modal .form-group label,
+#takeaway-modal .form-group label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-body);
+}
+
+#table-modal .form-group input,
+#takeaway-modal .form-group input {
+    width: 100%;
+    border-radius: var(--radius-md);
+    border: 1.5px solid var(--color-border);
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+    font-family: var(--font-sans);
+    background: var(--color-surface);
+    color: var(--text-body);
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+}
+
+#table-modal .form-group input:focus,
+#takeaway-modal .form-group input:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(31, 58, 95, 0.12), 0 2px 8px rgba(31, 58, 95, 0.1);
+    outline: none;
+    background: var(--color-surface);
+}
+
+#table-modal .form-group input:hover,
+#takeaway-modal .form-group input:hover {
+    border-color: var(--color-primary-light);
+}
+
+/* استایل customer-search-wrapper */
+#table-modal .customer-search-wrapper,
+#takeaway-modal .customer-search-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+#table-modal .customer-search-wrapper input,
+#takeaway-modal .customer-search-wrapper input {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* استایل لیست آیتم‌های انتخاب شده */
+#table-modal .table-items-list,
+#takeaway-modal .table-items-list {
+    max-height: 500px;
+    min-height: auto;
+    height: auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 0.75rem;
+    background: var(--color-bg);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* استایل scrollbar برای لیست آیتم‌ها */
+#table-modal .table-items-list::-webkit-scrollbar,
+#takeaway-modal .table-items-list::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+#table-modal .table-items-list::-webkit-scrollbar-track,
+#takeaway-modal .table-items-list::-webkit-scrollbar-track {
+    background: var(--color-bg);
+    border-radius: 4px;
+}
+
+#table-modal .table-items-list::-webkit-scrollbar-thumb,
+#takeaway-modal .table-items-list::-webkit-scrollbar-thumb {
+    background: var(--color-primary-light);
+    border-radius: 4px;
+}
+
+#table-modal .table-items-list::-webkit-scrollbar-thumb:hover,
+#takeaway-modal .table-items-list::-webkit-scrollbar-thumb:hover {
+    background: var(--color-primary);
+}
+
+#table-modal .table-items-list:empty::before,
+#takeaway-modal .table-items-list:empty::before {
+    content: 'هیچ آیتمی انتخاب نشده است';
+    display: block;
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    padding: 1.5rem 0;
+    font-style: italic;
+    min-height: auto;
+}
+
+/* استایل پیام خالی */
+#table-modal .table-items-list .empty-message,
+#takeaway-modal .table-items-list .empty-message {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    padding: 1.5rem 0;
+    font-style: italic;
+    margin: 0;
+    height: auto;
+}
+
+
+/* استایل جدول آیتم‌ها */
+#table-modal .table-items-list table,
+#takeaway-modal .table-items-list table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    table-layout: fixed;
+    height: auto;
+}
+
+#table-modal .table-items-list thead,
+#takeaway-modal .table-items-list thead {
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+    color: #ffffff;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+}
+
+#table-modal .table-items-list thead th,
+#takeaway-modal .table-items-list thead th {
+    padding: 0.65rem 0.5rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-align: center;
+    border: none;
+    white-space: nowrap;
+    color: #ffffff !important;
+}
+
+/* تنظیم text-align برای header ستون‌ها */
+#table-modal .table-items-list thead th:first-child,
+#takeaway-modal .table-items-list thead th:first-child {
+    text-align: right !important;
+}
+
+#table-modal .table-items-list thead th:nth-child(2),
+#table-modal .table-items-list thead th:nth-child(3),
+#table-modal .table-items-list thead th:nth-child(4),
+#takeaway-modal .table-items-list thead th:nth-child(2),
+#takeaway-modal .table-items-list thead th:nth-child(3),
+#takeaway-modal .table-items-list thead th:nth-child(4) {
+    text-align: center;
+}
+
+#table-modal .table-items-list thead th:first-child,
+#takeaway-modal .table-items-list thead th:first-child {
+    border-radius: 12px 0px 0px 0px;
+}
+
+#table-modal .table-items-list thead th:last-child,
+#takeaway-modal .table-items-list thead th:last-child {
+    border-radius: 0 0 0 0;
+    border-top-right-radius: 0px;
+}
+
+#table-modal .table-items-list tbody tr,
+#takeaway-modal .table-items-list tbody tr {
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+    transition: all 0.2s ease;
+}
+
+#table-modal .table-items-list tbody tr:hover,
+#takeaway-modal .table-items-list tbody tr:hover {
+    background: var(--color-surface-alt);
+    box-shadow: 0 2px 8px rgba(31, 58, 95, 0.1);
+}
+
+#table-modal .table-items-list tbody tr:last-child,
+#takeaway-modal .table-items-list tbody tr:last-child {
+    border-bottom: none;
+}
+
+#table-modal .table-items-list td,
+#takeaway-modal .table-items-list td {
+    padding: 0.65rem 0.5rem;
+    font-size: 0.85rem;
+    color: var(--color-secondary);
+    text-align: center;
+    vertical-align: middle;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+
+/* تنظیمات ستون‌های جدول */
+/* ستون 1: نام آیتم */
+#table-modal .table-items-list td:first-child,
+#table-modal .table-items-list th:first-child,
+#takeaway-modal .table-items-list td:first-child,
+#takeaway-modal .table-items-list th:first-child {
+    text-align: right !important;
+    font-weight: 600;
+    width: 30%;
+    padding: 0.65rem 0.75rem;
+}
+
+/* رنگ سفید برای header ستون اول */
+#table-modal .table-items-list thead th:first-child,
+#takeaway-modal .table-items-list thead th:first-child {
+    color: #ffffff !important;
+}
+
+/* رنگ برای td ستون اول */
+#table-modal .table-items-list tbody td:first-child,
+#takeaway-modal .table-items-list tbody td:first-child {
+    color: var(--text-heading);
+}
+
+/* ستون 2: قیمت واحد */
+#table-modal .table-items-list td:nth-child(2),
+#table-modal .table-items-list th:nth-child(2),
+#takeaway-modal .table-items-list td:nth-child(2),
+#takeaway-modal .table-items-list th:nth-child(2) {
+    text-align: center;
+    color: var(--color-primary);
+    font-weight: 600;
+    width: 20%;
+    padding: 0.65rem 0.5rem;
+}
+
+/* ستون 3: عملیات */
+#table-modal .table-items-list td:nth-child(3),
+#table-modal .table-items-list th:nth-child(3),
+#takeaway-modal .table-items-list td:nth-child(3),
+#takeaway-modal .table-items-list th:nth-child(3) {
+    text-align: center;
+    width: 30%;
+    padding: 0.65rem 0.5rem;
+}
+
+/* ستون 4: جمع کل */
+#table-modal .table-items-list td:nth-child(4),
+#table-modal .table-items-list th:nth-child(4),
+#takeaway-modal .table-items-list td:nth-child(4),
+#takeaway-modal .table-items-list th:nth-child(4) {
+    text-align: center;
+    color: var(--color-primary);
+    font-weight: 700;
+    font-size: 0.9rem;
+    width: 20%;
+    padding: 0.65rem 0.5rem;
+}
+
+/* استایل دکمه‌های کنترل تعداد */
+#table-modal .table-items-list .btn-quantity,
+#takeaway-modal .table-items-list .btn-quantity {
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+    color: #ffffff;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 0;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: 2rem;
+    height: 2rem;
+    min-width: 2rem;
+    min-height: 2rem;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(31, 58, 95, 0.2);
+}
+
+#table-modal .table-items-list .btn-quantity:hover,
+#takeaway-modal .table-items-list .btn-quantity:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(31, 58, 95, 0.3);
+    background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-primary) 100%);
+}
+
+#table-modal .table-items-list .btn-quantity:active,
+#takeaway-modal .table-items-list .btn-quantity:active {
+    transform: scale(0.95);
+}
+
+/* استایل دکمه حذف */
+#table-modal .table-items-list .btn-remove,
+#takeaway-modal .table-items-list .btn-remove {
+    background: linear-gradient(135deg, var(--color-danger) 0%, #b53030 100%);
+    color: #ffffff;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: 2rem;
+    height: 2rem;
+    min-width: 2rem;
+    min-height: 2rem;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(228, 72, 72, 0.2);
+}
+
+#table-modal .table-items-list .btn-remove:hover,
+#takeaway-modal .table-items-list .btn-remove:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(228, 72, 72, 0.3);
+    background: linear-gradient(135deg, #b53030 0%, var(--color-danger) 100%);
+}
+
+#table-modal .table-items-list .btn-remove:active,
+#takeaway-modal .table-items-list .btn-remove:active {
+    transform: scale(0.95);
+}
+
+/* استایل نمایش تعداد */
+#table-modal .table-items-list .order-qty,
+#takeaway-modal .table-items-list .order-qty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    min-width: 2rem;
+    min-height: 2rem;
+    text-align: center;
+    font-weight: 800;
+    font-size: 0.9rem;
+    color: var(--color-secondary);
+    padding: 0;
+    background: rgba(31, 58, 95, 0.08);
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+/* سلول کنترل تعداد در جدول آیتم‌ها */
+#table-modal .table-items-list .qty-controls-cell,
+#takeaway-modal .table-items-list .qty-controls-cell {
+    text-align: center;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+/* container فلکسی برای دکمه‌ها و عدد */
+#table-modal .table-items-list .qty-controls,
+#takeaway-modal .table-items-list .qty-controls {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    white-space: nowrap;
+}
+
+/* استایل summary */
+#table-modal .table-summary,
+#takeaway-modal .table-summary {
+    padding: 1rem;
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+    border-radius: var(--radius-md);
+    box-shadow: 0 4px 12px rgba(31, 58, 95, 0.2);
+}
+
+#table-modal .summary-row,
+#takeaway-modal .summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 0;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+#table-modal .summary-row:not(:last-child),
+#takeaway-modal .summary-row:not(:last-child) {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+#table-modal .summary-row:last-child,
+#takeaway-modal .summary-row:last-child {
+    font-weight: 800;
+    font-size: 1.15rem;
+    color: #ffffff;
+    padding-top: 0.75rem;
+    margin-top: 0.5rem;
+    border-top: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+/* استایل دکمه‌های عملیات */
+#table-modal .table-actions,
+#takeaway-modal .table-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+}
+
+#table-modal .table-actions .btn,
+#takeaway-modal .table-actions .btn {
+    flex: 1;
+    padding: 0.85rem 1.5rem;
+    font-weight: 700;
+    border-radius: var(--radius-md);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-size: 0.95rem;
+    border: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    position: relative;
+    overflow: hidden;
+}
+
+#table-modal .table-actions .btn::before,
+#takeaway-modal .table-actions .btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+#table-modal .table-actions .btn:hover::before,
+#takeaway-modal .table-actions .btn:hover::before {
+    width: 300px;
+    height: 300px;
+}
+
+#table-modal .table-actions .btn:hover,
+#takeaway-modal .table-actions .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+}
+
+#table-modal .table-actions .btn:active,
+#takeaway-modal .table-actions .btn:active {
+    transform: translateY(0);
+}
+
+#table-modal .table-actions .btn-primary,
+#takeaway-modal .table-actions .btn-primary {
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+    color: #ffffff;
+}
+
+#table-modal .table-actions .btn-success,
+#takeaway-modal .table-actions .btn-success {
+    background: linear-gradient(135deg, var(--color-success) 0%, #1f8a5b 100%);
+    color: #ffffff;
+}
+
+/* ستون چپ: منو */
+#table-modal .menu-panel,
+#takeaway-modal .menu-panel {
+    flex: 1;
+    min-width: 0;
+    background: linear-gradient(135deg, #1a1a1a 0%, #000000 100%);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+    border: 1px solid var(--color-border);
+    padding: 1.25rem;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+/* باکس سرچ منو */
+#table-modal .menu-search,
+#takeaway-modal .menu-search {
+    margin-bottom: 0.75rem;
+    position: sticky;
+    top: 0;
+    background: linear-gradient(135deg, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 1) 100%);
+    z-index: 10;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    color: rgba(0, 115, 230, 1);
+}
+
+#table-modal .menu-search input,
+#takeaway-modal .menu-search input {
+    width: 100%;
+    border-radius: 999px;
+    border: 1.5px solid var(--color-border);
+    padding: 0.5rem 0.9rem;
+    font-size: 0.85rem;
+    font-family: var(--font-sans);
+    background: #ffffff;
+    color: var(--color-primary);
+    transition: all 0.3s ease;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.05);
+}
+
+#table-modal .menu-search input:focus,
+#takeaway-modal .menu-search input:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(31, 58, 95, 0.12), 0 2px 8px rgba(31, 58, 95, 0.15);
+    outline: none;
+    transform: translateY(-1px);
+}
+
+#table-modal .menu-search input::placeholder,
+#takeaway-modal .menu-search input::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.7;
+}
+
+/* استایل دسته‌های منو */
+#table-modal .menu-category,
+#takeaway-modal .menu-category {
+    margin-bottom: 2rem;
+}
+
+#table-modal .menu-category:last-child,
+#takeaway-modal .menu-category:last-child {
+    margin-bottom: 0;
+}
+
+#table-modal .menu-category .category-header,
+#takeaway-modal .menu-category .category-header {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    margin-bottom: 1rem;
+    padding: 0.75rem 1rem;
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+    color: #ffffff;
+    border-radius: var(--radius-md);
+    box-shadow: 0 4px 12px rgba(31, 58, 95, 0.2);
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+#table-modal .menu-category .category-header::after,
+#takeaway-modal .menu-category .category-header::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, transparent 100%);
+    pointer-events: none;
+}
+
+/* Grid layout برای آیتم‌های منو (کارت مربعی) */
+#table-modal .category-items,
+#takeaway-modal .category-items {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 0.85rem;
+    margin-top: 0.5rem;
+}
+
+/* استایل آیتم‌های منو به صورت کارت مربعی */
+#table-modal .menu-item-selectable,
+#takeaway-modal .menu-item-selectable {
+    border-radius: var(--radius-md);
+    border: 2px solid var(--color-border);
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    background: var(--color-surface);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    min-height: 140px;
+    position: relative;
+    overflow: hidden;
+}
+
+#table-modal .menu-item-selectable::before,
+#takeaway-modal .menu-item-selectable::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--color-success) 0%, #1f8a5b 100%);
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+#table-modal .menu-item-selectable:hover,
+#takeaway-modal .menu-item-selectable:hover {
+    background: linear-gradient(135deg, var(--color-success) 0%, #1f8a5b 100%);
+    border-color: var(--color-success);
+    box-shadow: 0 8px 24px rgba(39, 179, 118, 0.25);
+    transform: translateY(-4px) scale(1.02);
+    color: #fff;
+}
+
+#table-modal .menu-item-selectable:hover::before,
+#takeaway-modal .menu-item-selectable:hover::before {
+    transform: scaleX(1);
+}
+
+#table-modal .menu-item-selectable:active,
+#takeaway-modal .menu-item-selectable:active {
+    transform: translateY(-2px) scale(1);
+}
+
+/* استایل محتوای آیتم */
+#table-modal .menu-item-selectable .item-name,
+#takeaway-modal .menu-item-selectable .item-name {
+    font-weight: 700;
+    color: var(--text-heading);
+    font-size: 0.95rem;
+    text-align: center;
+    margin-bottom: 0.5rem;
+    line-height: 1.4;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.25s ease;
+}
+
+#table-modal .menu-item-selectable:hover .item-name,
+#takeaway-modal .menu-item-selectable:hover .item-name {
+    color: #fff;
+}
+
+#table-modal .menu-item-selectable .item-price,
+#takeaway-modal .menu-item-selectable .item-price {
+    font-weight: 800;
+    color: var(--text-heading);
+    font-size: 1rem;
+    text-align: center;
+    margin-bottom: 0.4rem;
+    padding: 0.5rem 0.85rem;
+    background: rgba(39, 179, 118, 0.1);
+    border-radius: var(--radius-sm);
+    width: 100%;
+    transition: all 0.25s ease;
+    border: 1px solid rgba(39, 179, 118, 0.2);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#table-modal .menu-item-selectable:hover .item-price,
+#takeaway-modal .menu-item-selectable:hover .item-price {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+#table-modal .menu-item-selectable .item-stock,
+#takeaway-modal .menu-item-selectable .item-stock {
+    font-size: 0.75rem;
+    color: var(--text-body);
+    text-align: center;
+    padding: 0.4rem 0.6rem;
+    background: rgba(39, 179, 118, 0.08);
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    width: 100%;
+    transition: all 0.25s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(39, 179, 118, 0.15);
+}
+
+#table-modal .menu-item-selectable:hover .item-stock,
+#takeaway-modal .menu-item-selectable:hover .item-stock {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.3);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* استایل موجودی صفر - با استفاده از data attribute یا class */
+#table-modal .menu-item-selectable[data-stock="0"],
+#table-modal .menu-item-selectable.out-of-stock,
+#takeaway-modal .menu-item-selectable[data-stock="0"],
+#takeaway-modal .menu-item-selectable.out-of-stock {
+    opacity: 0.7;
+    cursor: not-allowed;
+    background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+    border-color: var(--color-disabled);
+}
+
+#table-modal .menu-item-selectable[data-stock="0"]:hover,
+#table-modal .menu-item-selectable.out-of-stock:hover,
+#takeaway-modal .menu-item-selectable[data-stock="0"]:hover,
+#takeaway-modal .menu-item-selectable.out-of-stock:hover {
+    transform: none;
+    border-color: var(--color-danger);
+    box-shadow: 0 2px 8px rgba(228, 72, 72, 0.2);
+}
+
+/* استایل dark mode برای کارت‌های منو */
+[data-theme="dark"] #table-modal .menu-item-selectable,
+[data-theme="dark"] #takeaway-modal .menu-item-selectable {
+    background: linear-gradient(135deg, var(--color-surface) 0%, var(--color-surface-alt) 100%);
+    border-color: var(--color-border);
+}
+
+[data-theme="dark"] #table-modal .menu-item-selectable .item-name,
+[data-theme="dark"] #takeaway-modal .menu-item-selectable .item-name {
+    color: var(--text-heading) !important;
+}
+
+[data-theme="dark"] #table-modal .menu-item-selectable .item-price,
+[data-theme="dark"] #takeaway-modal .menu-item-selectable .item-price {
+    color: var(--text-heading) !important;
+    background: rgba(46, 207, 143, 0.15);
+    border-color: rgba(46, 207, 143, 0.2);
+}
+
+[data-theme="dark"] #table-modal .menu-item-selectable .item-stock,
+[data-theme="dark"] #takeaway-modal .menu-item-selectable .item-stock {
+    color: var(--text-body) !important;
+    background: rgba(46, 207, 143, 0.1);
+    border-color: rgba(46, 207, 143, 0.15);
+}
+
+[data-theme="dark"] #table-modal .menu-item-selectable:hover,
+[data-theme="dark"] #takeaway-modal .menu-item-selectable:hover {
+    background: linear-gradient(135deg, var(--color-success) 0%, #1f8a5b 100%);
+    border-color: var(--color-success);
+}
+
+[data-theme="dark"] #table-modal .menu-item-selectable:hover .item-name,
+[data-theme="dark"] #takeaway-modal .menu-item-selectable:hover .item-name {
+    color: #ffffff !important;
+}
+
+/* استایل header مودال */
+#table-modal .table-modal-header,
+#takeaway-modal .table-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0;
+    padding-bottom: 1.25rem;
+    border-bottom: 2px solid var(--color-border);
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+    margin: -1.5rem -1.8rem 1.5rem -1.8rem;
+    padding: 1.5rem 1.8rem;
+    border-radius: 1.2rem 1.2rem 0 0;
+    position: relative;
+    overflow: hidden;
+}
+
+#table-modal .table-modal-header::before,
+#takeaway-modal .table-modal-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, transparent 100%);
+    pointer-events: none;
+}
+
+#table-modal .table-modal-header h3,
+#takeaway-modal .table-modal-header h3 {
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #ffffff;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    position: relative;
+    z-index: 1;
+}
+
+#table-modal .table-modal-header .close-modal,
+#takeaway-modal .table-modal-header .close-modal {
+    background: rgba(255, 255, 255, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    font-size: 1.5rem;
+    color: #ffffff;
+    cursor: pointer;
+    padding: 0;
+    width: 2.5rem;
+    height: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+    position: relative;
+    z-index: 1;
+    font-weight: 300;
+    line-height: 1;
+}
+
+#table-modal .table-modal-header .close-modal:hover,
+#takeaway-modal .table-modal-header .close-modal:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: rotate(90deg) scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* ریسپانسیو برای تبلت و موبایل */
+@media (max-width: 992px) {
+
+    #table-modal .table-modal-body,
+    #takeaway-modal .table-modal-body {
+        flex-direction: column-reverse;
+    }
+
+    #table-modal .table-info-panel,
+    #table-modal .menu-panel,
+    #takeaway-modal .table-info-panel,
+    #takeaway-modal .menu-panel {
+        width: 100%;
+        min-width: 0;
+    }
+
+    #table-modal .table-info-panel,
+    #takeaway-modal .table-info-panel {
+        min-width: 0;
+    }
+
+    #table-modal .menu-panel,
+    #takeaway-modal .menu-panel {
+        max-height: 50vh;
+    }
+
+    #table-modal .category-items,
+    #takeaway-modal .category-items {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 0.75rem;
+    }
+
+    #table-modal .table-items-list,
+    #takeaway-modal .table-items-list {
+        overflow-x: hidden;
+    }
+
+    #table-modal .table-items-list table,
+    #takeaway-modal .table-items-list table {
+        table-layout: fixed;
+    }
+}
+
+/* ریسپانسیو برای موبایل */
+@media (max-width: 768px) {
+
+    #table-modal .table-modal-content,
+    #takeaway-modal .table-modal-content {
+        padding: 0;
+    }
+
+    #table-modal .table-modal-header,
+    #takeaway-modal .table-modal-header {
+        margin: 0;
+        border-radius: 0;
+        padding: 1.25rem 1rem;
+    }
+
+    #table-modal .table-modal-body,
+    #takeaway-modal .table-modal-body {
+        padding: 1rem;
+        margin-top: 0;
+    }
+
+    #table-modal .table-info-panel,
+    #takeaway-modal .table-info-panel {
+        padding: 1.25rem;
+    }
+
+    #table-modal .menu-panel,
+    #takeaway-modal .menu-panel {
+        padding: 1rem;
+        max-height: 45vh;
+    }
+
+    #table-modal .table-actions,
+    #takeaway-modal .table-actions {
+        flex-direction: column;
+    }
+
+    #table-modal .table-actions .btn,
+    #takeaway-modal .table-actions .btn {
+        width: 100%;
+    }
+
+    #table-modal .category-items,
+    #takeaway-modal .category-items {
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        gap: 0.65rem;
+    }
+
+    #table-modal .menu-item-selectable,
+    #takeaway-modal .menu-item-selectable {
+        min-height: 120px;
+        padding: 0.85rem;
+    }
+
+    #table-modal .menu-item-selectable .item-name,
+    #takeaway-modal .menu-item-selectable .item-name {
+        font-size: 0.85rem;
+    }
+
+    #table-modal .menu-item-selectable .item-price,
+    #takeaway-modal .menu-item-selectable .item-price {
+        font-size: 0.9rem;
+        padding: 0.35rem 0.6rem;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    /* کاهش gap در موبایل برای qty-controls */
+    #table-modal .table-items-list .qty-controls,
+    #takeaway-modal .table-items-list .qty-controls {
+        gap: 0.3rem;
+    }
+}
+
+/* ===== MENU MANAGEMENT PAGE ===== */
+
+/* استایل کارت‌های آیتم منو */
+.menu-item {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+    background: linear-gradient(135deg, var(--color-surface) 0%, var(--color-surface-alt) 100%);
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    min-height: auto;
+    box-shadow: var(--card-shadow);
+    transition: all 0.2s ease;
+}
+
+.menu-item:hover {
+    box-shadow: 0 8px 24px rgba(31, 58, 95, 0.12);
+    transform: translateY(-2px);
+    border-color: var(--color-primary-light);
+}
+
+/* استایل input فیلدها در menu-item */
+.menu-item input {
+    width: 100%;
+    border-radius: var(--radius-md);
+    border: 1.5px solid var(--color-border);
+    padding: 0.65rem 0.85rem;
+    font-family: var(--font-sans);
+    font-size: 0.95rem;
+    background: var(--color-surface);
+    color: var(--text-body);
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+}
+
+.menu-item input:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(31, 58, 95, 0.12), 0 2px 8px rgba(31, 58, 95, 0.1);
+    outline: none;
+    background: #ffffff;
+}
+
+.menu-item input:hover {
+    border-color: var(--color-primary-light);
+}
+
+.menu-item input::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.7;
+}
+
+/* استایل نام آیتم */
+.menu-item .inline-name {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--text-heading);
+}
+
+/* استایل container قیمت و موجودی */
+.item-price-stock {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+
+/* استایل input قیمت */
+.menu-item .inline-price {
+    font-weight: 600;
+    color: var(--color-primary);
+    text-align: right;
+    direction: ltr;
+}
+
+/* استایل input موجودی */
+.menu-item .inline-stock {
+    font-weight: 600;
+    color: var(--text-body);
+    text-align: right;
+    direction: ltr;
+}
+
+/* استایل دکمه‌های عملیات */
+.item-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: auto;
+    flex-wrap: wrap;
+}
+
+.item-actions .ds-button {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.85rem;
+    padding: 0.6rem 0.85rem;
+    white-space: nowrap;
+}
+
+/* استایل لیست منو */
+.menu-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--space-2);
+}
+
+/* استایل category block */
+.category-block {
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border);
+    padding: var(--space-3);
+    box-shadow: var(--card-shadow);
+    transition: all 0.2s ease;
+}
+
+.category-block:hover {
+    box-shadow: 0 8px 24px rgba(31, 58, 95, 0.12);
+}
+
+.category-block.inactive-category {
+    opacity: 0.45;
+}
+
+/* ریسپانسیو برای صفحه منو */
+@media (max-width: 720px) {
+    .item-price-stock {
+        grid-template-columns: 1fr;
+    }
+
+    .menu-list {
+        grid-template-columns: 1fr;
+    }
+
+    .item-actions {
+        flex-direction: column;
+    }
+
+    .item-actions .ds-button {
+        width: 100%;
+    }
+}
+
+/* ===== PRICE MANAGEMENT PAGE ===== */
+
+/* استایل صفحه مدیریت قیمت */
+.price-management-page {
+    padding: 1.5rem 1.5rem 3rem;
+    max-width: none;
+    margin: 0;
+    min-height: calc(100vh - 140px);
+    background: var(--color-bg);
+}
+
+body:has(.price-management-page) .container {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+}
+
+/* استایل بنر فرمول */
+.cost-formula-banner {
+    background: linear-gradient(135deg, var(--color-surface) 0%, var(--color-surface-alt) 100%);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    gap: 1.25rem;
+    align-items: center;
+    border: 1px solid var(--color-border);
+    box-shadow: var(--card-shadow);
+}
+
+.cost-formula-banner__text {
+    font-size: 0.95rem;
+    color: var(--text-body);
+    line-height: 1.6;
+}
+
+.cost-formula-banner__text strong {
+    color: var(--text-heading);
+    font-weight: 700;
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+/* دکمه فرمول */
+.formula-btn {
+    background: linear-gradient(135deg, var(--color-success) 0%, #1f8a5b 100%);
+    color: #ffffff;
+    border: none;
+    border-radius: 999px;
+    padding: 0.65rem 1.5rem;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(39, 179, 118, 0.35);
+    transition: all 0.2s ease;
+}
+
+.formula-btn:hover {
+    background: linear-gradient(135deg, #1f8a5b 0%, var(--color-success) 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(39, 179, 118, 0.45);
+}
+
+/* استایل هدر صفحه */
+.page-header {
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+    color: #ffffff;
+    padding: 2rem;
+    border-radius: var(--radius-lg);
+    margin-bottom: 2rem;
+    box-shadow: 0 8px 24px rgba(31, 58, 95, 0.3);
+}
+
+.page-header h1 {
+    margin: 0 0 0.5rem 0;
+    font-size: 2rem;
+    font-weight: 800;
+}
+
+.page-header p {
+    margin: 0;
+    opacity: 0.9;
+    font-size: 1rem;
+}
+
+/* استایل کارت دسته‌بندی */
+.category-card {
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--card-shadow);
+    border: 1px solid var(--color-border);
+}
+
+.category-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--color-border);
+}
+
+.category-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-heading);
+}
+
+.category-total {
+    background: var(--color-bg);
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius-md);
+    font-weight: 700;
+    color: var(--text-heading);
+}
+
+.category-total .label {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-left: 0.5rem;
+    font-weight: 600;
+}
+
+/* استایل کارت آیتم */
+.item-card {
+    background: linear-gradient(135deg, var(--color-bg) 0%, var(--color-surface-alt) 100%);
+    border-radius: var(--radius-md);
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    border-right: 4px solid var(--color-primary);
+    box-shadow: var(--shadow-sm);
+    transition: all 0.2s ease;
+}
+
+.item-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
+
+.item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.item-name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-heading);
+}
+
+.item-prices {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+/* استایل badge قیمت */
+.price-badge {
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-sm);
+    font-weight: 700;
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+.price-badge.cost {
+    background: rgba(228, 72, 72, 0.1);
+    color: var(--color-danger);
+}
+
+.price-badge.selling {
+    background: rgba(31, 58, 95, 0.1);
+    color: var(--color-primary);
+}
+
+.price-badge.profit {
+    background: rgba(39, 179, 118, 0.1);
+    color: var(--color-success);
+}
+
+.price-badge.loss {
+    background: rgba(228, 72, 72, 0.1);
+    color: var(--color-danger);
+}
+
+.price-badge.suggested {
+    background: rgba(39, 179, 118, 0.15);
+    color: var(--color-success);
+    border: 1px solid var(--color-success);
+}
+
+.apply-suggested-btn {
+    border-radius: 999px;
+    border: 1px solid var(--color-success);
+    background: rgba(39, 179, 118, 0.1);
+    color: var(--color-success);
+    padding: 0.4rem 0.9rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.apply-suggested-btn:hover {
+    background: var(--color-success);
+    color: #ffffff;
+    transform: translateY(-1px);
+}
+
+/* استایل بخش متریال */
+.materials-section {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-border);
+}
+
+.materials-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    margin-bottom: 0.75rem;
+}
+
+.materials-section .material-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.65rem 0.85rem;
+    background: var(--color-surface);
+    border-radius: var(--radius-sm);
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    border: 1px solid var(--color-border);
+}
+
+.materials-section .material-name {
+    flex: 1;
+    color: var(--text-body);
+    font-weight: 600;
+}
+
+.materials-section .material-quantity {
+    color: var(--text-secondary);
+    margin: 0 1rem;
+}
+
+.materials-section .material-price {
+    font-weight: 700;
+    color: var(--text-heading);
+}
+
+/* استایل مودال فرمول */
+.cost-formula-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(9, 12, 16, 0.75);
+    backdrop-filter: blur(6px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    z-index: 10000;
+    overflow-y: auto;
+}
+
+.cost-formula-modal {
+    width: min(640px, 100%);
+    max-height: 90vh;
+    overflow-y: auto;
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    padding: 1.6rem 1.8rem;
+    box-shadow: 0 20px 60px rgba(15, 23, 42, 0.3);
+    border: 1px solid var(--color-border);
+}
+
+.cost-formula-modal h2 {
+    margin: 0 0 0.75rem 0;
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: var(--text-heading);
+}
+
+.cost-formula-modal p {
+    margin: 0 0 1.5rem 0;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+/* استایل grid فرمول */
+.cost-formula-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+/* استایل فیلد فرمول */
+.cf-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    font-size: 0.9rem;
+}
+
+.cf-field label {
+    font-weight: 700;
+    color: var(--text-heading);
+    font-size: 0.95rem;
+}
+
+/* استایل input و select در فرمول */
+.cf-input,
+.cf-select {
+    width: 100%;
+    border-radius: var(--radius-md);
+    border: 1.5px solid var(--color-border);
+    padding: 0.65rem 0.85rem;
+    font-size: 0.95rem;
+    font-family: var(--font-sans);
+    background: var(--color-surface);
+    color: var(--text-body);
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+}
+
+/* استایل container input با دکمه */
+.cf-input-with-btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.cf-input-with-btn .cf-input {
+    padding-right: 2.75rem;
+}
+
+/* دکمه محاسبه خودکار */
+.cf-auto-btn {
+    position: absolute;
+    left: 0.5rem;
+    width: 2rem;
+    height: 2rem;
+    min-width: 2rem;
+    border: none;
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+    color: #ffffff;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 6px rgba(31, 58, 95, 0.2);
+    padding: 0;
+    z-index: 1;
+}
+
+.cf-auto-btn:hover {
+    background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-primary) 100%);
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(31, 58, 95, 0.3);
+}
+
+.cf-auto-btn:active {
+    transform: scale(0.95);
+}
+
+.cf-auto-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.cf-auto-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+.cf-input:focus,
+.cf-select:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(31, 58, 95, 0.12), 0 2px 8px rgba(31, 58, 95, 0.1);
+    outline: none;
+    background: #ffffff;
+}
+
+.cf-input:hover,
+.cf-select:hover {
+    border-color: var(--color-primary-light);
+}
+
+.cf-helper {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+/* استایل لیست پرسنل */
+.personnel-list {
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+    padding: 0.75rem;
+    background: var(--color-bg);
+    margin-bottom: 1rem;
+}
+
+.personnel-row {
+    display: grid;
+    grid-template-columns: minmax(120px, 1.3fr) minmax(120px, 1fr) auto;
+    gap: 0.5rem 0.75rem;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.personnel-row input {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* دکمه حذف پرسنل */
+.remove-personnel-btn {
+    width: 2rem;
+    height: 2rem;
+    min-width: 2rem;
+    border: none;
+    background: linear-gradient(135deg, var(--color-danger) 0%, #b53030 100%);
+    color: #ffffff;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 1.2rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 6px rgba(228, 72, 72, 0.2);
+    line-height: 1;
+    padding: 0;
+}
+
+.remove-personnel-btn:hover {
+    background: linear-gradient(135deg, #b53030 0%, var(--color-danger) 100%);
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(228, 72, 72, 0.3);
+}
+
+.remove-personnel-btn:active {
+    transform: scale(0.95);
+}
+
+.personnel-row-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.25rem;
+}
+
+.cf-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.7rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    background: rgba(31, 58, 95, 0.1);
+    color: var(--color-primary);
+    margin-right: 0.3rem;
+    font-weight: 600;
+}
+
+.add-row-btn {
+    border-radius: 999px;
+    border: 1px dashed var(--color-border);
+    background: var(--color-bg);
+    padding: 0.4rem 1rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+    color: var(--text-body);
+    transition: all 0.2s ease;
+    font-weight: 600;
+}
+
+.add-row-btn:hover {
+    border-color: var(--color-primary);
+    background: rgba(31, 58, 95, 0.05);
+    color: var(--color-primary);
+}
+
+/* استایل ردیف اجاره */
+.cf-rent-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+    flex-wrap: wrap;
+}
+
+.cf-rent-row label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--text-body);
+}
+
+.cf-rent-row input[type="checkbox"] {
+    width: 1.1rem;
+    height: 1.1rem;
+    cursor: pointer;
+    accent-color: var(--color-primary);
+}
+
+.cf-rent-amount {
+    max-width: 220px;
+    flex: 1;
+    min-width: 200px;
+}
+
+/* استایل footer مودال */
+.cf-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 2px solid var(--color-border);
+}
+
+.cf-btn-secondary {
+    border-radius: 999px;
+    padding: 0.65rem 1.5rem;
+    border: 1.5px solid var(--color-border);
+    background: var(--color-surface);
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-body);
+    transition: all 0.2s ease;
+}
+
+.cf-btn-secondary:hover {
+    background: var(--color-bg);
+    border-color: var(--color-primary-light);
+    color: var(--color-primary);
+}
+
+.cf-btn-primary {
+    border-radius: 999px;
+    padding: 0.65rem 1.5rem;
+    border: none;
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+    color: #ffffff;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(31, 58, 95, 0.3);
+    transition: all 0.2s ease;
+}
+
+.cf-btn-primary:hover {
+    background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-primary) 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(31, 58, 95, 0.4);
+}
+
+/* استایل empty state */
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: var(--text-secondary);
+}
+
+.empty-state-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+/* ریسپانسیو برای صفحه مدیریت قیمت */
+@media (max-width: 768px) {
+    .price-management-page {
+        padding: 1rem;
+    }
+
+    .cost-formula-banner {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .formula-btn {
+        width: 100%;
+    }
+
+    .page-header {
+        padding: 1.5rem;
+    }
+
+    .page-header h1 {
+        font-size: 1.5rem;
+    }
+
+    .category-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .item-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .item-prices {
+        width: 100%;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .cost-formula-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .personnel-row {
+        grid-template-columns: 1fr;
+    }
+
+    .cf-rent-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .cf-rent-amount {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .cf-modal-footer {
+        flex-direction: column-reverse;
+    }
+
+    .cf-btn-secondary,
+    .cf-btn-primary {
+        width: 100%;
+    }
+}
+
+/* ===== REMOVE NUMBER INPUT SPINNERS ===== */
+
+/* حذف spinner از input type="number" در مودال‌های ثبت سفارش */
+#table-modal input[type="number"],
+#takeaway-modal input[type="number"],
+.ds-modal input[type="number"],
+input[type="number"] {
+    -moz-appearance: textfield;
+}
+
+/* حذف spinner در مرورگرهای WebKit (Chrome, Safari, Edge) */
+#table-modal input[type="number"]::-webkit-outer-spin-button,
+#table-modal input[type="number"]::-webkit-inner-spin-button,
+#takeaway-modal input[type="number"]::-webkit-outer-spin-button,
+#takeaway-modal input[type="number"]::-webkit-inner-spin-button,
+.ds-modal input[type="number"]::-webkit-outer-spin-button,
+.ds-modal input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* برای Firefox */
+#table-modal input[type="number"],
+#takeaway-modal input[type="number"],
+.ds-modal input[type="number"],
+input[type="number"] {
+    -moz-appearance: textfield;
+}
+
+/* ===== DISCOUNT INPUT WITH APPLY BUTTON ===== */
+
+/* استایل wrapper برای دو فیلد تخفیف */
+.discount-fields-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.discount-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.discount-field-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+/* استایل wrapper برای input تخفیف */
+.discount-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.discount-input-wrapper input {
+    width: 100%;
+    padding-right: 2.75rem;
+    box-sizing: border-box;
+    border-radius: var(--radius-md);
+    border: 1.5px solid var(--color-border);
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+    font-family: var(--font-sans);
+    background: var(--color-surface);
+    color: var(--text-body);
+    transition: all 0.2s ease;
+}
+
+.discount-input-wrapper input:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(31, 58, 95, 0.12), 0 2px 8px rgba(31, 58, 95, 0.1);
+    outline: none;
+    background: #ffffff;
+}
+
+.discount-input-wrapper input:hover {
+    border-color: var(--color-primary-light);
+}
+
+.discount-input-wrapper input::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.7;
+}
+
+/* دکمه اعمال تخفیف */
+.discount-apply-btn {
+    position: absolute;
+    left: 0.5rem;
+    width: 2rem;
+    height: 2rem;
+    min-width: 2rem;
+    border: none;
+    background: linear-gradient(135deg, var(--color-success) 0%, #1f8a5b 100%);
+    color: #ffffff;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 6px rgba(39, 179, 118, 0.2);
+    padding: 0;
+    z-index: 1;
+}
+
+.discount-apply-btn:hover {
+    background: linear-gradient(135deg, #1f8a5b 0%, var(--color-success) 100%);
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(39, 179, 118, 0.3);
+}
+
+.discount-apply-btn:active {
+    transform: scale(0.95);
+}
+
+.discount-apply-btn:disabled {
+    opacity: 0.5 !important;
+    cursor: not-allowed !important;
+    pointer-events: none;
+}
+
+.discount-apply-btn:disabled:hover {
+    transform: none;
+    box-shadow: 0 2px 6px rgba(39, 179, 118, 0.2);
+}
+
+/* استایل dark mode برای فیلدهای متنی در مودال‌ها */
+[data-theme="dark"] #table-modal .form-group input,
+[data-theme="dark"] #takeaway-modal .form-group input {
+    background: var(--color-surface);
+    color: var(--text-body);
+    border-color: var(--color-border);
+}
+
+[data-theme="dark"] #table-modal .form-group input:focus,
+[data-theme="dark"] #takeaway-modal .form-group input:focus {
+    background: var(--color-surface);
+    color: var(--text-body);
+    border-color: var(--color-primary-light);
+    box-shadow: 0 0 0 3px rgba(97, 181, 255, 0.2), 0 2px 8px rgba(97, 181, 255, 0.15);
+}
+
+[data-theme="dark"] #table-modal .form-group input:hover,
+[data-theme="dark"] #takeaway-modal .form-group input:hover {
+    border-color: var(--color-primary-light);
+}
+
+[data-theme="dark"] #table-modal .form-group input::placeholder,
+[data-theme="dark"] #takeaway-modal .form-group input::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.7;
+}
+
+/* استایل dark mode برای فیلدهای تخفیف */
+[data-theme="dark"] .discount-input-wrapper input {
+    background: var(--color-surface);
+    color: var(--text-body);
+    border-color: var(--color-border);
+}
+
+[data-theme="dark"] .discount-input-wrapper input:focus {
+    background: var(--color-surface);
+    color: var(--text-body);
+    border-color: var(--color-primary-light);
+    box-shadow: 0 0 0 3px rgba(97, 181, 255, 0.2), 0 2px 8px rgba(97, 181, 255, 0.15);
+}
+
+[data-theme="dark"] .discount-input-wrapper input:hover {
+    border-color: var(--color-primary-light);
+}
+
+[data-theme="dark"] .discount-field-label {
+    color: var(--text-secondary);
+}
+
+/* ===== DESIGN SYSTEM MODAL ===== */
+
+/* استایل مودال */
+.ds-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(9, 12, 16, 0.75);
+    backdrop-filter: blur(6px);
+    z-index: 10000;
+    padding: 1.5rem;
+    align-items: center;
+    justify-content: center;
+    overflow-y: auto;
+}
+
+.ds-modal[style*="display: block"] {
+    display: flex !important;
+}
+
+/* پنل مودال */
+.ds-modal__panel {
+    width: min(560px, 100%);
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border);
+    box-shadow: 0 20px 60px rgba(15, 23, 42, 0.3);
+    padding: var(--space-3);
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+}
+
+/* هدر مودال */
+.ds-modal__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-2);
+    padding-bottom: var(--space-2);
+    border-bottom: 2px solid var(--color-border);
+}
+
+.ds-modal__header h3 {
+    margin: 0;
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: var(--text-heading);
+}
+
+.ds-modal__header .modal-eyebrow {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.25rem;
+}
+
+/* دکمه بستن مودال */
+.ds-modal__close {
+    border: none;
+    background: transparent;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--text-secondary);
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+    padding: 0;
+    line-height: 1;
+}
+
+.ds-modal__close:hover {
+    background: var(--color-bg);
+    color: var(--text-heading);
+    transform: rotate(90deg);
+}
+
+/* بدنه مودال */
+.ds-modal__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+/* استایل فرم در مودال */
+.ds-modal__body form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+/* استایل input و select در مودال */
+.ds-modal__body .ds-input,
+.ds-modal__body .ds-select {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.ds-modal__body select {
+    width: 100%;
+    border-radius: var(--radius-md);
+    border: 1.5px solid var(--color-border);
+    padding: 0.65rem 0.85rem;
+    font-family: var(--font-sans);
+    font-size: 0.95rem;
+    background: var(--color-surface);
+    color: var(--text-body);
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+    cursor: pointer;
+}
+
+.ds-modal__body select:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(31, 58, 95, 0.12), 0 2px 8px rgba(31, 58, 95, 0.1);
+    outline: none;
+    background: #ffffff;
+}
+
+.ds-modal__body select:hover {
+    border-color: var(--color-primary-light);
+}
+
+/* بخش actions مودال */
+.ds-modal__actions {
+    margin-top: var(--space-2);
+    display: flex;
+    gap: var(--space-2);
+}
+
+.ds-modal__actions .ds-button {
+    flex: 1;
+    width: 100%;
+}
+
+/* ریسپانسیو برای مودال */
+@media (max-width: 768px) {
+    .ds-modal {
+        padding: 1rem;
+    }
+
+    .ds-modal__panel {
+        width: 100%;
+        max-height: 95vh;
+        padding: var(--space-2);
+    }
+
+    .ds-modal__header h3 {
+        font-size: 1.1rem;
+    }
+
+    .ds-modal__actions {
+        flex-direction: column;
+    }
+}
+
+/* ===== REMOVAL REASON STYLES ===== */
+
+/* استایل ردیف دلیل حذف */
+.removal-reason-row td {
+    padding: 1rem;
+    background-color: var(--color-border) !important;
+    border-top: 2px solid var(--color-danger) !important;
+}
+
+.removal-reason-row > td > div {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.removal-reason-row label {
+    font-weight: 600;
+    color: var(--color-danger);
+}
+
+/* استایل input دلیل حذف */
+.removal-reason-input {
+    flex: 1;
+    padding: 0.5rem;
+    border: 1px solid var(--color-danger) !important;
+    border-radius: 4px;
+    background-color: var(--navbar-bg) !important;
+    color: var(--color-danger) !important;
+    font-family: var(--font-sans);
+    font-size: 0.9rem;
+}
+
+.removal-reason-input::placeholder {
+    color: var(--color-danger);
+    opacity: 0.6;
+}
+
+.removal-reason-input:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(228, 72, 72, 0.2);
+}
+
+/* استایل دکمه لغو در ردیف دلیل حذف */
+.removal-reason-row .btn.btn-secondary {
+    color: var(--color-danger) !important;
+    background: transparent;
+    border: 1px solid var(--color-danger);
+}
+
+.removal-reason-row .btn.btn-secondary:hover {
+    background: var(--color-danger);
+    color: #fff !important;
+}

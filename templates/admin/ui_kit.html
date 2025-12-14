@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+{% block title %}راهنمای طراحی کافه{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}?v={{ cache_bust() }}">
+<style>
+    .theme-table td:first-child {
+        font-weight: 600;
+    }
+
+    .color-dot {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        margin-left: 0.5rem;
+        border: 1px solid rgba(0, 0, 0, 0.15);
+        vertical-align: middle;
+    }
+
+    [data-theme="dark"] .color-dot {
+        border-color: rgba(255, 255, 255, 0.25);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ds-page">
+    <div class="ds-stack" style="align-items:flex-start;">
+        <button id="ds-theme-toggle" class="ds-button ghost" type="button">🌙 تم تیره</button>
+    </div>
+    <div>
+        <div class="ds-title">راهنمای طراحی و Starter Kit</div>
+        <p class="ds-subtitle">
+            این صفحه یک مرجع سبک برای توسعه سریع صفحات است. تمام کارت‌ها، دکمه‌ها و فرم‌ها بر پایه‌ی
+            کامپوننت‌های زیر ساخته می‌شوند و می‌توانید آن‌ها را در سایر صفحات کپی کنید.
+        </p>
+    </div>
+
+    <section class="ds-section">
+        <div class="ds-title">تم لایت — Light Theme 🌞</div>
+        <p class="ds-subtitle">پالت رسمی نسخه روشن. تمام صفحات لایت باید از این رنگ‌ها استفاده کنند.</p>
+        <div class="ds-table-wrapper">
+            <table class="ds-table theme-table">
+                <thead>
+                    <tr>
+                        <th>Hex</th>
+                        <th>Name</th>
+                        <th>Role</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for color in light_palette %}
+                    <tr>
+                        <td><span class="color-dot" style="background: {{ color.hex }}"></span>{{ color.hex }}</td>
+                        <td>{{ color.name }}</td>
+                        <td>{{ color.role }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="ds-section">
+        <div class="ds-title">تم دارک — Dark Theme 🌚</div>
+        <p class="ds-subtitle">برای صفحات دارک، رنگ‌ها باید کنتراست بالا داشته باشند بدون اینکه چشم را خسته کنند.</p>
+        <div class="ds-table-wrapper">
+            <table class="ds-table theme-table">
+                <thead>
+                    <tr>
+                        <th>Hex</th>
+                        <th>Name</th>
+                        <th>Role</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for color in dark_palette %}
+                    <tr>
+                        <td><span class="color-dot" style="background: {{ color.hex }}"></span>{{ color.hex }}</td>
+                        <td>{{ color.name }}</td>
+                        <td>{{ color.role }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="ds-section">
+        <div class="ds-grid cols-3">
+            <button class="ds-button primary">Primary</button>
+            <button class="ds-button secondary">Secondary</button>
+            <button class="ds-button ghost">Ghost</button>
+            <button class="ds-button success">Success</button>
+            <button class="ds-button danger">Danger</button>
+            <button class="ds-button" disabled style="opacity:.5;cursor:not-allowed;">Disabled</button>
+        </div>
+    </section>
+
+    <section class="ds-section">
+        <div class="ds-title">چیدمان کارت‌های وضعیت</div>
+        <p class="ds-subtitle">هر کارت از رنگ‌های پالت استفاده می‌کند تا در یک نگاه دسته‌بندی شود.</p>
+        <div class="ds-stats-grid">
+            <article class="stat-card stat-card--success">
+                <span class="stat-card__badge">+۱۲٪ رشد روزانه</span>
+                <div class="stat-card__value">۲,۴۵۰,۰۰۰</div>
+                <div class="stat-card__meta">درآمد امروز</div>
+                <span class="stat-card__trend">۱۲ سفارش پرداخت شده</span>
+            </article>
+            <article class="stat-card stat-card--primary">
+                <span class="stat-card__badge">۵ سفارش فعال</span>
+                <div class="stat-card__value">۳ حضوری / ۲ بیرون‌بر</div>
+                <div class="stat-card__meta">سفارش‌های باز</div>
+                <span class="stat-card__trend">آخرین بروزرسانی ۵ دقیقه پیش</span>
+            </article>
+            <article class="stat-card stat-card--danger">
+                <span class="stat-card__badge">۴ قلم بحرانی</span>
+                <div class="stat-card__value">انبار بحرانی</div>
+                <div class="stat-card__meta">قهوه برزیل، شیر، شکر، لیوان</div>
+                <span class="stat-card__trend">نیاز به تامین فوری</span>
+            </article>
+            <article class="stat-card stat-card--warning">
+                <span class="stat-card__badge">۷۰٪ ظرفیت</span>
+                <div class="stat-card__value">رزرو میزها</div>
+                <div class="stat-card__meta">۱۲ میز اشغال شده از ۱۷</div>
+                <span class="stat-card__trend">پیک شلوغی ۱۸:۰۰</span>
+            </article>
+        </div>
+    </section>
+
+    <section class="ds-section">
+        <div class="ds-grid cols-2">
+            <div class="ds-stack">
+                <div class="ds-input-group">
+                    <label class="ds-label">نام مشتری</label>
+                    <input class="ds-input" placeholder="مثلاً علی راد">
+                </div>
+                <div class="ds-input-group">
+                    <label class="ds-label">شماره تماس</label>
+                    <input class="ds-input" placeholder="09xx ...">
+                </div>
+            </div>
+            <div class="ds-stack">
+                <div class="ds-input-group">
+                    <label class="ds-label">نوع سفارش</label>
+                    <select class="ds-select">
+                        <option>حضوری</option>
+                        <option>بیرون‌بر</option>
+                    </select>
+                </div>
+                <div class="ds-input-group">
+                    <label class="ds-label">یادداشت</label>
+                    <textarea class="ds-textarea" placeholder="توضیحات مشتری"></textarea>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="ds-section">
+        <div class="ds-table-wrapper">
+            <table class="ds-table">
+                <thead>
+                    <tr>
+                        <th>فاکتور</th>
+                        <th>مشتری</th>
+                        <th>مبلغ</th>
+                        <th>وضعیت</th>
+                        <th>ساعت</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>#4687</td>
+                        <td>سارا حقیقت</td>
+                        <td>۳۴۲,۰۰۰</td>
+                        <td><span class="ds-badge success">پرداخت شده</span></td>
+                        <td>۱۴:۳۲</td>
+                    </tr>
+                    <tr>
+                        <td>#4688</td>
+                        <td>مهدی صالحی</td>
+                        <td>۱۹۵,۰۰۰</td>
+                        <td><span class="ds-badge warning">در حال آماده‌سازی</span></td>
+                        <td>۱۴:۴۵</td>
+                    </tr>
+                    <tr>
+                        <td>#4689</td>
+                        <td>الهام رستمی</td>
+                        <td>۵۲۵,۰۰۰</td>
+                        <td><span class="ds-badge danger">پرداخت نشده</span></td>
+                        <td>۱۵:۰۲</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="ds-section">
+        <div class="ds-stack">
+            <strong>چیدمان نمونه داشبورد</strong>
+            <div class="ds-layout-preview">
+                <div class="ds-layout-block">Sidebar</div>
+                <div class="ds-layout-block">Main Content</div>
+                <div class="ds-layout-block">Context Panel</div>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    (function () {
+        const root = document.documentElement;
+        const toggle = document.getElementById('ds-theme-toggle');
+        const storageKey = 'madelineTheme';
+        const storedTheme = localStorage.getItem(storageKey) || 'light';
+
+        function applyTheme(theme) {
+            root.setAttribute('data-theme', theme);
+            if (toggle) {
+                toggle.textContent = theme === 'light' ? '🌙 تم تیره' : '☀️ تم روشن';
+            }
+            localStorage.setItem(storageKey, theme);
+        }
+
+        applyTheme(storedTheme);
+
+        toggle?.addEventListener('click', () => {
+            const current = root.getAttribute('data-theme') || 'light';
+            const next = current === 'light' ? 'dark' : 'light';
+            applyTheme(next);
+        });
+    })();
+</script>
+{% endblock %}
+
+

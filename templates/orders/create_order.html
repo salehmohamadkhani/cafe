@@ -1,0 +1,225 @@
+{% extends 'modal_base.html' %}
+{# ... ادامه فرم ... #}{% block title %}ثبت سفارش جدید{% endblock %}
+
+{% block content %}
+<div class="container mt-2">
+    <h1 class="text-center">ثبت سفارش جدید</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    <div class="alert alert-{{ category }}">{{ message }}</div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    <form id="order-form" method="post" action="{{ url_for('order.create_order') }}">
+        <div class="card mb-2">
+            <div class="card-header">
+                <b>مشخصات مشتری</b>
+            </div>
+            <div class="card-body">
+                <div class="customer-fields">
+                    <div class="customer-field">
+                        <label for="customer-name">نام:</label>
+                        <input type="text" id="customer-name" name="customer_name" required>
+                    </div>
+                    <div class="customer-field">
+                        <label for="customer-phone">موبایل:</label>
+                        <input type="text" id="customer-phone" name="customer_phone" maxlength="20">
+                    </div>
+                    <div class="customer-field">
+                        <label for="customer-search">جستجو:</label>
+                        <input type="text" id="customer-search" placeholder="نام یا موبایل" autocomplete="off">
+                    </div>
+                </div>
+                <div id="customer-results" class="search-results"></div>
+            </div>
+        </div>
+        <div class="card mb-2">
+            <div class="card-header">
+                <b>افزودن آیتم به سفارش</b>
+            </div>
+            <div class="card-body">
+                <div class="row align-items-end">
+                    <div class="col-6">
+                        <label for="menu-search">جستجوی آیتم منو:</label>
+                        <input type="text" id="menu-search" class="form-control" placeholder="نام آیتم...">
+                        <div id="menu-search-results" class="search-results"></div>
+                    </div>
+                    <div class="col-3">
+                        <label for="menu-quantity">تعداد:</label>
+                        <input type="number" id="menu-quantity" class="form-control" min="1" value="1">
+                    </div>
+                    <div class="col-3">
+                        <button type="button" id="add-menu-item-btn" class="btn btn-success btn-block">افزودن به
+                            سفارش</button>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <label>یا انتخاب سریع از منو:</label>
+                    <div class="row">
+                        {% for item in menu_items %}
+                        <div class="col-3 mb-2">
+                            <button type="button" class="btn btn-outline-primary btn-block add-to-order-btn"
+                                data-item-id="{{ item.id }}" data-item-name="{{ item.name }}"
+                                data-item-price="{{ item.price|int }}">
+                                {{ item.name }}<br><small>{{ "{:,}".format(item.price|int) }}</small>
+                            </button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-2">
+            <div class="card-header">
+                <b>آیتم‌های سفارش</b>
+            </div>
+            <div class="card-body">
+                <table class="table table-striped text-center" id="order-items-table">
+                    <thead>
+                        <tr>
+                            <th>نام آیتم</th>
+                            <th>تعداد</th>
+                            <th>قیمت واحد</th>
+                            <th>جمع جزء</th>
+                            <th>حذف</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- با جاوااسکریپت پر می‌شود -->
+                    </tbody>
+                </table>
+                <div class="row">
+                    <div class="col text-right">
+                        <b>جمع کل:</b> <span id="order-total">۰</span>                    </div>
+                    <div class="col text-right">
+                        <b>تخفیف:</b>
+                        <input type="number" id="order-discount" name="discount" class="form-control d-inline-block"
+                            style="width:100px;" value="0" min="0">
+                    </div>
+                    <div class="col text-right">
+                        <b>مالیات ({{ tax_percent }}٪):</b> <span id="order-tax-amount">۰</span>                        <input type="hidden" id="order-tax-percent" value="{{ tax_percent }}">
+                    </div>
+                    <div class="col text-right">
+                        <b>مبلغ نهایی:</b> <span id="order-final">۰</span>                    </div>
+                </div>
+                <div id="order-items-hidden"></div>
+            </div>
+        </div>
+
+        <div class="card mb-2">
+            <div class="card-header">
+                <b>اطلاعات سفارش</b>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col">
+                        <label for="order-type">نوع سفارش:</label>
+                        <select name="type" id="order-type" class="form-control">
+                            <option value="حضوری">حضوری</option>
+                            <option value="بیرون‌بر">بیرون‌بر</option>
+                        </select>
+                    </div>
+                    <div class="col">
+                        <label for="order-status">وضعیت سفارش:</label>
+                        <select name="status" id="order-status" class="form-control">
+                            <option value="پرداخت نشده">پرداخت نشده</option>
+                            <option value="پرداخت شده">پرداخت شده</option>
+                            <option value="لغو شده">لغو شده</option>
+                        </select>
+                    </div>
+                    <div class="col">
+                        <label>&nbsp;</label>
+                        <button type="submit" class="btn btn-primary btn-block">ثبت سفارش</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <div class="card mt-2">
+        <div class="card-header">
+            <b>راهنما</b>
+        </div>
+        <div class="card-body">
+            <ul>
+                <li>برای جستجوی مشتری، نام یا شماره موبایل را وارد کنید و از لیست انتخاب نمایید یا اطلاعات جدید ثبت
+                    کنید.</li>
+                <li>برای افزودن آیتم به سفارش، نام آیتم را جستجو یا از منوی سریع انتخاب کنید و تعداد را وارد نمایید.
+                </li>
+                <li>برای حذف آیتم از سفارش، روی دکمه حذف کنار هر آیتم کلیک کنید.</li>
+                <li>تخفیف و مالیات به صورت خودکار محاسبه می‌شود.</li>
+                <li>پس از تکمیل فرم، روی "ثبت سفارش" کلیک کنید.</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<style>
+    .search-results {
+        position: absolute;
+        background: #fff;
+        border: 1px solid #e0e0e0;
+        border-radius: 5px;
+        max-height: 200px;
+        overflow-y: auto;
+        width: 100%;
+        z-index: 10;
+        display: none;
+        margin-top: 2px;
+    }
+
+    /* دکمه‌های منو و سفارش */
+    .add-to-order-btn {
+        color: #007bff;
+        background: #e6f0ff;
+        border: 1px solid #007bff;
+        font-size: 1rem;
+        margin-bottom: 0.5rem;
+        white-space: normal;
+        transition: background 0.2s, color 0.2s;
+    }
+
+    .add-to-order-btn:hover {
+        background: #007bff;
+        color: #fff;
+    }
+
+    /* نتایج جستجو */
+    .customer-result,
+    .menu-search-result {
+        color: #222;
+        background: #fff;
+        transition: background 0.2s, color 0.2s;
+    }
+
+    .customer-result:hover,
+    .menu-search-result:hover {
+        background: #f7f7f7;
+        color: #007bff;
+    }
+
+    /* چیدمان ردیف‌ها */
+    .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .col,
+    .col-3,
+    .col-6 {
+        flex: 1 1 0;
+        min-width: 120px;
+        margin-bottom: 8px;
+    }
+
+    .d-inline-block {
+        display: inline-block;
+    }
+</style>
+
+{% endblock %}

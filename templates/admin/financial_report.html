@@ -1,0 +1,777 @@
+{% extends 'base.html' %}
+{% block title %}گزارش مالی{% endblock %}
+
+{% block head %}
+<style>
+    body:has(.financial-shell) .container {
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+        min-height: calc(100vh - 70px);
+        background: var(--color-bg, #F7F8FA);
+    }
+
+    body:has(.financial-shell) .footer {
+        display: none !important;
+    }
+
+    .financial-shell {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        padding: 1.5rem 2rem 2.5rem;
+    }
+
+    .financial-hero {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 1.5rem;
+        padding: 2rem;
+        border-radius: 24px;
+        background: radial-gradient(circle at top left, rgba(74, 168, 255, 0.45), rgba(31, 58, 95, 0.95));
+        color: #fff;
+        box-shadow: 0 25px 55px rgba(31, 58, 95, 0.25);
+    }
+
+    .financial-hero h1 {
+        margin: 0;
+        font-size: 2rem;
+    }
+
+    .financial-hero p {
+        margin: 0.35rem 0 0;
+        color: rgba(255, 255, 255, 0.85);
+    }
+
+    .period-toggle {
+        flex: 1;
+        min-width: 260px;
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 24px;
+        padding: 0.4rem;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 0.45rem;
+        align-self: flex-end;
+    }
+
+    .period-toggle .toggle-btn {
+        text-decoration: none;
+        border-radius: 999px;
+        padding: 0.55rem 1.1rem;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.85);
+        transition: all 0.2s ease;
+        border: 1px solid transparent;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 0.15rem;
+    }
+
+    .period-toggle .toggle-btn.active {
+        background: #fff;
+        color: var(--color-primary, #1F3A5F);
+        box-shadow: 0 12px 26px rgba(255, 255, 255, 0.35);
+        border-color: transparent;
+    }
+
+    .toggle-btn small {
+        font-size: 0.75rem;
+        color: inherit;
+        opacity: 0.9;
+        font-weight: 500;
+    }
+
+    /* Range filter - aligned with existing design-system components */
+    .range-filter {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: flex-end;
+        margin-top: 1rem;
+        padding: 0.75rem 0.9rem;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.14);
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        backdrop-filter: blur(10px);
+    }
+
+    .range-filter__title {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: rgba(255, 255, 255, 0.9);
+        padding: 0 0.15rem 0.4rem;
+        white-space: nowrap;
+    }
+
+    .range-filter__fields {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: flex-end;
+    }
+
+    .range-filter__field {
+        min-width: 170px;
+    }
+
+    .range-filter .ds-label {
+        font-size: 0.82rem;
+        color: rgba(255, 255, 255, 0.82);
+    }
+
+    .range-filter .ds-input {
+        background: rgba(255, 255, 255, 0.92);
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        color: var(--navbar-bg);
+        padding: 0.55rem 0.75rem;
+    }
+
+    .range-filter .ds-input:focus {
+        border-color: rgba(255, 255, 255, 0.65);
+        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.18);
+    }
+
+    .range-filter__actions {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+        margin-right: auto;
+    }
+
+    .range-filter .ds-button {
+        border-radius: 999px;
+        padding: 0.55rem 1.05rem;
+        box-shadow: 0 10px 22px rgba(15, 23, 42, 0.22);
+    }
+
+    @media (max-width: 768px) {
+        .range-filter {
+            padding: 0.75rem;
+        }
+
+        .range-filter__field {
+            min-width: 220px;
+            flex: 1;
+        }
+
+        .range-filter__actions {
+            width: 100%;
+            margin-right: 0;
+            justify-content: stretch;
+        }
+
+        .range-filter__actions .ds-button {
+            width: 100%;
+        }
+    }
+
+    .financial-summary-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+        gap: 1.2rem;
+    }
+
+    .stat-card {
+        background: #fff;
+        border-radius: 20px;
+        padding: 1.35rem;
+        box-shadow: 0 15px 40px rgba(15, 23, 42, 0.08);
+        display: flex;
+        flex-direction: column;
+        gap: 0.45rem;
+        border: 1px solid var(--color-border, #e2e8f0);
+    }
+
+    .stat-card h3 {
+        margin: 0;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--text-secondary, #6b7380);
+    }
+
+    .stat-card .stat-value {
+        font-size: 1.4rem;
+        font-weight: 800;
+        color: var(--navbar-bg);
+    }
+
+    .stat-card small {
+        color: var(--text-secondary, #6b7380);
+        font-size: 0.82rem;
+    }
+
+    .stat-card.primary {
+        background: linear-gradient(135deg, #4aa8ff, #1f3a5f);
+        color: #fff;
+        border: none;
+    }
+
+    .stat-card.primary h3,
+    .stat-card.primary small {
+        color: rgba(255, 255, 255, 0.85);
+    }
+
+    .stat-card.primary .stat-value {
+        color: #fff;
+    }
+
+    .stat-card.split {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.35rem;
+    }
+
+    .stat-chip {
+        background: rgba(39, 179, 118, 0.12);
+        color: var(--color-success, #27B376);
+        border-radius: 14px;
+        padding: 0.35rem 0.75rem;
+        text-align: center;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .stat-chip.danger {
+        background: rgba(228, 72, 72, 0.12);
+        color: var(--color-danger, #E44848);
+    }
+
+    .closing-panel {
+        background: var(--color-surface-alt);
+        border-radius: 24px;
+        padding: 1.8rem;
+        box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+        border: 1px solid var(--color-border, #e2e8f0);
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+    }
+
+    .closing-panel header {
+        display: flex;
+        flex-direction: column;
+        gap: 0.85rem;
+    }
+
+    .closing-panel header h3 {
+        margin: 0;
+        font-size: 1.15rem;
+        color: var(--text-heading, #2A2E34);
+    }
+
+    .closing-panel header p {
+        margin: 0;
+        color: var(--text-secondary, #6b7380);
+        font-size: 0.92rem;
+    }
+
+    .channel-pills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .channel-pill {
+        background: rgba(74, 168, 255, 0.12);
+        color: var(--color-muted);
+        padding: 0.4rem 0.85rem;
+        border-radius: 999px;
+        font-weight: 600;
+        font-size: 0.83rem;
+    }
+
+    .channel-pill.muted {
+        background: rgba(148, 163, 184, 0.2);
+        color: #64748b;
+    }
+
+    .closing-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1rem;
+    }
+
+    .closing-card {
+        background-color: var(--color-muted);
+        border-radius: 18px;
+        padding: 1.2rem;
+        border: 1px solid rgba(148, 163, 184, 0.3);
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+    }
+
+    .closing-card.primary {
+        background: linear-gradient(135deg, #4aa8ff, #1f3a5f);
+        color: #fff;
+        border: none;
+        box-shadow: 0 15px 35px rgba(31, 58, 95, 0.25);
+    }
+
+    .closing-card.warning {
+        background: linear-gradient(135deg, #f2b544, #f97316);
+        color: #2a1c04;
+    }
+
+    .closing-card strong {
+        font-size: 1.35rem;
+        font-weight: 800;
+    }
+
+    .closing-card small,
+    .closing-card span {
+        font-size: 0.85rem;
+        color: inherit;
+        opacity: 0.85;
+    }
+
+    .closing-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .closing-meta__item {
+        flex: 1;
+        min-width: 220px;
+        background: var(--color-border);
+        border-radius: 14px;
+        padding: 0.85rem 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+    }
+
+    .closing-meta__item span {
+        font-size: 0.85rem;
+        color: #6b7380;
+    }
+
+    .closing-meta__item strong {
+        font-size: 1.05rem;
+        color: var(--text-heading, #1e293b);
+    }
+
+    .payment-breakdown {
+        border: 1px dashed rgba(15, 23, 42, 0.15);
+        border-color: var(--navbar-text);
+        border-radius: 18px;
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.65rem;
+    }
+
+    .payment-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: 600;
+        color: var(--text-heading, #2A2E34);
+    }
+
+    .payment-row span {
+        flex: 1;
+    }
+
+    .payment-row strong {
+        font-size: 1rem;
+        color: var(--color-primary, #1F3A5F);
+    }
+
+    .payment-row.empty {
+        justify-content: center;
+        color: var(--text-secondary, #94a3b8);
+    }
+
+    .invoice-code {
+        font-family: 'SFMono-Regular', 'Vazirmatn', monospace;
+        font-size: 0.82rem;
+        color: #475569;
+    }
+
+    .orders-card {
+        background: var(--color-surface-alt);
+        border-radius: 22px;
+        padding: 1.6rem;
+        box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+        border: 1px solid var(--color-border, #e2e8f0);
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .orders-card header {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 0.75rem;
+        align-items: baseline;
+    }
+
+    .orders-card header h3 {
+        margin: 0;
+        font-size: 1.15rem;
+        color: var(--text-heading, #2A2E34);
+    }
+
+    .orders-card header span {
+        color: var(--text-secondary, #6b7380);
+        font-size: 0.9rem;
+    }
+
+    .orders-table-wrapper {
+        overflow-x: auto;
+    }
+
+    table.financial-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 0.65rem;
+        min-width: 880px;
+    }
+
+    table.financial-table thead th {
+        text-align: center;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-secondary, #6b7380);
+        padding-bottom: 0.75rem;
+    }
+
+    table.financial-table tbody tr {
+        background: var(--color-bg, #F7F8FA);
+        border-radius: 18px;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+    }
+
+    table.financial-table td {
+        padding: 0.85rem;
+        text-align: center;
+        font-weight: 600;
+        color: var(--text-heading, #2A2E34);
+    }
+
+    table.financial-table td:first-child {
+        border-top-right-radius: 18px;
+        border-bottom-right-radius: 18px;
+        color: var(--color-primary, #1F3A5F);
+    }
+
+    table.financial-table td:last-child {
+        border-top-left-radius: 18px;
+        border-bottom-left-radius: 18px;
+    }
+
+    .status-pill,
+    .type-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        border-radius: 999px;
+        padding: 0.3rem 0.9rem;
+        font-size: 0.82rem;
+        font-weight: 600;
+    }
+
+    .status-pill.success {
+        background: rgba(39, 179, 118, 0.12);
+        color: var(--color-success, #27B376);
+    }
+
+    .status-pill.warning {
+        background: rgba(242, 181, 68, 0.12);
+        color: var(--color-warning, #F2B544);
+    }
+
+    .type-pill {
+        background: rgba(74, 168, 255, 0.12);
+        color: var(--color-primary, #1F3A5F);
+    }
+
+    .type-pill.muted {
+        background: rgba(148, 163, 184, 0.22);
+        color: #64748b;
+    }
+
+    .method-pill {
+        background: var(--navbar-hover);
+        color: #0f172a;
+        border-radius: 999px;
+        padding: 0.3rem 0.9rem;
+        font-size: 0.82rem;
+        font-weight: 600;
+    }
+
+    .method-pill.muted {
+        background: rgba(148, 163, 184, 0.15);
+        color: #94a3b8;
+    }
+
+    @media (max-width: 768px) {
+        .financial-hero {
+            padding: 1.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="financial-shell">
+    <section class="financial-hero">
+        <div>
+            <p style="margin:0;opacity:0.85;">گزارش مالی</p>
+            <h1>{{ period_label }}</h1>
+            <p>{{ period_description }}</p>
+            <form class="range-filter" method="get" action="{{ url_for('admin.financial_report') }}">
+                <input type="hidden" name="period" value="{{ period }}">
+                <div class="range-filter__title">بازه دلخواه</div>
+                <div class="range-filter__fields">
+                    <div class="ds-input-group range-filter__field">
+                        <label class="ds-label" for="financial-start-date">از</label>
+                        <input type="date" id="financial-start-date" name="start" class="ds-input"
+                            value="{{ start_date.isoformat() }}">
+                    </div>
+                    <div class="ds-input-group range-filter__field">
+                        <label class="ds-label" for="financial-end-date">تا</label>
+                        <input type="date" id="financial-end-date" name="end" class="ds-input"
+                            value="{{ end_date.isoformat() }}">
+                    </div>
+                </div>
+                <div class="range-filter__actions">
+                    <button type="submit" class="ds-button primary">اعمال بازه</button>
+                </div>
+            </form>
+        </div>
+        <div class="period-toggle">
+            {% for option in period_options %}
+            <a class="toggle-btn {% if period == option.key %}active{% endif %}"
+               href="{{ url_for('admin.financial_report', period=option.key) }}">
+                <span>{{ option.label }}</span>
+                <small>{{ option.hint }}</small>
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="financial-summary-grid">
+        <article class="stat-card primary">
+            <h3>جمع فروش</h3>
+            <div class="stat-value">{{ "{:,}".format(total_sales) }}</div>
+            <small>کل دریافتی در بازه‌ی انتخابی</small>
+        </article>
+        <article class="stat-card">
+            <h3>مالیات محاسبه شده</h3>
+            <div class="stat-value">{{ "{:,}".format(total_tax) }}</div>
+            <small>براساس درصد تعریف‌شده در تنظیمات</small>
+        </article>
+        <article class="stat-card">
+            <h3>تخفیف‌ها</h3>
+            <div class="stat-value">{{ "{:,}".format(total_discount) }}</div>
+            <small>مجموع تخفیف‌های اعمال‌شده</small>
+        </article>
+        <article class="stat-card">
+            <h3>متوسط مبلغ هر سفارش</h3>
+            <div class="stat-value">{{ "{:,}".format(average_ticket) }}</div>
+            <small>{{ orders|length }} سفارش در بازه انتخابی</small>
+        </article>
+        <article class="stat-card split">
+            <div class="stat-chip">پرداخت شده: {{ paid_orders|length }}</div>
+            <div class="stat-chip danger">باز / معوق: {{ unpaid_orders|length }}</div>
+            <small style="grid-column: span 2;">وضعیت سفارش‌ها</small>
+        </article>
+        {% if total_deleted_items_count > 0 %}
+        <article class="stat-card" style="border-left: 4px solid #dc3545;">
+            <h3 style="color: #dc3545;">آیتم‌های حذف شده</h3>
+            <div class="stat-value" style="color: #dc3545;">{{ "{:,}".format(total_deleted_items_count) }} آیتم</div>
+            <small>{{ "{:,}".format(total_deleted_items_amount) }} · {{ orders_with_deleted }} سفارش</small>
+        </article>
+        {% endif %}
+    </section>
+
+    <section class="closing-panel">
+        <header>
+            <div>
+                <h3>جمع صندوق پایان {{ period_label }}</h3>
+                <p>تفکیک فروش کارتخوان، کارت به کارت و اسنپ (با امکان ثبت تسویه اسنپ) به‌همراه سفارش‌های باز برای جمع‌بندی پایان روز</p>
+            </div>
+            <div class="channel-pills">
+                {% if channel_breakdown %}
+                    {% for channel in channel_breakdown %}
+                        <span class="channel-pill">
+                            {{ channel.label }} • {{ channel.count }} سفارش · {{ "{:,}".format(channel.amount) }}
+                        </span>
+                    {% endfor %}
+                {% else %}
+                    <span class="channel-pill muted">سفارشی برای این بازه تسویه نشده است.</span>
+                {% endif %}
+            </div>
+        </header>
+        <div class="closing-grid">
+            <article class="closing-card primary">
+                <span>کارتخوان</span>
+                <strong>{{ "{:,}".format(closing_summary.pos_total) }}</strong>
+                <small>{{ closing_summary.pos_count }} پرداخت کارتخوان</small>
+            </article>
+            <article class="closing-card">
+                <span>کارت به کارت</span>
+                <strong>{{ "{:,}".format(closing_summary.transfer_total) }}</strong>
+                <small>{{ closing_summary.transfer_count }} پرداخت کارت به کارت</small>
+            </article>
+            {% if closing_summary.snap_total and closing_summary.snap_total > 0 %}
+            <article class="closing-card">
+                <span>اسنپ (در انتظار تسویه)</span>
+                <strong>-{{ "{:,}".format(closing_summary.snap_pending_total) }}</strong>
+                <small>{{ closing_summary.snap_pending_count }} سفارش در انتظار تسویه</small>
+            </article>
+            {% endif %}
+            <article class="closing-card warning">
+                <span>سفارش‌های باز</span>
+                <strong>{{ "{:,}".format(closing_summary.pending_total) }}</strong>
+                <small>{{ unpaid_orders|length }} سفارش نیازمند پیگیری</small>
+            </article>
+        </div>
+        <div class="closing-meta">
+            <div class="closing-meta__item">
+                <span>انتظار صندوق (کارتخوان)</span>
+                <strong>{{ "{:,}".format(closing_summary.drawer_expected) }}</strong>
+            </div>
+            <div class="closing-meta__item">
+                <span>جمع فروش پرداخت‌شده</span>
+                <strong>{{ "{:,}".format(closing_summary.paid_total) }}</strong>
+            </div>
+            {% if closing_summary.snap_total and closing_summary.snap_total > 0 %}
+            <div class="closing-meta__item">
+                <span>خالص دریافتی (بعد از کسر اسنپِ تسویه‌نشده)</span>
+                <strong>{{ "{:,}".format(closing_summary.received_total) }}</strong>
+            </div>
+            {% if closing_summary.snap_settled_total and closing_summary.snap_settled_total > 0 %}
+            <div class="closing-meta__item">
+                <span>اسنپ (تسویه‌شده)</span>
+                <strong>{{ "{:,}".format(closing_summary.snap_settled_total) }}</strong>
+            </div>
+            {% endif %}
+            {% endif %}
+        </div>
+        {% if closing_summary.snap_total and closing_summary.snap_total > 0 %}
+        <div style="display:flex; flex-wrap:wrap; gap:0.75rem; align-items:center; margin-top: 0.75rem;">
+            {% if snap_current_range_settled %}
+                <span class="method-pill muted">
+                    تسویه اسنپ این بازه ثبت شده است
+                    {% if snap_current_settlement and snap_current_settlement.settled_at %}
+                        · {{ snap_current_settlement.settled_at | datetime('%Y/%m/%d %H:%M') }}
+                    {% endif %}
+                </span>
+            {% else %}
+                <form method="post" action="{{ url_for('admin.settle_snap') }}" style="margin:0;">
+                    <input type="hidden" name="period" value="{{ period }}">
+                    <input type="hidden" name="start" value="{{ start_date.isoformat() }}">
+                    <input type="hidden" name="end" value="{{ end_date.isoformat() }}">
+                    <button type="submit" class="ds-button primary">ثبت تسویه اسنپ برای این بازه</button>
+                </form>
+                <span style="color: var(--text-secondary, #6b7380); font-size: 0.88rem;">
+                    تا زمان ثبت تسویه، مبلغ اسنپ در «خالص دریافتی» کسر می‌شود.
+                </span>
+            {% endif %}
+        </div>
+        {% endif %}
+        <div class="payment-breakdown">
+            {% if payment_breakdown %}
+                {% for payment in payment_breakdown %}
+                <div class="payment-row">
+                    <span>{{ payment.label }}</span>
+                    <span>{{ payment.count }} فاکتور</span>
+                    <strong>{{ "{:,}".format(payment.amount) }}</strong>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="payment-row empty">در این بازه پرداختی ثبت نشده است.</div>
+            {% endif %}
+        </div>
+    </section>
+
+    <section class="orders-card">
+        <header>
+            <div>
+                <h3>جزئیات سفارش‌های {{ period_label }}</h3>
+                <span>آخرین سفارش‌ها با اطلاعات تخفیف، مالیات و وضعیت پرداخت</span>
+            </div>
+            <span>{{ orders|length }} سفارش ثبت شده</span>
+        </header>
+        <div class="orders-table-wrapper">
+            <table class="financial-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>شماره روزانه</th>
+                        <th>شناسه فاکتور</th>
+                        <th>مشتری</th>
+                        <th>شماره تماس</th>
+                        <th>مبلغ نهایی</th>
+                        <th>تخفیف</th>
+                        <th>مالیات</th>
+                        <th>آیتم‌های حذف شده</th>
+                        <th>وضعیت</th>
+                        <th>نوع</th>
+                        <th>روش پرداخت</th>
+                        <th>تاریخ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if orders_with_deleted_info %}
+                        {% for item_info in orders_with_deleted_info %}
+                        {% set order = item_info.order %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td>{{ order.daily_sequence or '---' }}</td>
+                            <td><span class="invoice-code">{{ order.invoice_uid or ('LEGACY-' ~ order.invoice_number) }}</span></td>
+                            <td>{{ order.customer.name if order.customer else '---' }}</td>
+                            <td>{{ order.customer.phone if order.customer else '---' }}</td>
+                            <td>{{ "{:,}".format(order.final_amount) }}</td>
+                            <td>{{ "{:,}".format(order.discount) }}</td>
+                            <td>{{ "{:,}".format(order.tax_amount) }}</td>
+                            <td>
+                                {% if item_info.deleted_items_count > 0 %}
+                                    <span style="color: #dc3545; font-weight: 600;">
+                                        {{ item_info.deleted_items_count }} آیتم · {{ "{:,}".format(item_info.deleted_items_total) }}
+                                    </span>
+                                {% else %}
+                                    <span style="color: #6b7280;">---</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if order.status == 'پرداخت شده' %}
+                                    <span class="status-pill success">پرداخت شده</span>
+                                {% else %}
+                                    <span class="status-pill warning">{{ order.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td><span class="type-pill">{{ order.type or 'حضوری' }}</span></td>
+                            <td>
+                                {% if order.payment_method %}
+                                    <span class="method-pill">{{ order.payment_method }}</span>
+                                {% else %}
+                                    <span class="method-pill muted">نامشخص</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ order.created_at | to_jalali if order.created_at else '-' }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="13" style="text-align:center; color:#6b7280; font-weight:600;">سفارشی در این بازه یافت نشد.</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}
+

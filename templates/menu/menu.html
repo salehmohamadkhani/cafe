@@ -1,0 +1,760 @@
+{% extends "base.html" %}
+
+{% block title %}مدیریت منو{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}?v={{ cache_bust() }}">
+<style>
+    body.menu-page {
+        background: var(--color-bg);
+    }
+
+    body.menu-page .navbar {
+        margin-bottom: 0;
+    }
+
+    body.menu-page .container {
+        max-width: 100% !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        box-shadow: none;
+    }
+
+    body.menu-page .footer {
+        display: none;
+    }
+
+    .menu-shell {
+        min-height: calc(100vh - 72px);
+        padding: 2rem;
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-3);
+        background: var(--color-bg);
+    }
+
+    .menu-layout {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        gap: var(--space-3);
+    }
+
+    .menu-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+
+    .menu-toolbar .menu-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        border-radius: var(--radius-lg);
+        padding: 0.85rem 1.35rem;
+        font-weight: 600;
+        font-size: 0.95rem;
+        cursor: pointer;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        color: #fff;
+        letter-spacing: -0.01em;
+    }
+
+    .menu-btn--primary {
+        background: var(--color-primary);
+        box-shadow: 0 8px 18px rgba(31, 58, 95, 0.28);
+    }
+
+    .menu-btn--primary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 12px 26px rgba(31, 58, 95, 0.37);
+    }
+
+    .menu-btn--secondary {
+        background: var(--color-secondary);
+        color: #fff;
+        box-shadow: 0 8px 18px rgba(74, 168, 255, 0.35);
+    }
+
+    .menu-btn--secondary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 12px 26px rgba(74, 168, 255, 0.45);
+    }
+
+    .menu-btn--accent {
+        background: var(--color-accent1);
+        color: #fff;
+        box-shadow: 0 10px 20px rgba(106, 78, 54, 0.35);
+    }
+
+    .menu-btn--accent:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 14px 28px rgba(106, 78, 54, 0.45);
+    }
+
+    .menu-btn--ghost {
+        background: var(--color-primary-light);
+        color: #fff;
+        border: none;
+        box-shadow: 0 8px 18px rgba(58, 80, 120, 0.32);
+        text-decoration: none;
+    }
+
+    .menu-btn--ghost:hover {
+        background: var(--color-primary);
+        box-shadow: 0 12px 26px rgba(31, 58, 95, 0.38);
+        color: #fff;
+        transform: translateY(-1px);
+    }
+
+    .menu-sidebar {
+        position: sticky;
+        top: 1.5rem;
+        align-self: flex-start;
+    }
+
+    .menu-category-link {
+        display: block;
+        padding: 0.85rem 1rem;
+        border-radius: var(--radius-lg);
+        color: var(--text-body);
+        text-decoration: none;
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        transition: all 0.2s ease;
+    }
+
+    .menu-category-link:hover {
+        background: var(--color-primary-light, rgba(74, 168, 255, 0.1));
+        border-color: var(--color-primary);
+        transform: translateX(-2px);
+    }
+
+    .menu-category-link.active {
+        background: var(--color-secondary);
+        color: var(--color-primary-dark, #152233);
+        border-color: var(--color-secondary);
+        box-shadow: 0 4px 12px rgba(74, 168, 255, 0.25);
+        font-weight: 600;
+    }
+
+    .menu-main {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-3);
+    }
+
+    .category-block {
+        background: var(--color-surface);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--color-border);
+        padding: var(--space-3);
+        box-shadow: var(--card-shadow);
+    }
+
+    .category-block.inactive-category {
+        opacity: 0.45;
+    }
+
+    .menu-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: var(--space-2);
+    }
+
+    /* استایل‌های menu-item به design-system.css منتقل شد */
+
+    .search-card input {
+        width: 100%;
+        padding: 0.85rem 1rem;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--color-border);
+        background: var(--color-surface);
+        box-sizing: border-box;
+        display: block;
+    }
+
+    .search-results {
+        margin-top: 0.5rem;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        background: var(--color-surface);
+        display: none;
+    }
+
+    .search-result-item {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    .search-result-item:last-child {
+        border-bottom: none;
+    }
+
+    /* --- Materials (Recipe) modal - design-system aligned --- */
+    #materialsModal .ds-modal__body {
+        display: flex;
+        flex-direction: column;
+        gap: 0.9rem;
+    }
+
+    .materials-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        padding: 0.75rem;
+        border-radius: var(--radius-md);
+        background: var(--color-surface-alt);
+        border: 1px solid var(--color-border);
+    }
+
+    .materials-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        padding: 0.35rem 0.8rem;
+        border-radius: 999px;
+        background: rgba(74, 168, 255, 0.12);
+        color: var(--color-primary);
+        font-weight: 700;
+        font-size: 0.85rem;
+        border: 1px solid rgba(74, 168, 255, 0.22);
+        white-space: nowrap;
+    }
+
+    .materials-chip.active {
+        background: rgba(39, 179, 118, 0.12);
+        color: var(--color-success);
+        border-color: rgba(39, 179, 118, 0.22);
+    }
+
+    .materials-chip.pill strong {
+        font-size: 0.95rem;
+    }
+
+    .materials-list {
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        background: var(--color-surface);
+        padding: 0.75rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.65rem;
+        max-height: 260px;
+        overflow: auto;
+    }
+
+    .materials-list.empty {
+        color: var(--text-secondary);
+        text-align: center;
+        padding: 1rem;
+    }
+
+    .materials-item {
+        display: flex;
+        align-items: stretch;
+        justify-content: space-between;
+        gap: 0.85rem;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        background: var(--color-surface-alt);
+        padding: 0.85rem;
+    }
+
+    .materials-item__main {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.55rem;
+    }
+
+    .materials-item__title {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 0.75rem;
+    }
+
+    .materials-item__name {
+        font-size: 1rem;
+        color: var(--text-heading);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .materials-item__qty {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        white-space: nowrap;
+    }
+
+    .materials-item__meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+    }
+
+    .materials-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.22rem 0.55rem;
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.06);
+        color: var(--text-body);
+        font-size: 0.82rem;
+        border: 1px solid rgba(15, 23, 42, 0.08);
+    }
+
+    .materials-item__side {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 0.65rem;
+        min-width: 110px;
+    }
+
+    .materials-item__cost {
+        text-align: left;
+        direction: rtl;
+    }
+
+    .materials-item__cost-label {
+        display: block;
+        font-size: 0.78rem;
+        color: var(--text-secondary);
+        margin-bottom: 0.15rem;
+    }
+
+    .materials-item__cost-value {
+        display: block;
+        font-size: 0.98rem;
+        color: var(--text-heading);
+    }
+
+    .materials-item__delete {
+        border-radius: 999px;
+        padding: 0.45rem 0.85rem;
+        border: 1px solid rgba(228, 72, 72, 0.35);
+        background: rgba(228, 72, 72, 0.08);
+        color: var(--color-danger);
+        font-weight: 700;
+        cursor: pointer;
+        transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    }
+
+    .materials-item__delete:hover {
+        background: rgba(228, 72, 72, 0.14);
+        box-shadow: var(--shadow-xs);
+        transform: translateY(-1px);
+    }
+
+    .materials-total {
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        background: var(--color-surface);
+        padding: 0.85rem;
+    }
+
+    .materials-total-content {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        font-weight: 700;
+    }
+
+    .materials-total-label {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+
+    .materials-total-value {
+        color: var(--text-heading);
+        font-size: 1rem;
+    }
+
+    .materials-form {
+        display: grid;
+        grid-template-columns: 1fr 220px;
+        gap: 0.75rem;
+        align-items: start;
+        padding-top: 0.25rem;
+        border-top: 1px dashed var(--color-border);
+    }
+
+    .ds-autocomplete {
+        position: relative;
+        width: 100%;
+    }
+
+    .ds-autocomplete__menu {
+        position: absolute;
+        top: calc(100% + 0.35rem);
+        right: 0;
+        left: 0;
+        z-index: 50;
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-sm);
+        max-height: 240px;
+        overflow: auto;
+        padding: 0.35rem;
+    }
+
+    .ds-autocomplete__empty {
+        padding: 0.75rem 0.9rem;
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        text-align: center;
+    }
+
+    .ds-autocomplete__option {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        padding: 0.7rem 0.85rem;
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        border: 1px solid transparent;
+        color: var(--text-body);
+        background: transparent;
+        user-select: none;
+    }
+
+    .ds-autocomplete__option:hover,
+    .ds-autocomplete__option.active {
+        background: rgba(31, 58, 95, 0.08);
+        border-color: rgba(31, 58, 95, 0.14);
+    }
+
+    .ds-autocomplete__option strong {
+        font-size: 0.95rem;
+        color: var(--text-heading);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        flex: 1;
+        min-width: 0;
+        text-align: right;
+    }
+
+    .ds-autocomplete__option span {
+        font-size: 0.82rem;
+        color: var(--text-secondary);
+        white-space: nowrap;
+        direction: ltr;
+    }
+
+    .material-quantity-group {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    #material-unit-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 54px;
+        height: 42px;
+        padding: 0 0.6rem;
+        border-radius: 999px;
+        border: 1px solid var(--color-border);
+        background: var(--color-surface-alt);
+        color: var(--text-secondary);
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    @media (max-width: 640px) {
+        .materials-form {
+            grid-template-columns: 1fr;
+        }
+        .materials-item {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .materials-item__side {
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+            min-width: 0;
+        }
+        .materials-item__cost {
+            text-align: right;
+        }
+    }
+
+    /* استایل‌های مودال به design-system.css منتقل شد */
+
+    @media (max-width: 1100px) {
+        .menu-layout {
+            grid-template-columns: 1fr;
+        }
+
+        .menu-sidebar {
+            position: static;
+        }
+    }
+
+    @media (max-width: 720px) {
+        .menu-shell {
+            padding: 1rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<script>document.addEventListener('DOMContentLoaded', () => document.body.classList.add('menu-page'));</script>
+<div class="menu-shell">
+    <section class="ds-section">
+        <div class="ds-card-header" style="margin-bottom: var(--space-2); align-items:flex-start;">
+            <div>
+                <h2 style="margin:0;">مدیریت منوی کافه</h2>
+                <p class="ds-subtitle">به‌روزرسانی سریع آیتم‌ها و متریال‌ها</p>
+            </div>
+            <div class="menu-toolbar">
+                <button class="menu-btn menu-btn--primary" id="add-new-menu-item-btn">+ آیتم جدید</button>
+                <button class="menu-btn menu-btn--accent" id="manage-categories-btn">📁 مدیریت دسته‌بندی‌ها</button>
+                <a class="menu-btn menu-btn--ghost" href="{{ url_for('menu.menu_price_management') }}">مدیریت قیمت‌ها</a>
+                <a class="menu-btn menu-btn--ghost" href="javascript:history.back()">بازگشت</a>
+            </div>
+        </div>
+
+        <div class="menu-layout">
+            <div class="menu-sidebar">
+                <div class="ds-card" style="padding: 1rem;">
+                    <h4 style="margin: 0 0 1rem 0; font-size: 1.1rem; font-weight: 700; color: var(--text-heading);">دسته‌بندی‌ها</h4>
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <a href="#" class="menu-category-link active" data-category-id="all">
+                            <div>
+                                <div style="font-weight: 600; margin-bottom: 0.25rem;">همه آیتم‌ها</div>
+                                <div style="font-size: 0.85rem; color: var(--text-secondary);">{{ menu_items|length }} محصول</div>
+                            </div>
+                        </a>
+                        {% for category in categories %}
+                        <a href="#" class="menu-category-link" data-category-id="{{ category.id }}">
+                            <div>
+                                <div style="font-weight: 600; margin-bottom: 0.25rem;">{{ category.name }}</div>
+                                <div style="font-size: 0.85rem; color: var(--text-secondary);">{{ category.menu_items|selectattr('is_active')|list|length }} محصول</div>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="menu-main">
+                <div class="search-card ds-section">
+                    <input type="text" id="menu-search" placeholder="جست‌وجو در آیتم‌ها...">
+                    <div id="search-results" class="search-results"></div>
+                </div>
+
+                <div class="category-block" id="all-items" data-category="all">
+                    <div class="ds-card-header">
+                        <div>
+                            <span class="ds-pill">{{ menu_items|length }} آیتم</span>
+                            <h3 style="margin:0;">همه آیتم‌ها</h3>
+                        </div>
+                    </div>
+
+                    {% if grouped_items %}
+                        {% for group in grouped_items %}
+                        <div class="category-group" style="margin-bottom: 2rem;">
+                            <div class="ds-card-header" style="margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 2px solid var(--color-border);">
+                                <h4 style="margin: 0; font-size: 1.1rem; font-weight: 700; color: var(--text-heading);">
+                                    {% if group.category %}
+                                        {{ group.category.name }}
+                                    {% else %}
+                                        بدون دسته‌بندی
+                                    {% endif %}
+                                </h4>
+                                <span class="ds-pill" style="margin-right: 0.5rem;">{{ group['items']|length }} محصول</span>
+                            </div>
+                            <ul class="menu-list">
+                                {% for item in group['items'] %}
+                                <li class="menu-item" data-item-id="{{ item.id }}" data-category-id="{{ item.category_id or '' }}">
+                                    <input class="inline-name" type="text" value="{{ item.name }}" placeholder="نام محصول">
+                                    <div class="item-price-stock">
+                                        <input class="inline-price" type="number" value="{{ item.price }}" placeholder="قیمت">
+                                        <input class="inline-stock" type="number" value="{{ item.stock }}" placeholder="موجودی">
+                                    </div>
+                                    <div class="item-actions">
+                                        <button class="ds-button ghost materials-btn" data-id="{{ item.id }}">رسپی</button>
+                                        <button class="ds-button success inline-save-btn" data-id="{{ item.id }}">ذخیره</button>
+                                        <button class="ds-button danger delete-btn" data-id="{{ item.id }}">حذف</button>
+                                    </div>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <ul class="menu-list">
+                            <li class="menu-item" style="justify-content:center;align-items:center;">
+                                <span class="ds-subtitle">آیتمی ثبت نشده است.</span>
+                            </li>
+                        </ul>
+                    {% endif %}
+                </div>
+
+                {% for category in categories %}
+                <div class="category-block" id="category-{{ category.id }}" data-category="{{ category.id }}" style="display: none;">
+                    <div class="ds-card-header">
+                        <div>
+                            <span class="ds-pill">{{ category.menu_items|selectattr('is_active')|list|length }} آیتم</span>
+                            <h3 style="margin:0;">{{ category.name }}</h3>
+                        </div>
+                    </div>
+
+                    <ul class="menu-list">
+                        {% for item in (sorted_items_by_category.get(category.id, []) if sorted_items_by_category else []) %}
+                        <li class="menu-item" data-item-id="{{ item.id }}" data-category-id="{{ item.category_id or '' }}">
+                            <input class="inline-name" type="text" value="{{ item.name }}" placeholder="نام محصول">
+                            <div class="item-price-stock">
+                                <input class="inline-price" type="number" value="{{ item.price }}" placeholder="قیمت">
+                                <input class="inline-stock" type="number" value="{{ item.stock }}" placeholder="موجودی">
+                            </div>
+                            <div class="item-actions">
+                                <button class="ds-button ghost materials-btn" data-id="{{ item.id }}">رسپی</button>
+                                <button class="ds-button success inline-save-btn" data-id="{{ item.id }}">ذخیره</button>
+                                <button class="ds-button danger delete-btn" data-id="{{ item.id }}">حذف</button>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+</div>
+
+<!-- Modals -->
+<div id="menuItemModal" class="ds-modal" role="dialog" aria-modal="true">
+    <div class="ds-modal__panel">
+        <div class="ds-modal__header">
+            <h3 id="modal-title">افزودن آیتم منو</h3>
+            <button class="ds-modal__close close-modal" type="button" aria-label="بستن">&times;</button>
+        </div>
+        <div class="ds-modal__body">
+            <form id="menu-item-form">
+                <input type="hidden" id="item-id" name="id">
+                <input class="ds-input" type="text" id="item-name" name="name" placeholder="نام آیتم" required>
+                <input class="ds-input" type="number" id="item-price" name="price" placeholder="قیمت " required min="0">
+                <input class="ds-input" type="number" id="item-stock" name="stock" placeholder="موجودی" min="0">
+                <select class="ds-input" id="item-category" name="category_id">
+                    <option value="">بدون دسته‌بندی</option>
+                    {% for category in categories %}
+                    <option value="{{ category.id }}">{{ category.name }}</option>
+                    {% endfor %}
+                </select>
+                <div class="ds-modal__actions">
+                    <button type="submit" class="ds-button primary">ثبت آیتم</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+<div id="materialsModal" class="ds-modal" role="dialog" aria-modal="true">
+    <div class="ds-modal__panel">
+        <div class="ds-modal__header">
+            <div>
+                <p class="modal-eyebrow">مواد اولیه</p>
+                <h3 id="materials-modal-title">رسپی</h3>
+            </div>
+            <button class="ds-modal__close close-modal" id="close-materials-modal" type="button" aria-label="بستن">&times;</button>
+        </div>
+        <div class="ds-modal__body">
+            <div class="materials-toolbar">
+                <div class="materials-chip active">کل مصرف</div>
+                <div class="materials-chip pill" id="materials-summary-pill">
+                    <span>جمع متریال</span>
+                    <strong id="materials-summary-count">۰</strong>
+                </div>
+            </div>
+            <div id="materials-list" class="materials-list empty">متریالی ثبت نشده است.</div>
+            <div id="materials-total" class="materials-total" style="display: none;">
+                <div class="materials-total-content">
+                    <span class="materials-total-label">جمع کل هزینه مصرفی:</span>
+                    <span class="materials-total-value" id="materials-total-value">0</span>
+                </div>
+            </div>
+            <form id="materials-form" class="materials-form">
+                <input type="hidden" id="material-name">
+                <input type="hidden" id="material-raw-id">
+                <div class="ds-autocomplete" id="material-raw-autocomplete">
+                    <input class="ds-input" type="text" id="material-raw-input" placeholder="انتخاب ماده اولیه" required autocomplete="off">
+                    <div id="material-raw-dropdown" class="ds-autocomplete__menu" role="listbox" aria-label="مواد اولیه" style="display:none;"></div>
+                </div>
+                <div class="material-quantity-group">
+                    <input class="ds-input" type="number" id="material-quantity" placeholder="مقدار مصرف" required min="0" step="any">
+                    <span id="material-unit-badge">-</span>
+                </div>
+                <div class="ds-modal__actions">
+                    <button type="submit" class="ds-button success">افزودن متریال</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal مدیریت دسته‌بندی‌ها -->
+<div id="categoriesModal" class="ds-modal" role="dialog" aria-modal="true">
+    <div class="ds-modal__panel" style="max-width: 600px;">
+        <div class="ds-modal__header">
+            <h3>مدیریت دسته‌بندی‌ها</h3>
+            <button class="ds-modal__close close-modal" type="button" aria-label="بستن">&times;</button>
+        </div>
+        <div class="ds-modal__body">
+            <div style="margin-bottom: 1.5rem;">
+                <button class="ds-button primary" id="add-category-btn">+ دسته‌بندی جدید</button>
+            </div>
+            <div id="categories-list"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal افزودن/ویرایش دسته‌بندی -->
+<div id="categoryFormModal" class="ds-modal" role="dialog" aria-modal="true">
+    <div class="ds-modal__panel" style="max-width: 500px;">
+        <div class="ds-modal__header">
+            <h3 id="category-modal-title">افزودن دسته‌بندی</h3>
+            <button class="ds-modal__close close-modal" type="button" aria-label="بستن">&times;</button>
+        </div>
+        <div class="ds-modal__body">
+            <form id="category-form">
+                <input type="hidden" id="category-id" name="id">
+                <input class="ds-input" type="text" id="category-name" name="name" placeholder="نام دسته‌بندی" required>
+                <textarea class="ds-input" id="category-description" name="description" placeholder="توضیحات (اختیاری)" rows="3"></textarea>
+                <input class="ds-input" type="number" id="category-order" name="order" placeholder="ترتیب نمایش" value="0" min="0">
+                <div class="ds-modal__actions">
+                    <button type="submit" class="ds-button primary">ذخیره</button>
+                    <button type="button" class="ds-button ghost close-modal">انصراف</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.body.classList.add('menu-page');
+</script>
+<script src="{{ url_for('static', filename='js/menu.js') }}?v={{ cache_bust() }}"></script>
+{% endblock %}
+

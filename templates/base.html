@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}{{ cafe_name }}{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="پنل مدیریت و ثبت سفارش کافه">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}?v={{ cache_bust() }}">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <style>
+        /* فونت فارسی Vazirmatn */
+        @font-face {
+            font-family: Vazirmatn;
+            src: url('{{ url_for("static", filename="fonts/Vazirmatn-Regular.woff2") }}') format('woff2');
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        html,
+        body {
+            font-family: Vazirmatn, Tahoma, Arial, sans-serif;
+            background: var(--navbar-bg, #1F3A5F);
+            color: #222;
+            direction: rtl;
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background: var(--navbar-bg, #1F3A5F);
+            color: var(--navbar-text, #fff);
+            padding: 0;
+            margin-bottom: 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            border-bottom: 1px solid var(--color-border, rgba(255, 255, 255, 0.1));
+        }
+
+        .navbar-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+            gap: 2rem;
+        }
+
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--navbar-text, #fff);
+            text-decoration: none;
+            white-space: nowrap;
+            transition: opacity 0.2s;
+        }
+
+        .navbar-brand:hover {
+            opacity: 0.9;
+        }
+
+        .navbar-brand .logo {
+            height: 36px;
+            width: auto;
+        }
+
+        .navbar-nav {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex: 1;
+            justify-content: center;
+        }
+
+        .navbar-nav li {
+            display: inline-block;
+        }
+
+        .navbar-nav > li > a {
+            color: var(--navbar-text, #fff);
+            padding: 0.6rem 1.25rem;
+            border-radius: var(--radius-sm, 8px);
+            transition: all 0.2s ease;
+            font-size: 0.95rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            text-decoration: none;
+            position: relative;
+        }
+
+        /* ایجاد یک ناحیه hover برای کل nav-dropdown */
+        .nav-dropdown::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            right: 0;
+            left: 0;
+            height: 0.5rem;
+            background: transparent;
+            z-index: 999;
+            pointer-events: none;
+        }
+
+        /* فقط لینک‌های اصلی navbar، نه dropdown menu */
+        .navbar-nav > li:not(.nav-dropdown) > a:hover,
+        .navbar-nav > li.nav-dropdown > .dropdown-toggle:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+
+        .navbar-nav > li:not(.nav-dropdown) > a.active,
+        .navbar-nav > li.nav-dropdown > .dropdown-toggle.active {
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff;
+            font-weight: 600;
+        }
+
+        /* اطمینان از اینکه dropdown menu رنگ سفید نمی‌گیرد */
+        .navbar-nav .dropdown-menu,
+        .navbar-nav .dropdown-menu * {
+            color: #ffffff !important;
+        }
+
+        .navbar-nav .dropdown-menu a {
+            color: #ffffff !important;
+        }
+
+        /* Dropdown Menu Styles */
+        .nav-dropdown {
+            position: relative;
+        }
+
+        /* ایجاد یک ناحیه hover برای کل nav-dropdown که شامل فاصله بین navbar و dropdown است */
+        .nav-dropdown::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            right: 0;
+            left: 0;
+            height: 0.5rem;
+            background: transparent;
+            z-index: 999;
+        }
+
+        .dropdown-toggle {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .dropdown-toggle::after {
+            content: '▼';
+            font-size: 0.65em;
+            opacity: 0.7;
+            transition: transform 0.2s;
+        }
+
+        .nav-dropdown:hover .dropdown-toggle::after {
+            transform: rotate(180deg);
+        }
+
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: calc(100% + 0.5rem);
+            right: 0;
+            background: #1F3A5F !important;
+            min-width: 220px;
+            max-width: 280px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            border-radius: var(--radius-md, 12px);
+            padding: 0.5rem;
+            margin-top: 0;
+            z-index: 1000;
+            list-style: none;
+            border: 1px solid var(--color-border, #e2e8f0);
+            overflow: visible;
+        }
+
+        /* ایجاد یک ناحیه نامرئی برای اتصال navbar به dropdown */
+        .dropdown-menu::before {
+            content: '';
+            position: absolute;
+            top: -0.5rem;
+            right: 0;
+            left: 0;
+            height: 0.5rem;
+            background: transparent;
+            pointer-events: auto;
+        }
+
+        .nav-dropdown:hover .dropdown-menu {
+            display: block;
+            animation: fadeInDown 0.2s ease;
+        }
+
+        /* نگه داشتن dropdown باز وقتی mouse روی dropdown است */
+        .nav-dropdown:hover .dropdown-menu,
+        .dropdown-menu:hover {
+            display: block;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .dropdown-menu li {
+            display: block;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        .dropdown-menu a {
+            display: block;
+            padding: 0.7rem 1rem;
+            color: #ffffff !important;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            border-radius: var(--radius-sm, 6px);
+            font-size: 0.95rem;
+            font-weight: 500;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .dropdown-menu a:hover {
+            background: rgba(255, 255, 255, 0.1) !important;
+            color: #ffffff !important;
+            padding-right: 1.25rem;
+        }
+
+        .dropdown-menu a.active {
+            background: rgba(255, 255, 255, 0.15) !important;
+            color: #ffffff !important;
+            font-weight: 600;
+        }
+
+        .footer {
+            background: #222;
+            color: #fff;
+            text-align: center;
+            padding: 1.5rem 0 1rem 0;
+            margin-top: 3rem;
+            border-top: 1px solid #333;
+        }
+
+        .logo {
+            height: 40px;
+            vertical-align: middle;
+            margin-left: 0.5rem;
+        }
+
+        .navbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-right: auto;
+        }
+
+        .user-info {
+            color: var(--navbar-text, #fff);
+            font-size: 0.9rem;
+            font-weight: 500;
+            padding: 0.5rem 0.75rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-sm, 8px);
+            white-space: nowrap;
+        }
+
+        .theme-toggle-btn {
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--navbar-text, #fff);
+            padding: 0.5rem;
+            font-size: 1.1rem;
+            line-height: 1;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .theme-toggle-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+
+        .navbar-actions .btn {
+            padding: 0.5rem 1.25rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border-radius: var(--radius-sm, 8px);
+            text-decoration: none;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .navbar-actions .btn-danger {
+            background: var(--color-danger, #E44848);
+            color: #fff;
+            border: none;
+        }
+
+        .navbar-actions .btn-danger:hover {
+            background: #c93a3a;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(228, 72, 72, 0.3);
+        }
+
+        .navbar-actions .btn-primary {
+            background: var(--color-primary, #1F3A5F);
+            color: #fff;
+            border: none;
+        }
+
+        .navbar-actions .btn-primary:hover {
+            background: #2d4f82;
+            transform: translateY(-1px);
+        }
+
+        .lang-switch {
+            color: #fff;
+            font-size: 1rem;
+            margin-right: 1rem;
+            cursor: pointer;
+        }
+
+        .alert.fade {
+            opacity: 0;
+            transition: opacity 0.7s;
+        }
+
+        /* اسکرول بار زیبا */
+        ::-webkit-scrollbar {
+            width: 8px;
+            background: #eee;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #bbb;
+            border-radius: 4px;
+        }
+
+        /* ریسپانسیو */
+        @media (max-width: 1200px) {
+            .navbar-container {
+                padding: 0.75rem 1.5rem;
+                gap: 1.5rem;
+            }
+
+            .navbar-nav {
+                gap: 0.25rem;
+            }
+
+            .navbar-nav > li > a {
+                padding: 0.6rem 1rem;
+                font-size: 0.9rem;
+            }
+        }
+
+        @media (max-width: 992px) {
+            .navbar-container {
+                padding: 0.75rem 1rem;
+                gap: 1rem;
+            }
+
+            .navbar-brand {
+                font-size: 1.1rem;
+            }
+
+            .navbar-brand .logo {
+                height: 32px;
+            }
+
+            .navbar-nav {
+                gap: 0.25rem;
+            }
+
+            .navbar-nav > li > a {
+                padding: 0.5rem 0.75rem;
+                font-size: 0.85rem;
+            }
+
+            .user-info {
+                display: none;
+            }
+
+            .navbar-actions {
+                gap: 0.75rem;
+            }
+
+            .navbar-actions .btn {
+                padding: 0.5rem 1rem;
+                font-size: 0.85rem;
+            }
+        }
+
+        /* منوی همبرگری برای موبایل */
+        .mobile-menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            line-height: 1;
+        }
+
+        .mobile-menu-toggle:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        .mobile-menu-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 998;
+        }
+
+        .mobile-menu-overlay.active {
+            display: block;
+        }
+
+        .mobile-menu-sidebar {
+            position: fixed;
+            top: 0;
+            right: -100%;
+            width: 320px;
+            max-width: 85vw;
+            height: 100vh;
+            background: var(--color-surface, #fff);
+            color: var(--text-body, #2A2E34);
+            z-index: 999;
+            transition: right 0.3s ease;
+            overflow-y: auto;
+            padding: 1.5rem;
+            box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
+            border-left: 1px solid var(--color-border, #e2e8f0);
+        }
+
+        .mobile-menu-sidebar.active {
+            right: 0;
+        }
+
+        .mobile-menu-sidebar .navbar-nav {
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            align-items: stretch;
+        }
+
+        .mobile-menu-sidebar .navbar-nav li {
+            width: 100%;
+        }
+
+        .mobile-menu-sidebar .navbar-nav > li > a {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            padding: 0.85rem 1rem;
+            border-radius: var(--radius-md, 12px);
+            color: var(--text-body, #2A2E34);
+            background: var(--color-bg, #F7F8FA);
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .mobile-menu-sidebar .navbar-nav > li > a:hover,
+        .mobile-menu-sidebar .navbar-nav > li > a.active {
+            background: rgba(31, 58, 95, 0.1);
+            color: var(--color-primary, #1F3A5F);
+            font-weight: 600;
+        }
+
+        .mobile-menu-sidebar .nav-dropdown {
+            width: 100%;
+        }
+
+        .mobile-menu-sidebar .dropdown-menu {
+            position: static;
+            display: none;
+            width: 100%;
+            background: transparent;
+            margin-top: 0.5rem;
+            margin-right: 0;
+            padding: 0;
+            box-shadow: none;
+            border: none;
+            border-radius: 0;
+        }
+
+        .mobile-menu-sidebar .nav-dropdown.active .dropdown-menu {
+            display: block;
+        }
+
+        .mobile-menu-sidebar .dropdown-menu a {
+            padding: 0.7rem 1.5rem;
+            color: var(--text-secondary, #6B7380);
+            background: transparent;
+            border-radius: var(--radius-sm, 6px);
+        }
+
+        .mobile-menu-sidebar .dropdown-menu a:hover,
+        .mobile-menu-sidebar .dropdown-menu a.active {
+            background: rgba(31, 58, 95, 0.08);
+            color: var(--color-primary, #1F3A5F);
+        }
+
+        .mobile-menu-close {
+            background: var(--color-bg, #F7F8FA);
+            border: 1px solid var(--color-border, #e2e8f0);
+            color: var(--text-body, #2A2E34);
+            font-size: 1.8rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            line-height: 1;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius-md, 12px);
+            transition: all 0.2s ease;
+            margin-left: auto;
+        }
+
+        .mobile-menu-close:hover {
+            background: var(--color-danger, #E44848);
+            color: #fff;
+            border-color: var(--color-danger, #E44848);
+            transform: scale(1.05);
+        }
+
+        @media (max-width: 768px) {
+            .navbar-container {
+                padding: 0.75rem 1rem;
+                gap: 0.75rem;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+            }
+
+            .mobile-menu-toggle {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                order: 1;
+                background: rgba(255, 255, 255, 0.1);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: var(--radius-sm, 8px);
+                padding: 0.5rem 0.75rem;
+                color: var(--navbar-text, #fff);
+                font-size: 1.2rem;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                min-width: 2.5rem;
+                height: 2.5rem;
+                flex-shrink: 0;
+            }
+
+            .mobile-menu-toggle:hover {
+                background: rgba(255, 255, 255, 0.2);
+            }
+
+            .navbar-brand {
+                font-size: 1rem;
+                order: 2;
+                flex: 1;
+                justify-content: center;
+                text-align: center;
+                margin: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                min-width: 0;
+            }
+
+            .navbar-brand .logo {
+                height: 28px;
+            }
+
+            .navbar-nav {
+                display: none;
+            }
+
+            .navbar-actions {
+                order: 3;
+                gap: 0.5rem;
+                margin: 0;
+                display: flex;
+                align-items: center;
+                flex-shrink: 0;
+            }
+
+            .user-info {
+                display: none;
+            }
+
+            .theme-toggle-btn {
+                width: 2.5rem;
+                height: 2.5rem;
+                min-width: 2.5rem;
+                font-size: 1rem;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 0;
+                flex-shrink: 0;
+            }
+
+            .navbar-actions .btn {
+                padding: 0.45rem 0.9rem;
+                font-size: 0.8rem;
+                white-space: nowrap;
+                height: 2.5rem;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 700px) {
+            .container {
+                padding: 0.5rem !important;
+            }
+
+            /* حذف شده: .navbar .navbar-container - برای حفظ هم‌راستایی المان‌های هدر */
+
+            .navbar-nav {
+                flex-direction: column;
+                gap: 0.5rem;
+                width: 100%;
+            }
+
+            .navbar-nav li {
+                width: 100%;
+            }
+
+            .navbar-nav a {
+                display: block;
+                width: 100%;
+            }
+
+            .dropdown-menu {
+                position: static;
+                width: 100%;
+                margin-right: 0;
+                margin-top: 0.25rem;
+            }
+
+        }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+
+<body {% if request.endpoint == 'dashboard.dashboard' %}class="dashboard-page"{% endif %}>
+    {# نمایش هدر فقط اگر مسیر فعلی صفحه لاگین نباشد #}
+    {% if request.endpoint != 'auth.login' %}
+    <nav class="navbar">
+            <div class="navbar-container">
+            <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="منو">☰</button>
+            <a class="navbar-brand" href="{{ url_for('menu.show_menu') }}">
+                {{ cafe_name }}
+            </a>
+            <ul class="navbar-nav">
+                <li><a href="{{ url_for('dashboard.dashboard') }}" {% if request.endpoint == 'dashboard.dashboard' %}class="active" {% endif %}>داشبورد</a></li>
+                <li class="nav-dropdown">
+                    <a href="#" class="dropdown-toggle">منو</a>
+                    <ul class="dropdown-menu">
+                        <li><a href="{{ url_for('menu.show_menu') }}" {% if request.endpoint == 'menu.show_menu' %}class="active" {% endif %}>مشاهده منو</a></li>
+                        <li><a href="{{ url_for('menu.menu_price_management') }}" {% if request.endpoint == 'menu.menu_price_management' %}class="active" {% endif %}>مدیریت قیمت منو</a></li>
+                    </ul>
+                </li>
+                <li class="nav-dropdown">
+                    <a href="#" class="dropdown-toggle">سفارشات</a>
+                    <ul class="dropdown-menu">
+                        <li><a href="{{ url_for('order.orders_list') }}" {% if request.endpoint == 'order.orders_list' %}class="active" {% endif %}>مشاهده سفارشات</a></li>
+                        <li><a href="{{ url_for('admin.customers_leaderboard') }}" {% if request.endpoint == 'admin.customers_leaderboard' %}class="active" {% endif %}>باشگاه مشتریان</a></li>
+                    </ul>
+                </li>
+                <li class="nav-dropdown">
+                    <a href="#" class="dropdown-toggle">گزارش‌ها</a>
+                    <ul class="dropdown-menu">
+                        <li><a href="{{ url_for('admin.financial_report') }}" {% if request.endpoint == 'admin.financial_report' %}class="active" {% endif %}>گزارش مالی</a></li>
+                        <li><a href="{{ url_for('admin.inventory_dashboard') }}" {% if request.endpoint == 'admin.inventory_dashboard' %}class="active" {% endif %}>انبارداری</a></li>
+                        <li><a href="{{ url_for('admin.warehouses_management') }}" {% if request.endpoint == 'admin.warehouses_management' %}class="active" {% endif %}>مدیریت انبارها</a></li>
+                    </ul>
+                </li>
+                <li class="nav-dropdown">
+                    <a href="#" class="dropdown-toggle">مدیریت</a>
+                    <ul class="dropdown-menu">
+                        <li><a href="{{ url_for('admin.settings') }}" {% if request.endpoint == 'admin.settings' %}class="active" {% endif %}>تنظیمات</a></li>
+                        {% if current_user.is_authenticated and current_user.role == 'admin' %}
+                        <li><a href="{{ url_for('admin.users_list') }}" {% if request.endpoint == 'admin.users_list' %}class="active" {% endif %}>مدیریت کاربران</a></li>
+                        {% endif %}
+                    </ul>
+                </li>
+            </ul>
+            <div class="navbar-actions">
+                <button id="global-theme-toggle" class="theme-toggle-btn" type="button" aria-label="تغییر تم">
+                    🌙
+                </button>
+                {% if current_user.is_authenticated %}
+                <span class="user-info">{{ current_user.username }}</span>
+                <a href="{{ url_for('auth.logout') }}" class="btn btn-danger">خروج</a>
+                {% else %}
+                <a href="{{ url_for('auth.login') }}" class="btn btn-primary">ورود</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <!-- منوی موبایل (همبرگری) -->
+    <div class="mobile-menu-overlay" id="mobile-menu-overlay"></div>
+    <div class="mobile-menu-sidebar" id="mobile-menu-sidebar">
+        <button class="mobile-menu-close" id="mobile-menu-close" aria-label="بستن منو">×</button>
+        <ul class="navbar-nav">
+            <li><a href="{{ url_for('dashboard.dashboard') }}" {% if request.endpoint == 'dashboard.dashboard' %}class="active" {% endif %}>داشبورد</a></li>
+            <li class="nav-dropdown">
+                <a href="#" class="dropdown-toggle">منو</a>
+                <ul class="dropdown-menu">
+                    <li><a href="{{ url_for('menu.show_menu') }}" {% if request.endpoint == 'menu.show_menu' %}class="active" {% endif %}>مشاهده منو</a></li>
+                    <li><a href="{{ url_for('menu.menu_price_management') }}" {% if request.endpoint == 'menu.menu_price_management' %}class="active" {% endif %}>مدیریت قیمت منو</a></li>
+                </ul>
+            </li>
+            <li class="nav-dropdown">
+                <a href="#" class="dropdown-toggle">سفارشات</a>
+                <ul class="dropdown-menu">
+                    <li><a href="{{ url_for('order.orders_list') }}" {% if request.endpoint == 'order.orders_list' %}class="active" {% endif %}>مشاهده سفارشات</a></li>
+                    <li><a href="{{ url_for('admin.customers_leaderboard') }}" {% if request.endpoint == 'admin.customers_leaderboard' %}class="active" {% endif %}>باشگاه مشتریان</a></li>
+                </ul>
+            </li>
+            <li class="nav-dropdown">
+                <a href="#" class="dropdown-toggle">گزارش‌ها</a>
+                <ul class="dropdown-menu">
+                    <li><a href="{{ url_for('admin.financial_report') }}" {% if request.endpoint == 'admin.financial_report' %}class="active" {% endif %}>گزارش مالی</a></li>
+                    <li><a href="{{ url_for('admin.inventory_dashboard') }}" {% if request.endpoint == 'admin.inventory_dashboard' %}class="active" {% endif %}>انبارداری</a></li>
+                    <li><a href="{{ url_for('admin.warehouses_management') }}" {% if request.endpoint == 'admin.warehouses_management' %}class="active" {% endif %}>مدیریت انبارها</a></li>
+                </ul>
+            </li>
+            <li class="nav-dropdown">
+                <a href="#" class="dropdown-toggle">مدیریت</a>
+                <ul class="dropdown-menu">
+                    <li><a href="{{ url_for('admin.settings') }}" {% if request.endpoint == 'admin.settings' %}class="active" {% endif %}>تنظیمات</a></li>
+                    {% if current_user.is_authenticated and current_user.role == 'admin' %}
+                    <li><a href="{{ url_for('admin.users_list') }}" {% if request.endpoint == 'admin.users_list' %}class="active" {% endif %}>مدیریت کاربران</a></li>
+                    {% endif %}
+                </ul>
+            </li>
+        </ul>
+    </div>
+    {% endif %} {# پایان شرط نمایش هدر #}
+
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- فقط یک بار این خط را داشته باشید -->
+    <script src="{{ url_for('static', filename='js/main.js') }}?v={{ cache_bust() }}"></script>
+    {% block scripts %}{% endblock %}
+    <script>
+        // Global light/dark theme toggle
+        (function () {
+            const root = document.documentElement;
+            const toggle = document.getElementById('global-theme-toggle');
+            const storageKey = 'madelineTheme';
+            const storedTheme = localStorage.getItem(storageKey) || 'light';
+
+            function applyTheme(theme) {
+                root.setAttribute('data-theme', theme);
+                if (toggle) {
+                    if (theme === 'light') {
+                        toggle.textContent = '🌙';
+                        toggle.setAttribute('aria-label', 'سوئیچ به تم تیره');
+                    } else {
+                        toggle.textContent = '☀️';
+                        toggle.setAttribute('aria-label', 'سوئیچ به تم روشن');
+                    }
+                }
+                localStorage.setItem(storageKey, theme);
+            }
+
+            // initial
+            applyTheme(storedTheme);
+
+            if (toggle) {
+                toggle.addEventListener('click', function () {
+                    const current = root.getAttribute('data-theme') || 'light';
+                    const next = current === 'light' ? 'dark' : 'light';
+                    applyTheme(next);
+                });
+            }
+        })();
+
+        // مدیریت منوی همبرگری موبایل
+        document.addEventListener('DOMContentLoaded', function() {
+            const menuToggle = document.getElementById('mobile-menu-toggle');
+            const menuClose = document.getElementById('mobile-menu-close');
+            const menuSidebar = document.getElementById('mobile-menu-sidebar');
+            const menuOverlay = document.getElementById('mobile-menu-overlay');
+
+            function openMenu() {
+                menuSidebar.classList.add('active');
+                menuOverlay.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeMenu() {
+                menuSidebar.classList.remove('active');
+                menuOverlay.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+
+            if (menuToggle) {
+                menuToggle.addEventListener('click', openMenu);
+            }
+
+            if (menuClose) {
+                menuClose.addEventListener('click', closeMenu);
+            }
+
+            if (menuOverlay) {
+                menuOverlay.addEventListener('click', closeMenu);
+            }
+
+            // مدیریت dropdown در منوی موبایل
+            const mobileDropdowns = document.querySelectorAll('#mobile-menu-sidebar .nav-dropdown');
+            mobileDropdowns.forEach(dropdown => {
+                const toggle = dropdown.querySelector('.dropdown-toggle');
+                if (toggle) {
+                    toggle.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        dropdown.classList.toggle('active');
+                    });
+                }
+            });
+
+            // بستن منو هنگام کلیک روی لینک
+            const mobileMenuLinks = document.querySelectorAll('#mobile-menu-sidebar a');
+            mobileMenuLinks.forEach(link => {
+                link.addEventListener('click', function() {
+                    if (!this.classList.contains('dropdown-toggle')) {
+                        closeMenu();
+                    }
+                });
+            });
+        });
+    </script>
+    <!-- پیام‌های فلش به صورت اتوماتیک محو می‌شوند -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.alert').forEach(function (alert) {
+                setTimeout(function () {
+                    alert.classList.add('fade');
+                    setTimeout(function () {
+                        alert.remove();
+                    }, 700);
+                }, 4000);
+            });
+        });
+    </script>
+
+    <!-- مودال‌های عمومی -->
+    <div id="modal-overlay"
+        style="display:none;position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(0,0,0,0.3);z-index:1000;">
+    </div>
+    <div id="modal-dialog"
+        style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border-radius:10px;box-shadow:0 2px 16px rgba(0,0,0,0.2);padding:2rem;z-index:1001;min-width:300px;max-width:90vw;">
+        <div id="modal-content"></div>
+        <button id="modal-close" class="btn btn-secondary btn-sm" style="margin-top:1rem;">بستن</button>
+    </div>
+    <script>
+        // نمایش مودال عمومی
+        function showModal(html) {
+            document.getElementById('modal-content').innerHTML = html;
+            document.getElementById('modal-overlay').style.display = 'block';
+            document.getElementById('modal-dialog').style.display = 'block';
+        }
+        function closeModal() {
+            document.getElementById('modal-overlay').style.display = 'none';
+            document.getElementById('modal-dialog').style.display = 'none';
+        }
+        document.getElementById('modal-close').onclick = closeModal;
+        document.getElementById('modal-overlay').onclick = closeModal;
+    </script>
+    <div id="orderModal" class="modal"
+        style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.4); z-index:9999;">
+        <div class="modal-content"
+            style="background:#fff; border-radius:8px; max-width:700px; margin:5% auto; padding:1rem; position:relative;">
+            <span id="closeModal"
+                style="position:absolute; top:10px; left:10px; cursor:pointer; font-size:20px;">&times;</span>
+            <div id="modal-body">
+                در حال بارگذاری...
+            </div>
+        </div>
+    </div>
+    
+</body>
+
+</html>

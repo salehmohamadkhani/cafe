@@ -1,0 +1,555 @@
+{% extends "base.html" %}
+{% block title %}مدیریت قیمت منو{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}?v={{ cache_bust() }}">
+<!-- استایل‌های صفحه مدیریت قیمت به design-system.css منتقل شد -->
+{% endblock %}
+
+{% block content %}
+<div class="price-management-page">
+    <div class="cost-formula-banner">
+        <div class="cost-formula-banner__text">
+            <strong>چطور قیمت تمام‌شده را محاسبه کنیم؟</strong>
+            <div>
+                ابتدا مواد اولیه هر آیتم را در BOM ثبت کنید، سپس با تعریف هزینه پرسنل و اجاره،
+                سیستم می‌تواند بهای تمام‌شده واقعی هر محصول را به شما نشان دهد.
+            </div>
+        </div>
+        <button id="open-cost-formula-modal" class="formula-btn">
+            فرمول محاسبه بهای تمام‌شده
+        </button>
+    </div>
+
+    <div class="page-header">
+        <h1>مدیریت قیمت منو</h1>
+        <p>محاسبه قیمت تمام‌شده آیتم‌های منو بر اساس مواد اولیه مصرفی و خریدهای ثبت‌شده</p>
+    </div>
+
+    {% if formula %}
+    <div class="category-card" style="margin-top: -1rem; margin-bottom: 2rem;">
+        <div class="category-header">
+            <h2>خلاصه هزینه‌های ثابت کافه</h2>
+            <div class="category-total">
+                <span>جمع هزینه‌های ثابت ماهانه:</span>
+                <span class="label">{{ "{:,.0f}".format(total_fixed_cost) }}</span>
+            </div>
+        </div>
+        <div class="materials-section">
+            <div class="materials-title">ترکیب هزینه‌ها:</div>
+            <div class="material-row">
+                <span class="material-name">نیروی انسانی ({{ formula.staff_count or 0 }} نفر)</span>
+                <span class="material-price">
+                    {{ "{:,.0f}".format(staff_cost or 0) }} در ماه
+                </span>
+            </div>
+            <div class="material-row">
+                <span class="material-name">هزینه استهلاک تجهیزات</span>
+                <span class="material-price">
+                    {{ "{:,.0f}".format(depreciation_cost or 0) }} در ماه
+                </span>
+            </div>
+            <div class="material-row">
+                <span class="material-name">اجاره کافه</span>
+                <span class="material-price">
+                    {% if formula.has_rent %}
+                    {{ "{:,.0f}".format(rent_cost or 0) }} در ماه
+                    {% else %}
+                    در محاسبات لحاظ نشده (مالک ملک)
+                    {% endif %}
+                </span>
+            </div>
+            <div class="material-row">
+                <span class="material-name">میانگین تعداد سفارش در ماه</span>
+                <span class="material-price">
+                    {% if monthly_orders_avg %}
+                    حدود {{ "{:,.0f}".format(monthly_orders_avg) }} سفارش
+                    {% else %}
+                    هنوز داده‌ای برای محاسبه میانگین سفارش در دسترس نیست.
+                    {% endif %}
+                </span>
+            </div>
+            <div class="material-row">
+                <span class="material-name">میانگین مبلغ هر سفارش</span>
+                <span class="material-price">
+                    {% if avg_order_price %}
+                    حدود {{ "{:,.0f}".format(avg_order_price) }}                    {% else %}
+                    هنوز داده‌ای برای محاسبه میانگین مبلغ سفارش در دسترس نیست.
+                    {% endif %}
+                </span>
+            </div>
+            <div class="material-row">
+                <span class="material-name">درصد کاست کنترل</span>
+                <span class="material-price">
+                    {% if cost_control_percent %}
+                    {{ cost_control_percent }}٪
+                    {% else %}
+                    تعیین نشده
+                    {% endif %}
+                </span>
+            </div>
+            <div class="material-row" style="margin-top:0.75rem; border-right-color:#10b981;">
+                <span class="material-name">سهم هزینه ثابت هر سفارش</span>
+                <span class="material-price">
+                    {% if per_order_overhead > 0 %}
+                    حدود {{ "{:,.0f}".format(per_order_overhead) }} برای هر سفارش
+                    {% else %}
+                    برای محاسبه دقیق، میانگین تعداد سفارش را در فرم بالا تکمیل کنید.
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if categories %}
+        {% for category in categories %}
+        <div class="category-card">
+            <div class="category-header">
+                <h2>{{ category['name'] }}</h2>
+                <div class="category-total">
+                    <span>هزینه کل دسته‌بندی:</span>
+                    <span class="label">{{ "{:,.0f}".format(category['total_cost']) }}</span>
+                </div>
+            </div>
+
+            {% if category['items'] %}
+                {% for item in category['items'] %}
+                <div class="item-card">
+                    <div class="item-header">
+                        <div class="item-name">{{ item['name'] }}</div>
+                        <div class="item-prices">
+                            <span class="price-badge cost">
+                                هزینه: {{ "{:,.0f}".format(item['cost_price']) }}                            </span>
+                            <span class="price-badge selling">
+                                فروش: {{ "{:,.0f}".format(item['selling_price']) }}                            </span>
+                            {% if item['suggested_price'] > 0 %}
+                            <span class="price-badge suggested">
+                                بازه پیشنهادی سیستم:
+                                {% if item['min_price'] > 0 %}
+                                {{ "{:,.0f}".format(item['min_price']) }} تا
+                                {% endif %}
+                                {{ "{:,.0f}".format(item['suggested_price']) }}                            </span>
+                            <button type="button"
+                                    class="apply-suggested-btn"
+                                    data-item-id="{{ item['id'] }}"
+                                    data-price="{{ item['suggested_price'] }}">
+                                اعمال در منو
+                            </button>
+                            {% endif %}
+                            <span class="price-badge {% if item['profit'] >= 0 %}profit{% else %}loss{% endif %}">
+                                {% if item['profit'] >= 0 %}
+                                    سود: {{ "{:,.0f}".format(item['profit']) }}                                {% else %}
+                                    زیان: {{ "{:,.0f}".format(item['profit']|abs) }}                                {% endif %}
+                                ({{ "{:.1f}".format(item['profit_margin']) }}%)
+                            </span>
+                        </div>
+                    </div>
+
+                    {% if item['materials'] %}
+                    <div class="materials-section">
+                        <div class="materials-title">مواد اولیه مصرفی:</div>
+                        <div class="materials-details show" id="materials-{{ category['id'] }}-{{ item['id'] }}">
+                            {% for material in item['materials'] %}
+                            <div class="material-row">
+                                <span class="material-name">{{ material['name'] }}</span>
+                                <span class="material-quantity">{{ "{:,.2f}".format(material['quantity']) }} {{ material['unit'] }}</span>
+                                <span class="material-price">
+                                    قیمت واحد: {{ "{:,.0f}".format(material['avg_unit_price']) }}                                    | کل: {{ "{:,.0f}".format(material['total_cost']) }}                                </span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="materials-section">
+                        <div class="materials-title" style="color: #ef4444;">هیچ ماده اولیه‌ای برای این آیتم ثبت نشده است.</div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            {% else %}
+            <div class="empty-state">
+                <div class="empty-state-icon">📦</div>
+                <p>هیچ آیتم فعالی در این دسته‌بندی وجود ندارد.</p>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">📋</div>
+        <p>هیچ دسته‌بندی فعالی وجود ندارد.</p>
+    </div>
+    {% endif %}
+
+    <!-- مودال تنظیم فرمول بهای تمام‌شده -->
+    <div id="cost-formula-modal-backdrop" class="cost-formula-modal-backdrop">
+        <div class="cost-formula-modal">
+            <h2>فرمول محاسبه بهای تمام‌شده</h2>
+            <p>
+                در این بخش فقط اطلاعات پایه را ثبت می‌کنید تا بعداً در محاسبه بهای تمام‌شده
+                هر آیتم منو از آن استفاده شود.
+            </p>
+
+            <div class="cf-field">
+                <label>لیست پرسنل و حقوق ماهانه</label>
+                <span class="cf-helper">
+                    برای هر نفر، نام و حقوق تمام‌شده ماهانه را وارد کنید.
+                </span>
+                <div id="personnel-list" class="personnel-list">
+                    {% if formula and formula.personnel %}
+                        {% for p in formula.personnel %}
+                        <div class="personnel-row">
+                            <input type="text" class="cf-input" placeholder="نام پرسنل (مثلاً باریستا ۱)"
+                                value="{{ p.name }}">
+                            <input type="number" min="0" class="cf-input" placeholder="حقوق ماهانه "
+                                value="{{ p.salary }}">
+                            <button type="button" class="remove-personnel-btn" title="حذف">×</button>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="personnel-row">
+                            <input type="text" class="cf-input" placeholder="نام پرسنل (مثلاً باریستا ۱)">
+                            <input type="number" min="0" class="cf-input" placeholder="حقوق ماهانه ">
+                            <button type="button" class="remove-personnel-btn" title="حذف">×</button>
+                        </div>
+                    {% endif %}
+                </div>
+                <button type="button" id="add-personnel-row" class="add-row-btn">
+                    + افزودن پرسنل
+                </button>
+            </div>
+
+            <div class="cf-field" style="margin-top: 1rem;">
+                <label>اجاره یا مالکیت ملک کافه</label>
+                <div class="cf-rent-row">
+                    <label style="display:flex;align-items:center;gap:0.35rem;">
+                        <input type="checkbox" id="cf-has-rent"
+                            {% if formula and formula.has_rent %}checked{% endif %}>
+                        <span>کافه اجاره‌ای است و هزینه اجاره در محاسبه لحاظ شود</span>
+                    </label>
+                        <input type="number" min="0" id="cf-rent-amount" class="cf-input cf-rent-amount"
+                        placeholder="مبلغ اجاره ماهانه "
+                        value="{{ (formula.rent_amount if formula and formula.has_rent else '') or '' }}"
+                        style="display:{% if formula and formula.has_rent %}block{% else %}none{% endif %};">
+                </div>
+                <span class="cf-helper">
+                    اگر مالک ملک هستید، این گزینه را خالی بگذارید تا اجاره در محاسبه وارد نشود.
+                </span>
+            </div>
+
+            <div class="cf-field" style="margin-top: 1rem;">
+                <label>هزینه استهلاک ماهانه دستگاه‌ها</label>
+                <input type="number" min="0" id="cf-depreciation" class="cf-input"
+                    placeholder="مبلغ استهلاک ماهانه تمام دستگاه‌ها "
+                    value="{{ (formula.depreciation if formula else '') or '' }}">
+                <span class="cf-helper">
+                    مجموع استهلاک ماهانه اسپرسو ماشین، آسیاب، یخچال‌ها و سایر تجهیزات را تخمینی وارد کنید.
+                </span>
+            </div>
+
+            <div class="cost-formula-grid" style="margin-top: 1rem;">
+                <div class="cf-field">
+                    <label for="cf-monthly-orders">میانگین تعداد سفارش در ماه</label>
+                    <div class="cf-input-with-btn">
+                        <input id="cf-monthly-orders" type="number" min="0" class="cf-input"
+                            placeholder="مثلاً ۲۵۰۰ سفارش در ماه"
+                            value="{{ monthly_orders_avg or '' }}">
+                        <button type="button" class="cf-auto-btn" data-target="monthly-orders" title="کلیک کنید تا به صورت خودکار بر اساس تعداد خریدهای ثبت شده محاسبه شود">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M2 8C2 4.68629 4.68629 2 8 2C9.5913 2 11.1174 2.63214 12.2426 3.75736" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                <path d="M14 8C14 11.3137 11.3137 14 8 14C6.4087 14 4.88258 13.3679 3.75736 12.2426" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                <path d="M2 8L5 5M14 8L11 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <span class="cf-helper">
+                        برای تقسیم هزینه‌های ثابت (پرسنل، اجاره، استهلاک) روی هر سفارش استفاده می‌شود.
+                    </span>
+                </div>
+                <div class="cf-field">
+                    <label for="cf-avg-order-price">میانگین مبلغ هر سفارش </label>
+                    <div class="cf-input-with-btn">
+                        <input id="cf-avg-order-price" type="number" min="0" class="cf-input"
+                            placeholder="مثلاً ۵۰۰٬۰۰۰"
+                            value="{{ avg_order_price or '' }}">
+                        <button type="button" class="cf-auto-btn" data-target="avg-order-price" title="کلیک کنید تا به صورت خودکار بر اساس تعداد خریدهای ثبت شده محاسبه شود">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M2 8C2 4.68629 4.68629 2 8 2C9.5913 2 11.1174 2.63214 12.2426 3.75736" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                <path d="M14 8C14 11.3137 11.3137 14 8 14C6.4087 14 4.88258 13.3679 3.75736 12.2426" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                <path d="M2 8L5 5M14 8L11 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <span class="cf-helper">
+                        تخمینی از متوسط مبلغ هر رسید مشتری در ماه.
+                    </span>
+                </div>
+                <div class="cf-field">
+                    <label for="cf-cost-control">درصد کاست کنترل (٪)</label>
+                    <input id="cf-cost-control" type="number" min="0" max="100" class="cf-input"
+                        placeholder="مثلاً 10"
+                        value="{{ cost_control_percent or '' }}">
+                    <span class="cf-helper">
+                        برای افزودن حاشیه اطمینان روی هزینه‌ها. فعلاً فقط ذخیره می‌شود و روی محاسبات اعمال نشده است.
+                    </span>
+                </div>
+            </div>
+
+            <div class="cf-modal-footer">
+                <button type="button" id="cf-close-btn" class="cf-btn-secondary">بستن</button>
+                <button type="button" id="cf-save-btn" class="cf-btn-primary">
+                    ذخیره تنظیمات
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    (function () {
+        const backdrop = document.getElementById('cost-formula-modal-backdrop');
+        const openBtn = document.getElementById('open-cost-formula-modal');
+        const closeBtn = document.getElementById('cf-close-btn');
+        const saveBtn = document.getElementById('cf-save-btn');
+        const rentCheckbox = document.getElementById('cf-has-rent');
+        const rentAmount = document.getElementById('cf-rent-amount');
+        const personnelList = document.getElementById('personnel-list');
+        const addPersonnelRowBtn = document.getElementById('add-personnel-row');
+        const monthlyOrdersInput = document.getElementById('cf-monthly-orders');
+        const avgOrderPriceInput = document.getElementById('cf-avg-order-price');
+        const depreciationInput = document.getElementById('cf-depreciation');
+        const costControlInput = document.getElementById('cf-cost-control');
+        const applySuggestedButtons = document.querySelectorAll('.apply-suggested-btn');
+        const autoCalculateButtons = document.querySelectorAll('.cf-auto-btn');
+
+        function openModal() {
+            if (backdrop) {
+                backdrop.style.display = 'flex';
+            }
+        }
+
+        function closeModal() {
+            if (backdrop) {
+                backdrop.style.display = 'none';
+            }
+        }
+
+        if (openBtn) openBtn.addEventListener('click', openModal);
+        if (closeBtn) closeBtn.addEventListener('click', closeModal);
+        if (backdrop) {
+            backdrop.addEventListener('click', function (event) {
+                if (event.target === backdrop) {
+                    closeModal();
+                }
+            });
+        }
+
+        if (rentCheckbox && rentAmount) {
+            // مقدار اولیه بر اساس وضعیت ذخیره‌شده
+            if (rentCheckbox.checked) {
+                rentAmount.style.display = 'block';
+            }
+
+            rentCheckbox.addEventListener('change', function () {
+                rentAmount.style.display = this.checked ? 'block' : 'none';
+                if (!this.checked) {
+                    rentAmount.value = '';
+                }
+            });
+        }
+
+        if (addPersonnelRowBtn && personnelList) {
+            addPersonnelRowBtn.addEventListener('click', function () {
+                const row = document.createElement('div');
+                row.className = 'personnel-row';
+                row.innerHTML = ''
+                    + '<input type="text" class="cf-input" placeholder="نام پرسنل">'
+                    + '<input type="number" min="0" class="cf-input" placeholder="حقوق ماهانه ">'
+                    + '<button type="button" class="remove-personnel-btn" title="حذف">×</button>';
+                personnelList.appendChild(row);
+                
+                // اضافه کردن event listener برای دکمه حذف جدید
+                const removeBtn = row.querySelector('.remove-personnel-btn');
+                if (removeBtn) {
+                    removeBtn.addEventListener('click', function() {
+                        row.remove();
+                    });
+                }
+            });
+        }
+        
+        // Event delegation برای دکمه‌های حذف موجود
+        if (personnelList) {
+            personnelList.addEventListener('click', function(e) {
+                if (e.target.classList.contains('remove-personnel-btn')) {
+                    const row = e.target.closest('.personnel-row');
+                    if (row) {
+                        row.remove();
+                    }
+                }
+            });
+        }
+
+        function parseIntSafe(value) {
+            const n = parseInt(value, 10);
+            return isNaN(n) ? 0 : n;
+        }
+
+        function parseFloatSafe(value) {
+            const n = parseFloat(value);
+            return isNaN(n) ? 0 : n;
+        }
+
+        if (saveBtn) {
+            saveBtn.addEventListener('click', function () {
+                // محاسبه تعداد پرسنل و مجموع حقوق
+                let normalizedPersonnel = [];
+                if (personnelList) {
+                    const rows = personnelList.querySelectorAll('.personnel-row');
+                    rows.forEach(row => {
+                        const inputs = row.querySelectorAll('input');
+                        if (inputs.length >= 2) {
+                            const nameVal = (inputs[0].value || '').trim();
+                            const salaryVal = parseIntSafe(inputs[1].value || '0');
+                            if (nameVal || salaryVal > 0) {
+                                normalizedPersonnel.push({
+                                    name: nameVal,
+                                    salary: salaryVal
+                                });
+                            }
+                        }
+                    });
+                }
+
+                const hasRent = !!(rentCheckbox && rentCheckbox.checked);
+                const rentVal = hasRent ? parseIntSafe(rentAmount && rentAmount.value) : 0;
+                const depreciationVal = parseIntSafe(depreciationInput && depreciationInput.value);
+                const monthlyOrdersVal = parseIntSafe(monthlyOrdersInput && monthlyOrdersInput.value);
+                const avgOrderPriceVal = parseIntSafe(avgOrderPriceInput && avgOrderPriceInput.value);
+                const costControlVal = parseIntSafe(costControlInput && costControlInput.value);
+
+                const payload = {
+                    personnel: normalizedPersonnel,
+                    has_rent: hasRent,
+                    rent_amount: rentVal,
+                    depreciation: depreciationVal,
+                    monthly_orders_avg: monthlyOrdersVal,
+                    avg_order_price: avgOrderPriceVal,
+                    cost_control_percent: costControlVal
+                };
+
+                fetch('{{ url_for("menu.save_cost_formula_settings") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data && data.status === 'success') {
+                            // برای ساده بودن، بعد از ذخیره صفحه را رفرش می‌کنیم تا خلاصه بالا آپدیت شود
+                            window.location.reload();
+                        } else {
+                            alert(data.message || 'خطا در ذخیره تنظیمات فرمول بهای تمام‌شده.');
+                        }
+                    })
+                    .catch(() => {
+                        alert('در ذخیره تنظیمات فرمول بهای تمام‌شده خطایی رخ داد.');
+                    });
+            });
+        }
+
+        // دکمه‌های محاسبه خودکار
+        if (autoCalculateButtons && autoCalculateButtons.length) {
+            autoCalculateButtons.forEach(btn => {
+                btn.addEventListener('click', async function() {
+                    const target = this.getAttribute('data-target');
+                    const btnElement = this;
+                    
+                    // نمایش loading state
+                    btnElement.disabled = true;
+                    btnElement.style.opacity = '0.6';
+                    
+                    try {
+                        const response = await fetch('{{ url_for("menu.calculate_order_stats") }}');
+                        const data = await response.json();
+                        
+                        if (data.status === 'success') {
+                            if (target === 'monthly-orders' && monthlyOrdersInput) {
+                                monthlyOrdersInput.value = data.monthly_orders_avg || '';
+                                // Trigger input event برای به‌روزرسانی UI
+                                monthlyOrdersInput.dispatchEvent(new Event('input'));
+                            } else if (target === 'avg-order-price' && avgOrderPriceInput) {
+                                avgOrderPriceInput.value = data.avg_order_price || '';
+                                // Trigger input event برای به‌روزرسانی UI
+                                avgOrderPriceInput.dispatchEvent(new Event('input'));
+                            }
+                            
+                            // نمایش پیام موفقیت موقت
+                            const originalTitle = btnElement.getAttribute('title');
+                            btnElement.setAttribute('title', '✓ به‌روزرسانی شد!');
+                            
+                            // اضافه کردن انیمیشن چرخش به آیکون
+                            const svg = btnElement.querySelector('svg');
+                            if (svg) {
+                                svg.style.transform = 'rotate(360deg)';
+                                svg.style.transition = 'transform 0.5s ease';
+                                setTimeout(() => {
+                                    svg.style.transform = 'rotate(0deg)';
+                                }, 500);
+                            }
+                            
+                            setTimeout(() => {
+                                btnElement.setAttribute('title', originalTitle);
+                            }, 2000);
+                        } else {
+                            alert(data.message || 'خطا در محاسبه میانگین سفارشات');
+                        }
+                    } catch (error) {
+                        console.error('Error calculating order stats:', error);
+                        alert('خطا در ارتباط با سرور');
+                    } finally {
+                        btnElement.disabled = false;
+                        btnElement.style.opacity = '1';
+                    }
+                });
+            });
+        }
+        
+        // اعمال قیمت پیشنهادی سیستم روی قیمت منو
+        if (applySuggestedButtons && applySuggestedButtons.length) {
+            applySuggestedButtons.forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const itemId = this.dataset.itemId;
+                    const price = parseInt(this.dataset.price || '0', 10);
+                    if (!itemId || !price) return;
+                    if (!confirm('آیا می‌خواهید قیمت این آیتم بر اساس قیمت پیشنهادی سیستم تنظیم شود؟')) {
+                        return;
+                    }
+                    fetch(`/menu/item/${itemId}/apply-suggested-price`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ price })
+                    })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.status === 'success') {
+                                window.location.reload();
+                            } else {
+                                alert(data.message || 'خطا در به‌روزرسانی قیمت آیتم.');
+                            }
+                        })
+                        .catch(() => {
+                            alert('در به‌روزرسانی قیمت آیتم خطایی رخ داد.');
+                        });
+                });
+            });
+        }
+    })();
+</script>
+{% endblock %}
+

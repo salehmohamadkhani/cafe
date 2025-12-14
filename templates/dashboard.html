@@ -1,0 +1,1517 @@
+{% extends 'base.html' %}
+{% block title %}داشبورد کافه{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}?v={{ cache_bust() }}">
+<style>
+    body.dashboard-page .container {
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+        background: var(--color-bg);
+    }
+
+    body.dashboard-page .footer {
+        display: none !important;
+    }
+
+    .dashboard-shell {
+        padding: 2rem;
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-3);
+        background: var(--color-bg);
+        min-height: calc(100vh - 80px);
+    }
+
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: var(--space-3);
+        align-items: flex-start;
+    }
+
+    .dashboard-grid .dashboard-left,
+    .dashboard-grid .dashboard-right {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-3);
+    }
+
+    .tables-grid.board {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: var(--space-2);
+    }
+
+    .takeaway-orders-grid.modern {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: var(--space-2);
+        align-items: stretch;
+    }
+
+    @media (min-width: 1200px) {
+        .takeaway-orders-grid.modern {
+            grid-template-columns: repeat(3, minmax(260px, 1fr));
+        }
+    }
+
+    @media (max-width: 768px) {
+        .takeaway-orders-grid.modern {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .financial-metrics {
+        display: grid;
+        gap: var(--space-2);
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+
+    .orders-columns {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: var(--space-2);
+    }
+
+    .recent-orders .order-item,
+    .unpaid-orders .order-item {
+        border-radius: var(--radius-md);
+        padding: 0.85rem;
+        border: 1px solid var(--color-border);
+        background: var(--color-surface);
+    }
+
+    .dashboard-section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .dashboard-section-header .ds-subtitle {
+        margin: 0;
+        color: var(--text-secondary) !important;
+    }
+    
+    [data-theme="dark"] .dashboard-section-header h2,
+    [data-theme="dark"] .dashboard-section-header h3 {
+        color: #ffffff !important;
+    }
+    
+    [data-theme="dark"] .dashboard-section-header .ds-subtitle {
+        color: #D0D0D0 !important;
+    }
+    
+    /* اطمینان از خوانایی متن‌های dashboard در dark mode */
+    [data-theme="dark"] .table-group__header h4 {
+        color: #ffffff !important;
+    }
+    
+    [data-theme="dark"] .table-group__header small {
+        color: #D0D0D0 !important;
+    }
+    
+    [data-theme="dark"] .ds-stack h4 {
+        color: #ffffff !important;
+    }
+    
+    [data-theme="dark"] .recent-orders h4,
+    [data-theme="dark"] .unpaid-orders h4 {
+        color: #ffffff !important;
+    }
+    
+    [data-theme="dark"] .order-item {
+        color: var(--text-body) !important;
+    }
+    
+    [data-theme="dark"] .order-header,
+    [data-theme="dark"] .order-details,
+    [data-theme="dark"] .order-time {
+        color: var(--text-body) !important;
+    }
+
+    .table-card {
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-lg);
+        padding: 1.25rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        min-height: 240px;
+        box-shadow: var(--card-shadow);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        overflow: visible;
+        position: relative;
+    }
+
+    .table-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 14px 28px rgba(31, 58, 95, 0.15);
+    }
+
+    .table-card__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .table-card__title span {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+    }
+
+    .table-card__title strong {
+        font-size: 1.5rem;
+        color: var(--text-heading);
+    }
+
+    .table-card__badge {
+        padding: 0.3rem 0.85rem;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        background: rgba(39, 179, 118, 0.12);
+        color: var(--color-success);
+    }
+
+    .table-card__badge.occupied {
+        background: rgba(242, 181, 68, 0.18);
+        color: var(--color-warning);
+    }
+
+    .table-card__customer,
+    .table-card__order {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.85rem 1rem;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--color-border);
+        background: var(--color-bg);
+    }
+
+    .table-card__order.is-muted {
+        background: transparent;
+        border-style: dashed;
+    }
+
+    .table-card__customer span,
+    .table-card__order span {
+        display: block;
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+    }
+
+    .table-card__customer strong,
+    .table-card__order strong {
+        display: block;
+        font-size: 1rem;
+        color: var(--text-heading);
+        margin-top: 0.2rem;
+    }
+
+    .table-card__order-status {
+        padding: 0.25rem 0.65rem;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .table-card__order-status.paid {
+        background: rgba(39, 179, 118, 0.15);
+        color: var(--color-success);
+    }
+
+    .table-card__order-status.unpaid {
+        background: rgba(228, 72, 72, 0.15);
+        color: var(--color-danger);
+    }
+
+    .table-card__actions {
+        display: flex;
+        gap: 0.75rem;
+    }
+
+    .table-card__checkout {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        position: relative;
+    }
+
+    .table-card__checkout-options {
+        display: none;
+        flex-direction: column;
+        gap: 0.5rem;
+        position: absolute;
+        bottom: 100%;
+        left: 0;
+        right: 0;
+        margin-bottom: 0.5rem;
+        z-index: 10;
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        padding: 0.5rem;
+        box-shadow: var(--shadow-md);
+    }
+
+    .table-card__checkout-options.active {
+        display: flex;
+    }
+
+    .table-card__checkout-options .ds-button {
+        flex: 1;
+        padding: 0.6rem;
+        font-size: 0.85rem;
+        background: var(--color-primary-light);
+        width: 100%;
+    }
+
+    .table-card__empty {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-secondary);
+        font-weight: 600;
+        background: var(--color-bg);
+        border-radius: var(--radius-md);
+        border: 1px dashed var(--color-border);
+    }
+
+    .takeaway-order-card {
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--color-border);
+        padding: 0.9rem;
+        box-shadow: var(--card-shadow);
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+        background: var(--color-surface);
+        min-height: 180px;
+    }
+
+    .takeaway-order-header {
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.6rem;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        background: var(--color-bg);
+    }
+
+    .takeaway-order-header .ds-badge {
+        font-size: 0.8rem;
+    }
+
+    .takeaway-order-info {
+        display: flex;
+        justify-content: space-between;
+        font-weight: 600;
+        color: var(--text-heading);
+        font-size: 0.95rem;
+        padding: 0 0.2rem;
+    }
+
+    .takeaway-order-meta {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+    }
+
+    .takeaway-order-meta .label {
+        display: block;
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+    }
+
+    .takeaway-order-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .takeaway-order-actions .ds-button {
+        flex: 1;
+        font-size: 0.85rem;
+        padding: 0.55rem 0.8rem;
+    }
+
+    .takeaway-order-checkout {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        position: relative;
+    }
+
+    .takeaway-order-checkout-options {
+        display: none;
+        gap: 0.5rem;
+    }
+
+    .takeaway-order-checkout-options.active {
+        display: flex;
+    }
+
+    .takeaway-order-checkout-options .ds-button {
+        flex: 1;
+        padding: 0.6rem;
+        font-size: 0.85rem;
+        background: var(--color-primary-light);
+    }
+
+    .payment-methods {
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+    }
+
+    .detail-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.65rem 0;
+        border-bottom: 1px dashed var(--color-border);
+        color: var(--text-body);
+    }
+
+    .detail-item:last-child {
+        border-bottom: none;
+    }
+
+    .metric-card {
+        border-radius: var(--radius-lg);
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        padding: 1.2rem;
+        box-shadow: var(--card-shadow);
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+    }
+
+    .metric-card__badge {
+        align-self: flex-start;
+        padding: 0.2rem 0.8rem;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        background: rgba(79, 124, 201, 0.12);
+        color: var(--color-primary);
+    }
+
+    .metric-card__badge.danger {
+        background: rgba(228, 72, 72, 0.12);
+        color: var(--color-danger);
+    }
+
+    .metric-card__value {
+        font-size: 1.8rem;
+        font-weight: 800;
+        color: var(--text-heading) !important;
+    }
+
+    .metric-card__caption {
+        color: var(--text-secondary) !important;
+        font-size: 0.95rem;
+    }
+    
+    [data-theme="dark"] .metric-card__value {
+        color: #ffffff !important;
+    }
+    
+    [data-theme="dark"] .metric-card__caption {
+        color: #E8E8E8 !important;
+        font-weight: 500;
+    }
+    
+    [data-theme="dark"] .metric-card__badge {
+        color: #E0E0E0 !important;
+        background: rgba(255, 255, 255, 0.15) !important;
+    }
+
+    .payment-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 0.75rem;
+    }
+
+    .payment-card {
+        border-radius: var(--radius-md);
+        border: 1px solid var(--color-border);
+        background: var(--color-surface);
+        padding: 0.9rem 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        box-shadow: var(--shadow-xs);
+    }
+
+    .payment-card span {
+        color: var(--text-secondary) !important;
+        font-size: 0.85rem;
+    }
+
+    .payment-card strong {
+        font-size: 1.1rem;
+        color: var(--color-primary);
+    }
+    
+    [data-theme="dark"] .payment-card strong {
+        color: var(--color-secondary, #61B5FF) !important;
+    }
+
+    .payment-card small {
+        font-size: 0.75rem;
+        color: var(--text-secondary) !important;
+        margin-top: 0.2rem;
+    }
+    
+    [data-theme="dark"] .payment-card span,
+    [data-theme="dark"] .payment-card small {
+        color: #D0D0D0 !important;
+    }
+
+    /* استایل لیست نتایج جستجوی مشتری */
+    .customer-search-wrapper {
+        position: relative;
+    }
+
+    .customer-results {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        left: 0;
+        margin-top: 0.5rem;
+        background: var(--color-surface, #ffffff);
+        border: 1px solid var(--color-border, #e2e8f0);
+        border-radius: var(--radius-md, 12px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        max-height: 250px;
+        overflow-y: auto;
+        z-index: 1000;
+        display: none;
+    }
+
+    .customer-results.active {
+        display: block;
+    }
+
+    .customer-result {
+        padding: 0.75rem 1rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border-bottom: 1px solid var(--color-border-subtle, #f1f5f9);
+        color: var(--text-body, #2A2E34);
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+    }
+
+    .customer-result:last-child {
+        border-bottom: none;
+    }
+
+    .customer-result:hover {
+        background: var(--color-bg, #F7F8FA);
+        color: var(--color-primary, #1F3A5F);
+    }
+
+    .customer-result:active {
+        background: rgba(31, 58, 95, 0.1);
+    }
+
+    .customer-result__name {
+        font-weight: 600;
+        color: var(--text-heading, #0f172a);
+    }
+
+    .customer-result__phone {
+        color: var(--text-secondary, #6B7380);
+        font-size: 0.85rem;
+        direction: ltr;
+        text-align: left;
+        font-family: inherit;
+    }
+
+    /* استایل دکمه حذف سفارش در header مودال بیرون‌بر */
+    #takeaway-modal .table-modal-header .btn-danger {
+        background: var(--color-danger, #E44848);
+        color: #ffffff;
+        border: none;
+        padding: 0.5rem 1.25rem;
+        font-size: 0.9rem;
+        font-weight: 600;
+        border-radius: var(--radius-sm, 8px);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        position: relative;
+        z-index: 1;
+        white-space: nowrap;
+    }
+
+    #takeaway-modal .table-modal-header .btn-danger:hover {
+        background: #c93a3a;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(228, 72, 72, 0.3);
+    }
+
+    .no-result {
+        padding: 0.75rem 1rem;
+        color: var(--text-secondary, #6B7380);
+        font-size: 0.85rem;
+        text-align: center;
+        font-style: italic;
+    }
+
+    .tax-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 0.75rem;
+    }
+
+    .tax-card {
+        border-radius: var(--radius-md);
+        border: 1px dashed var(--color-border);
+        background: var(--color-surface);
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+    }
+
+    .tax-card span {
+        color: var(--text-secondary) !important;
+        font-size: 0.9rem;
+    }
+
+    .tax-card strong {
+        font-size: 1.2rem;
+        color: var(--text-heading) !important;
+    }
+    
+    [data-theme="dark"] .tax-card span {
+        color: #D0D0D0 !important;
+    }
+    
+    [data-theme="dark"] .tax-card strong {
+        color: #ffffff !important;
+    }
+
+    .table-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .table-group__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 0.75rem;
+    }
+
+    .table-group__header h4 {
+        margin: 0;
+        font-size: 1.05rem;
+        color: var(--text-heading);
+    }
+
+    .table-group__header small {
+        color: var(--text-secondary);
+        font-size: 0.86rem;
+    }
+    
+    .period-toggle {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .period-btn {
+        border: 1px solid var(--color-border);
+        background: var(--color-surface);
+        color: var(--text-heading);
+        padding: 0.35rem 0.9rem;
+        border-radius: 999px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .period-btn.active {
+        background: var(--color-primary, #1F3A5F);
+        color: #fff;
+        box-shadow: 0 8px 20px rgba(31, 58, 95, 0.2);
+    }
+    
+    [data-theme="dark"] .period-btn {
+        background: var(--color-surface);
+        color: var(--text-heading) !important;
+        border-color: var(--color-border);
+    }
+    
+    [data-theme="dark"] .period-btn:hover {
+        background: var(--color-surface-alt);
+        color: #ffffff !important;
+    }
+    
+    [data-theme="dark"] .period-btn.active {
+        background: var(--color-primary-light, #61B5FF);
+        color: #fff !important;
+        box-shadow: 0 8px 20px rgba(97, 181, 255, 0.3);
+    }
+    
+    .financial-period-panel {
+        display: none;
+        flex-direction: column;
+        gap: var(--space-3);
+    }
+    
+    .financial-period-panel.active {
+        display: flex;
+    }
+    
+    .is-hidden {
+        display: none !important;
+    }
+
+    @media (max-width: 1200px) {
+        .dashboard-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .dashboard-shell {
+            padding: 1rem;
+        }
+    }
+</style>
+{% endblock %}
+{% block content %}
+{% set occupied_count = tables | selectattr('status', 'equalto', 'اشغال شده') | list | length %}
+{% set takeaway_count = takeaway_orders | length %}
+{% set unpaid_count = financial.unpaid_count %}
+<div class="dashboard-shell">
+    <section class="ds-section">
+        <div class="dashboard-section-header">
+            <div>
+                <h2 style="margin:0;">داشبورد لحظه‌ای کافه</h2>
+                <p class="ds-subtitle">وضعیت میزها، سفارش‌های بیرون‌بر و شاخص‌های مالی</p>
+            </div>
+            <span class="ds-pill">کل میزها: {{ tables|length }}</span>
+        </div>
+        <div class="ds-stats-grid">
+            <article class="stat-card stat-card--success">
+                <span class="stat-card__badge">{{ financial.today_paid_count }} پرداخت شده</span>
+                <div class="stat-card__value">{{ "{:,}".format(financial.today_revenue) }}</div>
+                <div class="stat-card__meta">درآمد امروز</div>
+                <span class="stat-card__trend">میانگین سفارش: {{ "{:,}".format(financial.today_revenue // (financial.today_paid_count or 1)) }}</span>
+            </article>
+            <article class="stat-card stat-card--primary">
+                <span class="stat-card__badge">{{ occupied_count }} میز فعال</span>
+                <div class="stat-card__value">{{ occupied_count }}/{{ tables|length }}</div>
+                <div class="stat-card__meta">وضعیت میزهای داخل سالن</div>
+                <span class="stat-card__trend">میزهای خالی: {{ tables|length - occupied_count }}</span>
+            </article>
+            <article class="stat-card stat-card--warning">
+                <span class="stat-card__badge">{{ takeaway_count }} سفارش</span>
+                <div class="stat-card__value">سفارشات بیرون‌بر</div>
+                <div class="stat-card__meta">نوبت‌های در انتظار</div>
+                <span class="stat-card__trend">دکمه + سفارش بیرون‌بر جدید</span>
+            </article>
+            <article class="stat-card stat-card--danger">
+                <span class="stat-card__badge">{{ unpaid_count }} سفارش باز</span>
+                <div class="stat-card__value">{{ "{:,}".format(financial.unpaid_total) }}</div>
+                <div class="stat-card__meta">مجموع پرداخت نشده</div>
+                <span class="stat-card__trend">میانگین بدهی: {{ "{:,}".format((financial.unpaid_total // (unpaid_count or 1)) or 0) }}</span>
+            </article>
+        </div>
+    </section>
+
+    <div class="dashboard-grid">
+        <div class="dashboard-left">
+            <section id="tables-section" class="ds-section">
+                <div class="dashboard-section-header">
+                    <div>
+                        <h3 style="margin:0;">میزهای کافه</h3>
+                        <p class="ds-subtitle">پیگیری وضعیت میزها و سفارش‌های جاری</p>
+                    </div>
+                </div>
+                {% for group in table_groups %}
+                <div class="table-group">
+                    <div class="table-group__header">
+                        <div>
+                            <h4>{{ group.label }}</h4>
+                            <small>میزهای این بخش</small>
+                        </div>
+                        <span class="ds-pill">{{ group.tables|length }} میز</span>
+                    </div>
+                    <div class="tables-grid board">
+                    {% for table in group.tables %}
+                    {% set current_order = table.order %}
+                    {% set is_occupied = table.status == 'اشغال شده' %}
+                    <div class="table-card" data-table-id="{{ table.id }}" data-table-number="{{ table.number }}">
+                        <div class="table-card__header">
+                            <div class="table-card__title">
+                                <span>میز</span>
+                                <strong>{{ table.number }}</strong>
+                            </div>
+                            <span class="table-card__badge {{ 'occupied' if is_occupied else 'empty' }}">{{ table.status }}</span>
+                        </div>
+
+                        {% if is_occupied %}
+                        <div class="table-card__customer">
+                            <div>
+                                <span>مشتری</span>
+                                <strong>{{ table.customer_name or 'بدون نام' }}</strong>
+                            </div>
+                            <div>
+                                <span>مبلغ با تخفیف</span>
+                                <strong>{{ "{:,}".format(current_order.final_amount if current_order else table.final_amount) }}</strong>
+                            </div>
+                        </div>
+
+                        {% if current_order %}
+                        <div class="table-card__order">
+                            <div>
+                                <span>فاکتور</span>
+                                <strong>#{{ current_order.invoice_number }}</strong>
+                            </div>
+                            <div>
+                                <span>مبلغ سفارش</span>
+                                <strong>{{ "{:,}".format(current_order.final_amount) }}</strong>
+                            </div>
+                        </div>
+                        <div class="table-card__order is-muted">
+                            <div>
+                                <span>وضعیت</span>
+                                <span class="table-card__order-status {{ 'paid' if current_order.status == 'پرداخت شده' else 'unpaid' }}">{{ current_order.status }}</span>
+                            </div>
+                            <div>
+                                <span>شماره سفارش</span>
+                                <strong>{{ current_order.id }}</strong>
+                            </div>
+                        </div>
+                        <div class="table-card__actions">
+                            <button class="ds-button ghost" onclick="printTableInvoice({{ current_order.id }}, event)">پرینت فاکتور</button>
+                            <div class="table-card__checkout">
+                                <button class="ds-button success table-checkout-toggle" onclick="toggleCheckoutOptions({{ table.id }}, event)">تسویه حساب</button>
+                                <div class="table-card__checkout-options" id="checkout-options-{{ table.id }}">
+                                    <button class="ds-button secondary" onclick="settleTableFromDashboard({{ table.id }}, event, 'کارت به کارت')">کارت به کارت</button>
+                                    <button class="ds-button secondary" onclick="settleTableFromDashboard({{ table.id }}, event, 'کارتخوان')">کارتخوان</button>
+                                    <button class="ds-button secondary" onclick="settleTableFromDashboard({{ table.id }}, event, 'اسنپ')">اسنپ</button>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% else %}
+                        <div class="table-card__empty">
+                            میز آماده پذیرش
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </section>
+
+            <section class="ds-section">
+                <div class="dashboard-section-header">
+                    <div>
+                        <h3 style="margin:0;">سفارشات بیرون‌بر</h3>
+                        <p class="ds-subtitle">نظم و اولویت‌بندی برای تحویل سریع</p>
+                    </div>
+                    <button class="ds-button primary btn-new-takeaway" onclick="openNewTakeawayModal()">+ سفارش جدید</button>
+                </div>
+                <div class="takeaway-orders-grid modern">
+                    {% for order in takeaway_orders %}
+                    <div class="takeaway-order-card" data-order-id="{{ order.id }}">
+                        <div class="takeaway-order-header">
+                            <div class="takeaway-order-meta">
+                                <div>
+                                    <span class="label">فاکتور</span>
+                                    <strong>#{{ order.invoice_number }}</strong>
+                                </div>
+                                <div>
+                                    <span class="label">زمان</span>
+                                    <strong>{{ order.created_at.strftime('%Y-%m-%d %H:%M') }}</strong>
+                                </div>
+                            </div>
+                            <span class="ds-badge {{ 'success' if order.status == 'پرداخت شده' else 'warning' }}">{{ order.status }}</span>
+                        </div>
+                        <div class="takeaway-order-info">
+                            <span class="takeaway-customer">{{ order.customer.name }}</span>
+                            <span class="takeaway-amount">{{ "{:,}".format(order.final_amount) }}</span>
+                        </div>
+                        <div class="takeaway-order-actions">
+                            <button class="ds-button ghost" onclick="openTakeawayModal({{ order.id }}, event)">ویرایش</button>
+                            {% if order.status == 'پرداخت نشده' %}
+                            <div class="takeaway-order-checkout">
+                                <button class="ds-button success takeaway-checkout-toggle" onclick="toggleTakeawayCheckoutOptions({{ order.id }}, event)">تسویه</button>
+                                <div class="takeaway-order-checkout-options" id="takeaway-checkout-options-{{ order.id }}">
+                                    <button class="ds-button secondary" onclick="checkoutTakeawayOrder({{ order.id }}, event, 'کارتخوان')">کارتخوان</button>
+                                    <button class="ds-button secondary" onclick="checkoutTakeawayOrder({{ order.id }}, event, 'کارت به کارت')">کارت به کارت</button>
+                                    <button class="ds-button secondary" onclick="checkoutTakeawayOrder({{ order.id }}, event, 'اسنپ')">اسنپ</button>
+                                </div>
+                            </div>
+                            {% endif %}
+                            <button class="ds-button danger" onclick="deleteTakeawayOrder({{ order.id }}, event)">حذف</button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+        </div>
+
+        <div class="dashboard-right" id="financial-section">
+            <section class="ds-section">
+                <div class="dashboard-section-header">
+                    <div>
+                        <h3 style="margin:0;">شاخص‌های مالی</h3>
+                        <p class="ds-subtitle">جمع‌بندی ماه جاری و روش‌های پرداخت</p>
+                    </div>
+                    <div class="period-toggle">
+                        {% for period in financial.periods %}
+                        <button class="period-btn {% if period.key == financial.active_period %}active{% endif %}" data-period="{{ period.key }}">{{ period.label }}</button>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="financial-periods">
+                    {% for period in financial.periods %}
+                    <div class="financial-period-panel {% if period.key == financial.active_period %}active{% endif %}" data-period-panel="{{ period.key }}">
+                        <div class="financial-metrics">
+                            <article class="metric-card">
+                                <span class="metric-card__badge">{{ period.orders_count }} سفارش</span>
+                                <div class="metric-card__value">{{ "{:,}".format(period.total_sales) }}</div>
+                                <p class="metric-card__caption">جمع فروش این بازه</p>
+                            </article>
+                            <article class="metric-card">
+                                <span class="metric-card__badge">{{ period.paid_count }} پرداخت شده</span>
+                                <div class="metric-card__value">{{ "{:,}".format(period.paid_total) }}</div>
+                                <p class="metric-card__caption">دریافتی تسویه‌شده</p>
+                            </article>
+                            <article class="metric-card">
+                                <span class="metric-card__badge danger">{{ (period.orders_count - period.paid_count) }} سفارش باز</span>
+                                <div class="metric-card__value">{{ "{:,}".format(period.unpaid_total) }}</div>
+                                <p class="metric-card__caption">پرداخت نشده</p>
+                            </article>
+                        </div>
+                        <div class="ds-grid cols-2" style="margin-top: var(--space-3);">
+                            <div class="ds-stack">
+                                <h4>روش پرداخت</h4>
+                                <div class="payment-grid">
+                                    <div class="payment-card">
+                                        <span>کارتخوان</span>
+                                        <strong>{{ "{:,}".format(period.payment.pos) }}</strong>
+                                        <small>{{ period.payment_counts.pos }} سفارش</small>
+                                    </div>
+                                    <div class="payment-card">
+                                        <span>کارت به کارت</span>
+                                        <strong>{{ "{:,}".format(period.payment.card_to_card) }}</strong>
+                                        <small>{{ period.payment_counts.card_to_card }} سفارش</small>
+                                    </div>
+                                    <div class="payment-card">
+                                        <span>اسنپ</span>
+                                        <strong>{{ "{:,}".format(period.payment.snap) }}</strong>
+                                        <small>{{ period.payment_counts.snap }} سفارش</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="ds-stack">
+                                <h4>مالیات و تخفیف</h4>
+                                <div class="tax-grid">
+                                    <div class="tax-card">
+                                        <span>مالیات این بازه</span>
+                                        <strong>{{ "{:,}".format(period.tax_total) }}</strong>
+                                    </div>
+                                    <div class="tax-card">
+                                        <span>تخفیف این بازه</span>
+                                        <strong>{{ "{:,}".format(period.discount_total) }}</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="ds-section">
+                <div class="dashboard-section-header">
+                    <div>
+                        <h3 style="margin:0;">جریان سفارش‌ها</h3>
+                        <p class="ds-subtitle">نمایش آخرین پرداخت‌ها و بدهی‌های باز</p>
+                    </div>
+                </div>
+                <div class="orders-columns">
+                    <div class="recent-orders">
+                        <h4>آخرین سفارشات</h4>
+                        <div class="orders-list">
+                            {% for order in financial.recent_orders %}
+                            <div class="order-item">
+                                <div class="order-header">
+                                    <span class="order-invoice-num">فاکتور #{{ order.invoice_number }}</span>
+                                    <span class="ds-badge {{ 'success' if order.status == 'پرداخت شده' else 'warning' }}">{{ order.status }}</span>
+                                </div>
+                                <div class="order-details">
+                                    <span class="order-customer">{{ order.customer.name }}</span>
+                                    <span class="order-amount">{{ "{:,}".format(order.final_amount) }}</span>
+                                </div>
+                                <div class="order-time">{{ order.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% if financial.unpaid_orders %}
+                    <div class="unpaid-orders">
+                        <h4>سفارشات پرداخت نشده</h4>
+                        <div class="orders-list">
+                            {% for order in financial.unpaid_orders[:5] %}
+                            <div class="order-item unpaid-item">
+                                <div class="order-header">
+                                    <span class="order-invoice-num">فاکتور #{{ order.invoice_number }}</span>
+                                    <span class="order-amount">{{ "{:,}".format(order.final_amount) }}</span>
+                                </div>
+                                <div class="order-details">
+                                    <span class="order-customer">{{ order.customer.name }}</span>
+                                    <span class="order-time">{{ order.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </section>
+        </div>
+    </div>
+</div>
+<!-- پاپ‌آپ میز -->
+<div id="table-modal" class="table-modal">
+    <div class="table-modal-content">
+        <div class="table-modal-header">
+            <h3 id="table-modal-title">میز <span id="table-modal-number"></span></h3>
+            <button class="close-modal" onclick="closeTableModal()">&times;</button>
+        </div>
+        <div class="table-modal-body">
+            <!-- سمت راست: اطلاعات میز -->
+            <div class="table-info-panel">
+                <div class="customer-info-section">
+                    <h4>اطلاعات مشتری</h4>
+                    <div class="form-group">
+                        <label for="table-customer-name">نام و فامیل:</label>
+                        <div class="customer-search-wrapper">
+                            <input type="text" id="table-customer-name" placeholder="مثلاً علی احمدی" autocomplete="off">
+                            <div id="table-customer-results" class="customer-results"></div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="table-customer-phone">شماره تماس:</label>
+                        <div class="customer-search-wrapper">
+                            <input type="text" id="table-customer-phone" placeholder="09xx..." autocomplete="off">
+                            <div id="table-customer-phone-results" class="customer-results"></div>
+                        </div>
+                    </div>
+                    <div class="form-group" id="table-customer-birth-date-group" style="display: none;">
+                        <label for="table-customer-birth-date">تاریخ تولد:</label>
+                        <input type="date" id="table-customer-birth-date" autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label>تخفیف:</label>
+                        <div class="discount-fields-wrapper">
+                            <div class="discount-field">
+                                <label for="table-discount-amount" class="discount-field-label">تخفیف عددی :</label>
+                                <div class="discount-input-wrapper">
+                                    <input type="number" id="table-discount-amount" value="0" min="0" placeholder="مقدار تخفیف">
+                                    <button type="button" class="discount-apply-btn" id="apply-table-discount-amount" title="اعمال تخفیف عددی">✓</button>
+                                </div>
+                            </div>
+                            <div class="discount-field">
+                                <label for="table-discount-percent" class="discount-field-label">تخفیف درصدی (%):</label>
+                                <div class="discount-input-wrapper">
+                                    <input type="number" id="table-discount-percent" value="0" min="0" max="100" placeholder="درصد تخفیف">
+                                    <button type="button" class="discount-apply-btn" id="apply-table-discount-percent" title="اعمال تخفیف درصدی">✓</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="table-items-section">
+                    <h4>آیتم‌های انتخاب شده</h4>
+                    <div id="table-items-list" class="table-items-list">
+                        <!-- آیتم‌ها اینجا نمایش داده می‌شوند -->
+                    </div>
+                </div>
+                
+                <div class="table-summary">
+                    <div class="summary-row">
+                        <span>جمع کل:</span>
+                        <span id="table-total-amount">0</span>                    </div>
+                    <div class="summary-row">
+                        <span>مالیات:</span>
+                        <span id="table-tax-amount">0</span>                    </div>
+                    <div class="summary-row" id="table-discount-row" style="display: none;">
+                        <span>تخفیف:</span>
+                        <span id="table-discount-display">0</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>مبلغ نهایی:</span>
+                        <span id="table-final-amount">0</span>                    </div>
+                </div>
+                
+                <div class="table-actions">
+                    <button id="submit-table-order" class="btn btn-primary">ثبت میز</button>
+                    <button id="checkout-table" class="btn btn-success">تسویه میز</button>
+                </div>
+            </div>
+            
+            <!-- سمت چپ: منو -->
+            <div class="menu-panel">
+                <div class="menu-search">
+                    <input type="text" id="menu-search-input" placeholder="جستجو در منو..." onkeyup="filterMenuItems()">
+                </div>
+                <div class="menu-categories">
+                    {% for category in categories %}
+                    <div class="menu-category" data-category-id="{{ category.id }}">
+                        <h4 class="category-header">{{ category.name }}</h4>
+                        <div class="category-items">
+                            {% for item in category.menu_items if item.is_active %}
+                            <div class="menu-item-selectable" data-item-id="{{ item.id }}" data-item-name="{{ item.name }}" data-item-price="{{ item.price }}">
+                                <div class="item-name">{{ item.name }}</div>
+                                <div class="item-price">{{ "{:,}".format(item.price) }}</div>
+                                <div class="item-stock">موجودی: {{ item.stock }}</div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% if menu_items|selectattr('category_id', 'equalto', none)|list|length > 0 %}
+                    <div class="menu-category" data-category-id="0">
+                        <h4 class="category-header">بدون دسته‌بندی</h4>
+                        <div class="category-items">
+                            {% for item in menu_items if not item.category_id and item.is_active %}
+                            <div class="menu-item-selectable" data-item-id="{{ item.id }}" data-item-name="{{ item.name }}" data-item-price="{{ item.price }}">
+                                <div class="item-name">{{ item.name }}</div>
+                                <div class="item-price">{{ "{:,}".format(item.price) }}</div>
+                                <div class="item-stock">موجودی: {{ item.stock }}</div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- پاپ‌آپ سفارشات بیرون‌بر -->
+<div id="takeaway-modal" class="table-modal">
+    <div class="table-modal-content">
+        <div class="table-modal-header">
+            <h3 id="takeaway-modal-title">سفارش بیرون‌بر <span id="takeaway-modal-invoice"></span></h3>
+            <button class="btn btn-danger" type="button" onclick="cancelCurrentTakeawayOrder()">حذف سفارش</button>
+        </div>
+        <div class="table-modal-body">
+            <!-- سمت راست: اطلاعات سفارش -->
+            <div class="table-info-panel">
+                <div class="customer-info-section">
+                    <h4>اطلاعات مشتری</h4>
+                    <div class="form-group">
+                        <label for="takeaway-customer-name">نام و فامیل:</label>
+                        <div class="customer-search-wrapper">
+                            <input type="text" id="takeaway-customer-name" placeholder="" autocomplete="off">
+                            <div id="takeaway-customer-results" class="customer-results"></div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="takeaway-customer-phone">شماره تماس:</label>
+                        <div class="customer-search-wrapper">
+                            <input type="text" id="takeaway-customer-phone" placeholder="" autocomplete="off">
+                            <div id="takeaway-customer-phone-results" class="customer-results"></div>
+                        </div>
+                    </div>
+                    <div class="form-group" id="takeaway-customer-birth-date-group" style="display: none;">
+                        <label for="takeaway-customer-birth-date">تاریخ تولد:</label>
+                        <input type="date" id="takeaway-customer-birth-date" autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label>تخفیف:</label>
+                        <div class="discount-fields-wrapper">
+                            <div class="discount-field">
+                                <label for="takeaway-discount-amount" class="discount-field-label">تخفیف عددی :</label>
+                                <div class="discount-input-wrapper">
+                                    <input type="number" id="takeaway-discount-amount" value="0" min="0" placeholder="مقدار تخفیف">
+                                    <button type="button" class="discount-apply-btn" id="apply-takeaway-discount-amount" title="اعمال تخفیف عددی">✓</button>
+                                </div>
+                            </div>
+                            <div class="discount-field">
+                                <label for="takeaway-discount-percent" class="discount-field-label">تخفیف درصدی (%):</label>
+                                <div class="discount-input-wrapper">
+                                    <input type="number" id="takeaway-discount-percent" value="0" min="0" max="100" placeholder="درصد تخفیف">
+                                    <button type="button" class="discount-apply-btn" id="apply-takeaway-discount-percent" title="اعمال تخفیف درصدی">✓</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="table-items-section">
+                    <h4>آیتم‌های انتخاب شده</h4>
+                    <div id="takeaway-items-list" class="table-items-list">
+                        <!-- آیتم‌ها اینجا نمایش داده می‌شوند -->
+                    </div>
+                </div>
+                
+                <div class="table-summary">
+                    <div class="summary-row">
+                        <span>جمع کل:</span>
+                        <span id="takeaway-total-amount">0</span>                    </div>
+                    <div class="summary-row">
+                        <span>مالیات:</span>
+                        <span id="takeaway-tax-amount">0</span>                    </div>
+                    <div class="summary-row" id="takeaway-discount-row" style="display: none;">
+                        <span>تخفیف:</span>
+                        <span id="takeaway-discount-display">0</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>مبلغ نهایی:</span>
+                        <span id="takeaway-final-amount">0</span>                    </div>
+                </div>
+                
+                <div class="table-actions">
+                    <button id="submit-takeaway-order" class="btn btn-primary">ثبت سفارش</button>
+                    <div class="takeaway-modal-checkout" style="position: relative;">
+                        <button id="checkout-takeaway-order" class="btn btn-success takeaway-modal-checkout-toggle">تسویه سفارش</button>
+                        <div class="takeaway-order-checkout-options" id="takeaway-modal-checkout-options" style="position: absolute; bottom: 100%; right: 0; margin-bottom: 0.5rem;">
+                            <button class="ds-button secondary" onclick="checkoutTakeawayOrderFromModal('کارتخوان')">کارتخوان</button>
+                            <button class="ds-button secondary" onclick="checkoutTakeawayOrderFromModal('کارت به کارت')">کارت به کارت</button>
+                            <button class="ds-button secondary" onclick="checkoutTakeawayOrderFromModal('اسنپ')">اسنپ</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- سمت چپ: منو -->
+            <div class="menu-panel">
+                <div class="menu-search">
+                    <input type="text" id="takeaway-menu-search-input" placeholder="جستجو در منو..." onkeyup="filterTakeawayMenuItems()">
+                </div>
+                <div class="menu-categories">
+                    {% for category in categories %}
+                    <div class="menu-category" data-category-id="{{ category.id }}">
+                        <h4 class="category-header">{{ category.name }}</h4>
+                        <div class="category-items">
+                            {% for item in category.menu_items if item.is_active %}
+                            <div class="menu-item-selectable" data-item-id="{{ item.id }}" data-item-name="{{ item.name }}" data-item-price="{{ item.price }}">
+                                <div class="item-name">{{ item.name }}</div>
+                                <div class="item-price">{{ "{:,}".format(item.price) }}</div>
+                                <div class="item-stock">موجودی: {{ item.stock }}</div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% if menu_items|selectattr('category_id', 'equalto', none)|list|length > 0 %}
+                    <div class="menu-category" data-category-id="0">
+                        <h4 class="category-header">بدون دسته‌بندی</h4>
+                        <div class="category-items">
+                            {% for item in menu_items if not item.category_id and item.is_active %}
+                            <div class="menu-item-selectable" data-item-id="{{ item.id }}" data-item-name="{{ item.name }}" data-item-price="{{ item.price }}">
+                                <div class="item-name">{{ item.name }}</div>
+                                <div class="item-price">{{ "{:,}".format(item.price) }}</div>
+                                <div class="item-stock">موجودی: {{ item.stock }}</div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal برای صفحه منو -->
+<div id="menu-management-modal" class="table-modal">
+    <div class="table-modal-content" style="max-width: 95%; width: 95%; height: 90vh; max-height: 90vh;">
+        <div class="table-modal-header">
+            <h3>مدیریت منو</h3>
+            <button class="close-modal" onclick="closeMenuModal()">&times;</button>
+        </div>
+        <div class="table-modal-body" style="height: calc(90vh - 80px); overflow-y: auto;">
+            <iframe id="menu-iframe" src="{{ url_for('menu.show_menu') }}" style="width: 100%; height: 100%; border: none;"></iframe>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/debug.js') }}?v={{ cache_bust() }}"></script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}?v={{ cache_bust() }}"></script>
+<script src="{{ url_for('static', filename='js/tables.js') }}?v={{ cache_bust() }}"></script>
+<script src="{{ url_for('static', filename='js/takeaway.js') }}?v={{ cache_bust() }}"></script>
+<script>
+    // توابع برای باز و بسته کردن modal منو
+    function openMenuModal() {
+        const modal = document.getElementById('menu-management-modal');
+        if (modal) {
+            modal.style.display = 'flex';
+            // Reload iframe to get latest menu data
+            const iframe = document.getElementById('menu-iframe');
+            if (iframe) {
+                iframe.src = iframe.src; // Reload iframe
+            }
+        }
+    }
+    
+    function closeMenuModal() {
+        const modal = document.getElementById('menu-management-modal');
+        if (modal) {
+            modal.style.display = 'none';
+            // Refresh menu in table and takeaway modals if they are open
+            refreshMenuInModals();
+        }
+    }
+    
+    // تابع برای refresh کردن منو در modal‌های table و takeaway
+    let menuRefreshInFlight = null;
+
+    function refreshMenuInModals() {
+        if (!menuRefreshInFlight) {
+            menuRefreshInFlight = fetch(`/menu/api/categories?cb=${Date.now()}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        updateMenuInTableModal(data.categories);
+                        updateMenuInTakeawayModal(data.categories);
+                        if (typeof fetchAndUpdateStock === 'function') {
+                            fetchAndUpdateStock();
+                        }
+                    }
+                })
+                .catch(error => {})
+                .finally(() => {
+                    menuRefreshInFlight = null;
+                });
+        }
+        return menuRefreshInFlight;
+    }
+    
+    // تابع برای به‌روزرسانی منو در modal میز
+    function updateMenuInTableModal(categories) {
+        const menuPanel = document.querySelector('#table-modal .menu-panel .menu-categories');
+        if (!menuPanel) return;
+        
+        menuPanel.innerHTML = '';
+        
+        // اگر categories یک آرایه است و هر category دارای items است
+        categories.forEach(category => {
+            if (category.items && Array.isArray(category.items) && category.items.length > 0) {
+                const categoryDiv = document.createElement('div');
+                categoryDiv.className = 'menu-category';
+                categoryDiv.setAttribute('data-category-id', category.id || 0);
+                
+                const header = document.createElement('h4');
+                header.className = 'category-header';
+                header.textContent = category.name || 'بدون دسته‌بندی';
+                
+                const itemsDiv = document.createElement('div');
+                itemsDiv.className = 'category-items';
+                
+                category.items.forEach(item => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'menu-item-selectable';
+                    itemDiv.setAttribute('data-item-id', item.id);
+                    itemDiv.setAttribute('data-item-name', item.name);
+                    itemDiv.setAttribute('data-item-price', item.price);
+                    
+                    itemDiv.innerHTML = `
+                        <div class="item-name">${item.name}</div>
+                        <div class="item-price">${item.price.toLocaleString('fa-IR')}</div>
+                        <div class="item-stock">موجودی: ${item.stock}</div>
+                    `;
+                    
+                    itemsDiv.appendChild(itemDiv);
+                });
+                
+                categoryDiv.appendChild(header);
+                categoryDiv.appendChild(itemsDiv);
+                menuPanel.appendChild(categoryDiv);
+            }
+        });
+        
+        // Re-attach event listeners for menu items
+        setTimeout(() => {
+            const menuItems = menuPanel.querySelectorAll('.menu-item-selectable');
+            menuItems.forEach(item => {
+                item.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    const itemId = parseInt(item.getAttribute('data-item-id'));
+                    if (itemId && !isNaN(itemId) && currentTableId) {
+                        addItemToTable(itemId);
+                    }
+                }, true);
+            });
+        }, 100);
+    }
+    
+    // تابع برای به‌روزرسانی منو در modal سفارشات بیرون‌بر
+    function updateMenuInTakeawayModal(categories) {
+        const menuPanel = document.querySelector('#takeaway-modal .menu-panel .menu-categories');
+        if (!menuPanel) return;
+        
+        menuPanel.innerHTML = '';
+        
+        // اگر categories یک آرایه است و هر category دارای items است
+        categories.forEach(category => {
+            if (category.items && Array.isArray(category.items) && category.items.length > 0) {
+                const categoryDiv = document.createElement('div');
+                categoryDiv.className = 'menu-category';
+                categoryDiv.setAttribute('data-category-id', category.id || 0);
+                
+                const header = document.createElement('h4');
+                header.className = 'category-header';
+                header.textContent = category.name || 'بدون دسته‌بندی';
+                
+                const itemsDiv = document.createElement('div');
+                itemsDiv.className = 'category-items';
+                
+                category.items.forEach(item => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'menu-item-selectable';
+                    itemDiv.setAttribute('data-item-id', item.id);
+                    itemDiv.setAttribute('data-item-name', item.name);
+                    itemDiv.setAttribute('data-item-price', item.price);
+                    
+                    itemDiv.innerHTML = `
+                        <div class="item-name">${item.name}</div>
+                        <div class="item-price">${item.price.toLocaleString('fa-IR')}</div>
+                        <div class="item-stock">موجودی: ${item.stock}</div>
+                    `;
+                    
+                    itemsDiv.appendChild(itemDiv);
+                });
+                
+                categoryDiv.appendChild(header);
+                categoryDiv.appendChild(itemsDiv);
+                menuPanel.appendChild(categoryDiv);
+            }
+        });
+        
+        // Re-attach event listeners for menu items
+        setTimeout(() => {
+            const menuItems = menuPanel.querySelectorAll('.menu-item-selectable');
+            menuItems.forEach(item => {
+                item.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    const itemId = parseInt(item.getAttribute('data-item-id'));
+                    if (itemId && !isNaN(itemId) && currentTakeawayId) {
+                        addItemToTakeaway(itemId);
+                    }
+                }, true);
+            });
+        }, 100);
+    }
+    
+    // بستن modal با کلیک روی پس‌زمینه
+    window.addEventListener('click', function(event) {
+        const menuModal = document.getElementById('menu-management-modal');
+        if (event.target === menuModal) {
+            closeMenuModal();
+        }
+    });
+    
+    // گوش دادن به پیام‌های iframe برای به‌روزرسانی منو
+    window.addEventListener('message', function(event) {
+        if (event.data && event.data.type === 'menuUpdated') {
+            // منو به‌روزرسانی شده است - modal‌های باز را refresh کنیم
+            refreshMenuInModals();
+        }
+    });
+    
+    // Make functions globally available
+    window.openMenuModal = openMenuModal;
+    window.closeMenuModal = closeMenuModal;
+    window.refreshMenuInModals = refreshMenuInModals;
+    
+    // Event handler برای دکمه‌های دوره زمانی (period buttons)
+    document.addEventListener('DOMContentLoaded', function() {
+        const periodButtons = document.querySelectorAll('.period-btn');
+        const periodPanels = document.querySelectorAll('.financial-period-panel');
+        
+        periodButtons.forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                const period = this.getAttribute('data-period');
+                
+                // حذف active از همه دکمه‌ها
+                periodButtons.forEach(btn => btn.classList.remove('active'));
+                
+                // اضافه کردن active به دکمه کلیک شده
+                this.classList.add('active');
+                
+                // مخفی کردن همه panel‌ها
+                periodPanels.forEach(panel => panel.classList.remove('active'));
+                
+                // نمایش panel مربوط به دوره انتخاب شده
+                const targetPanel = document.querySelector(`[data-period-panel="${period}"]`);
+                if (targetPanel) {
+                    targetPanel.classList.add('active');
+                }
+            });
+        });
+        
+        const menuLink = document.getElementById('menu-link');
+        if (menuLink) {
+            // حذف event listener قبلی و اضافه کردن جدید
+            const newMenuLink = menuLink.cloneNode(true);
+            menuLink.parentNode.replaceChild(newMenuLink, menuLink);
+            
+            newMenuLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                openMenuModal();
+            });
+        }
+
+        // ✅ باز کردن مدال میز با کلیک روی کارت‌های میز (fallback event delegation)
+        document.addEventListener('click', function(e) {
+            const card = e.target.closest('.table-card');
+            if (!card) return;
+
+            // اگر روی دکمه‌های عملیات کلیک شده، مدال باز نشود
+            if (e.target.closest('.table-actions')) return;
+            if (e.target.classList.contains('btn-settle-table') ||
+                e.target.classList.contains('btn-print-invoice')) {
+                return;
+            }
+
+            const tableId = parseInt(card.getAttribute('data-table-id'));
+            const tableNumber = parseInt(card.getAttribute('data-table-number'));
+
+            if (typeof openTableModal === 'function' && tableId) {
+                e.preventDefault();
+                openTableModal(tableId, tableNumber);
+            }
+        });
+    });
+</script>
+{% endblock %}

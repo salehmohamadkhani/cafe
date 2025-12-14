@@ -1,0 +1,470 @@
+{% extends 'base.html' %}
+{% block title %}لیست سفارش‌ها{% endblock %}
+
+{% block head %}
+<style>
+    .orders-page {
+        padding: 1rem 0 2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .orders-hero {
+        background: linear-gradient(135deg, #1d4ed8, #1e3a8a);
+        color: #fff;
+        border-radius: 18px;
+        padding: 1.8rem 2rem;
+        box-shadow: 0 18px 40px rgba(29, 78, 216, 0.25);
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1.2rem;
+    }
+
+    .orders-hero h1 {
+        margin: 0;
+        font-size: 1.9rem;
+    }
+
+    .orders-hero p {
+        margin: 0.2rem 0 0;
+        color: rgba(255, 255, 255, 0.85);
+    }
+
+    .orders-meta {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    .orders-badge {
+        background: rgba(255, 255, 255, 0.2);
+        padding: 0.35rem 1.1rem;
+        border-radius: 50px;
+        font-weight: 600;
+    }
+
+    .orders-filters {
+        background: #fff;
+        border-radius: 18px;
+        padding: 1.5rem;
+        box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+    }
+
+    .filters-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1rem 1.25rem;
+        align-items: end;
+    }
+
+    .filters-grid label {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #4b5563;
+        margin-bottom: 0.35rem;
+        display: block;
+    }
+
+    .filters-grid input,
+    .filters-grid select {
+        width: 100%;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 0.65rem 0.9rem;
+        font-size: 0.95rem;
+        background: #f9fafb;
+        transition: border 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .filters-grid input:focus,
+    .filters-grid select:focus {
+        outline: none;
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+        background: #fff;
+    }
+
+    .filters-actions {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        direction: ltr;
+    }
+
+    .filters-actions button,
+    .filters-actions a {
+        border: none;
+        border-radius: 12px;
+        padding: 0.7rem 1.6rem;
+        font-weight: 600;
+        font-size: 0.95rem;
+        cursor: pointer;
+        transition: transform 0.18s ease, box-shadow 0.18s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 8px 20px rgba(37, 99, 235, 0.18);
+        background: #2563eb;
+        color: #fff;
+        direction: rtl;
+    }
+
+    .filters-actions button:hover,
+    .filters-actions a:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 28px rgba(37, 99, 235, 0.28);
+    }
+
+    .filters-actions a.btn-reset {
+        background: #f3f4f6;
+        color: #374151;
+        box-shadow: none;
+    }
+
+    .orders-table-card {
+        background: #fff;
+        border-radius: 18px;
+        padding: 1.6rem;
+        box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+    }
+
+    .orders-table-wrapper {
+        overflow-x: auto;
+        border-radius: 16px;
+    }
+
+    table.orders-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 0.75rem;
+        min-width: 860px;
+    }
+
+    table.orders-table thead th {
+        font-size: 0.85rem;
+        font-weight: 600;
+        text-align: center;
+        color: #6b7280;
+        padding-bottom: 0.8rem;
+    }
+
+    table.orders-table tbody tr {
+        background: #f9fafb;
+        border-radius: 16px;
+        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+        transition: transform 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    table.orders-table tbody tr:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 26px rgba(15, 23, 42, 0.12);
+    }
+
+    table.orders-table td {
+        padding: 1rem;
+        text-align: center;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #111827;
+    }
+
+    table.orders-table td:first-child {
+        border-top-right-radius: 16px;
+        border-bottom-right-radius: 16px;
+    }
+
+    table.orders-table td:last-child {
+        border-top-left-radius: 16px;
+        border-bottom-left-radius: 16px;
+    }
+
+    .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.35rem 0.9rem;
+        border-radius: 999px;
+        font-size: 0.85rem;
+        font-weight: 700;
+    }
+
+    .status-paid {
+        background: rgba(34, 197, 94, 0.16);
+        color: #15803d;
+    }
+
+    .status-unpaid {
+        background: rgba(250, 204, 21, 0.22);
+        color: #b45309;
+    }
+
+    .status-cancelled {
+        background: rgba(248, 113, 113, 0.25);
+        color: #b91c1c;
+    }
+
+    .orders-actions-col {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .btn-view,
+    .btn-edit {
+        padding: 0.35rem 0.9rem;
+        border-radius: 10px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        text-decoration: none;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .btn-view {
+        background: #2563eb;
+        color: #fff;
+        box-shadow: 0 6px 18px rgba(37, 99, 235, 0.2);
+    }
+
+    .btn-edit {
+        background: #f59e0b;
+        color: #fff;
+        box-shadow: 0 6px 18px rgba(245, 158, 11, 0.2);
+    }
+
+    .btn-view:hover,
+    .btn-edit:hover {
+        transform: translateY(-2px);
+    }
+
+    .timer-cell {
+        font-size: 0.9rem;
+        color: #4b5563;
+    }
+
+    .timer-text {
+        font-weight: 600;
+        direction: ltr;
+        display: inline-block;
+        text-align: center;
+    }
+
+    .timer-text.running {
+        color: #f59e0b;
+    }
+
+    .timer-text.completed {
+        color: #22c55e;
+    }
+
+    .empty-state {
+        padding: 2rem;
+        text-align: center;
+        color: #6b7280;
+        font-weight: 600;
+    }
+
+    @media (max-width: 768px) {
+        .orders-hero {
+            padding: 1.5rem;
+        }
+
+        .orders-hero h1 {
+            font-size: 1.6rem;
+        }
+
+        table.orders-table {
+            min-width: 680px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="orders-page">
+    <section class="orders-hero">
+        <div>
+            <h1>لیست سفارش‌ها</h1>
+            <p>مدیریت کامل سفارش‌ها با امکان جستجو، فیلتر و عملیات سریع</p>
+        </div>
+        <div class="orders-meta">
+            <span class="orders-badge">کل سفارش‌ها: {{ orders|length }}</span>
+            {% if status %}
+            <span class="orders-badge">وضعیت انتخاب شده: {{ status }}</span>
+            {% endif %}
+            {% if q %}
+            <span class="orders-badge">جستجو برای: "{{ q }}"</span>
+            {% endif %}
+        </div>
+    </section>
+
+    <section class="orders-filters">
+        <form method="GET" action="{{ url_for('order.orders_list') }}">
+            <div class="filters-grid">
+                <div>
+                    <label for="q">جستجو (نام، فاکتور یا شماره مشتری)</label>
+                    <input type="text" id="q" name="q" value="{{ q or '' }}" placeholder="عنوانی را تایپ کنید...">
+                </div>
+                <div>
+                    <label for="status">فیلتر وضعیت</label>
+                    <select id="status" name="status">
+                        <option value="">همه وضعیت‌ها</option>
+                        <option value="پرداخت شده" {% if status == 'پرداخت شده' %}selected{% endif %}>پرداخت شده</option>
+                        <option value="پرداخت نشده" {% if status == 'پرداخت نشده' %}selected{% endif %}>پرداخت نشده</option>
+                        <option value="لغو شده" {% if status == 'لغو شده' %}selected{% endif %}>لغو شده</option>
+                    </select>
+                </div>
+                <div class="filters-actions">
+                    <button type="submit">جستجو</button>
+                    <a href="{{ url_for('order.orders_list') }}" class="btn-reset">پاک کردن فیلترها</a>
+                </div>
+            </div>
+        </form>
+    </section>
+
+    <section class="orders-table-card">
+        <div class="orders-table-wrapper">
+            <table class="orders-table">
+                <thead>
+                    <tr>
+                        <th>شناسه</th>
+                        <th>شماره فاکتور</th>
+                        <th>مشتری</th>
+                        <th>شماره تماس</th>
+                        <th>مبلغ نهایی</th>
+                        <th>وضعیت</th>
+                        <th>نوع</th>
+                        <th>تاریخ ثبت</th>
+                        <th>زمان تسویه</th>
+                        <th>عملیات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if orders %}
+                        {% for order in orders %}
+                        {% set deleted_items_count = order.order_items|selectattr('is_deleted', 'equalto', true)|list|length %}
+                        <tr>
+                            <td>{{ order.id }}</td>
+                            <td>
+                                {{ order.invoice_number }}
+                                {% if deleted_items_count > 0 %}
+                                <span style="color: #dc3545; font-size: 0.85rem; margin-right: 0.5rem;" title="{{ deleted_items_count }} آیتم حذف شده">
+                                    ⚠️
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td>{{ order.customer.name if order.customer else '---' }}</td>
+                            <td>{{ order.customer.phone if order.customer else '---' }}</td>
+                            <td>{{ "{:,}".format(order.final_amount) }}</td>
+                            <td>
+                                {% if order.status == 'پرداخت شده' %}
+                                    <span class="status-pill status-paid">پرداخت شده</span>
+                                {% elif order.status == 'پرداخت نشده' %}
+                                    <span class="status-pill status-unpaid">پرداخت نشده</span>
+                                {% elif order.status == 'لغو شده' %}
+                                    <span class="status-pill status-cancelled">لغو شده</span>
+                                {% else %}
+                                    <span class="status-pill">{{ order.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ order.type or 'حضوری' }}</td>
+                            <td>
+                                {% if order.created_at %}
+                                    {{ order.created_at | to_jalali }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td class="timer-cell" 
+                                data-created-at="{{ order.created_at.timestamp() if order.created_at else '' }}"
+                                data-paid-at="{{ order.paid_at.timestamp() if order.paid_at else '' }}"
+                                data-status="{{ order.status }}">
+                                <span class="timer-text">-</span>
+                            </td>
+                            <td>
+                                <div class="orders-actions-col">
+                                    <a href="{{ url_for('order.order_detail', order_id=order.id) }}" class="btn-view">مشاهده</a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="10" class="empty-state">
+                                سفارشی یافت نشد.
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const timerCells = document.querySelectorAll('.timer-cell');
+    
+    function formatTime(seconds) {
+        if (seconds < 60) {
+            return seconds + ' ثانیه';
+        } else if (seconds < 3600) {
+            const minutes = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return minutes + "''" + (secs > 0 ? ' ' + secs + ' ثانیه' : '');
+        } else {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            return hours + "'" + (minutes > 0 ? ' ' + minutes + "''" : "'");
+        }
+    }
+    
+    function updateTimer(cell) {
+        const createdAt = parseFloat(cell.getAttribute('data-created-at'));
+        const paidAt = parseFloat(cell.getAttribute('data-paid-at'));
+        const status = cell.getAttribute('data-status');
+        const timerText = cell.querySelector('.timer-text');
+        
+        if (!createdAt || isNaN(createdAt)) {
+            timerText.textContent = '-';
+            return;
+        }
+        
+        const now = Date.now() / 1000; // Convert to seconds
+        
+        if (status === 'پرداخت شده' && paidAt && !isNaN(paidAt)) {
+            // سفارش پرداخت شده - نشان دادن زمان از ثبت تا پرداخت
+            const duration = paidAt - createdAt;
+            timerText.textContent = formatTime(Math.floor(duration));
+            timerText.className = 'timer-text completed';
+        } else {
+            // سفارش هنوز پرداخت نشده - نشان دادن زمان از ثبت تا الان
+            const duration = now - createdAt;
+            timerText.textContent = formatTime(Math.floor(duration));
+            timerText.className = 'timer-text running';
+        }
+    }
+    
+    // به‌روزرسانی اولیه
+    timerCells.forEach(updateTimer);
+    
+    // به‌روزرسانی هر 1 ثانیه برای سفارش‌های پرداخت نشده
+    setInterval(function() {
+        timerCells.forEach(function(cell) {
+            const status = cell.getAttribute('data-status');
+            if (status !== 'پرداخت شده') {
+                updateTimer(cell);
+            }
+        });
+    }, 1000);
+});
+</script>
+{% endblock %}
+
+

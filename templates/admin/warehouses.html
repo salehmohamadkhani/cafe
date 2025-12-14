@@ -1,0 +1,425 @@
+{% extends 'base.html' %}
+{% block title %}مدیریت انبارها{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}?v={{ cache_bust() }}">
+<style>
+  body:has(.warehouses-shell) {
+    background: var(--color-bg);
+  }
+
+  body:has(.warehouses-shell) .container {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  body:has(.warehouses-shell) .footer {
+    background: transparent;
+    color: var(--text-secondary);
+  }
+
+  .warehouses-shell {
+    padding: clamp(1rem, 2vw, 1.5rem);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    min-height: calc(100vh - 120px);
+  }
+
+  .warehouses-hero {
+    background: linear-gradient(140deg, var(--navbar-bg), var(--color-primary-light) 65%, var(--color-secondary));
+    color: #fff;
+    border-radius: var(--radius-lg);
+    padding: var(--space-3);
+    box-shadow: var(--card-shadow);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .warehouses-hero h1 {
+    margin: 0.25rem 0 0.4rem;
+  }
+
+  .warehouses-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+    width: 100%;
+  }
+
+  @media (min-width: 980px) {
+    .warehouses-layout {
+      grid-template-columns: 420px 1fr;
+      align-items: start;
+    }
+  }
+
+  /* Prevent grid items from expanding due to wide children (tables) */
+  .warehouses-layout > section {
+    min-width: 0;
+  }
+
+  .warehouse-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .warehouse-card {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    padding: 1rem;
+  }
+
+  .warehouse-card.active {
+    border-color: rgba(74, 168, 255, 0.7);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .warehouse-card a {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+  }
+
+  .warehouse-card h4 {
+    margin: 0;
+    font-size: 1.05rem;
+    color: var(--text-heading);
+  }
+
+  .warehouse-card p {
+    margin: 0.35rem 0 0;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+  }
+
+  /* Ensure cards/forms never overflow their column */
+  .warehouses-shell .ds-card {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .transfer-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .transfer-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .transfer-grid > * {
+    min-width: 0;
+  }
+
+  .transfer-grid .ds-input,
+  .transfer-grid .ds-select,
+  .transfer-grid input,
+  .transfer-grid select {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .transfer-grid .ds-pill {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    justify-content: center;
+    text-align: center;
+  }
+
+  @media (min-width: 720px) {
+    .transfer-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .ds-table-wrapper {
+    overflow-x: auto;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    max-width: 100%;
+  }
+
+  .ds-table-wrapper table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 860px;
+    background: var(--color-surface);
+    color: var(--text-body);
+  }
+
+  .ds-table-wrapper thead {
+    background: var(--color-primary);
+    color: #fff;
+  }
+
+  .ds-table-wrapper th,
+  .ds-table-wrapper td {
+    padding: 0.65rem 0.75rem;
+    text-align: center;
+    border-bottom: 1px solid var(--color-border);
+    white-space: nowrap;
+    font-size: 0.88rem;
+  }
+
+  .ds-table-wrapper tbody tr:nth-child(even) {
+    background: var(--color-surface-alt);
+  }
+
+  .badge-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.7rem;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 0.8rem;
+  }
+
+  .badge-low {
+    background: rgba(228, 72, 72, 0.14);
+    color: var(--color-danger);
+    border: 1px solid rgba(228, 72, 72, 0.28);
+  }
+
+  .badge-ok {
+    background: rgba(39, 179, 118, 0.14);
+    color: var(--color-success);
+    border: 1px solid rgba(39, 179, 118, 0.25);
+  }
+
+  .transfer-history .ds-pill {
+    background: rgba(15, 23, 42, 0.06);
+  }
+
+  [data-theme="dark"] .warehouse-card.active {
+    border-color: rgba(97, 181, 255, 0.7);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="warehouses-shell ds-page">
+  <section class="ds-section warehouses-hero">
+    <p class="panel-eyebrow">انبارداری چند انباره</p>
+    <h1>مدیریت انبارها</h1>
+    <p>از انبار مرکزی دریافت می‌کنید و با انتقال، موجودی را بین انبارهای آشپزخانه و قلیان توزیع می‌کنید.</p>
+    <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+      <a class="ds-button ghost" href="{{ url_for('admin.inventory_dashboard') }}">بازگشت به انبارداری</a>
+    </div>
+  </section>
+
+  <div class="warehouses-layout">
+    <section class="ds-section">
+      <header class="ds-card-header" style="margin-bottom: 0.75rem;">
+        <div>
+          <h3 style="margin:0;">انبارها</h3>
+          <p class="ds-subtitle">برای نمایش موجودی، یک انبار را انتخاب کنید.</p>
+        </div>
+      </header>
+      <div class="warehouse-list">
+        {% for wh in warehouses %}
+        <div class="warehouse-card {% if selected_wh and wh.id == selected_wh.id %}active{% endif %}">
+          <a href="{{ url_for('admin.warehouses_management', warehouse_id=wh.id) }}">
+            <h4>{{ wh.name }}</h4>
+            <p>{% if central_wh and wh.id == central_wh.id %}مبدأ اصلی ورود خریدها{% else %}انبار مقصد/مصرف{% endif %}</p>
+          </a>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="ds-card" style="margin-top: 1rem; padding: 1rem;">
+        <header class="ds-card-header" style="margin-bottom: 0.75rem;">
+          <div>
+            <h3 style="margin:0;">ثبت انتقال</h3>
+            <p class="ds-subtitle">ورودی خریدها همیشه به انبار مرکزی اضافه می‌شود؛ انتقال فقط از انبار مرکزی انجام می‌شود.</p>
+          </div>
+        </header>
+        <form class="transfer-form" method="post" action="{{ url_for('admin.create_warehouse_transfer') }}">
+          <div class="transfer-grid">
+            <div class="ds-input-group">
+              <label class="ds-label" for="raw_material_id">ماده اولیه</label>
+              <select id="raw_material_id" name="raw_material_id" class="ds-select" required>
+                <option value="" disabled selected>انتخاب ماده اولیه</option>
+                {% for rm in raw_materials %}
+                <option value="{{ rm.id }}">{{ rm.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="ds-input-group">
+              <label class="ds-label" for="transfer_date">تاریخ انتقال</label>
+              <input id="transfer_date" name="transfer_date" type="date" class="ds-input" value="{{ today.isoformat() }}">
+            </div>
+
+            <div class="ds-input-group">
+              <label class="ds-label">از انبار</label>
+              {% if central_wh %}
+                <div class="ds-pill" style="justify-content:center;">{{ central_wh.name }}</div>
+                <input type="hidden" name="from_warehouse_id" value="{{ central_wh.id }}">
+              {% else %}
+                <select id="from_warehouse_id" name="from_warehouse_id" class="ds-select" required>
+                  {% for wh in warehouses %}
+                  <option value="{{ wh.id }}">{{ wh.name }}</option>
+                  {% endfor %}
+                </select>
+              {% endif %}
+            </div>
+
+            <div class="ds-input-group">
+              <label class="ds-label" for="to_warehouse_id">به انبار</label>
+              <select id="to_warehouse_id" name="to_warehouse_id" class="ds-select" required>
+                <option value="" disabled selected>انتخاب مقصد</option>
+                {% for wh in warehouses %}
+                  {% if not central_wh or wh.id != central_wh.id %}
+                  <option value="{{ wh.id }}" {% if selected_wh and selected_wh.id == wh.id %}selected{% endif %}>{{ wh.name }}</option>
+                  {% endif %}
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="ds-input-group">
+              <label class="ds-label" for="quantity">مقدار</label>
+              <input id="quantity" name="quantity" type="number" step="0.01" min="0.01" class="ds-input" required>
+            </div>
+
+            <div class="ds-input-group">
+              <label class="ds-label" for="unit">واحد</label>
+              <select id="unit" name="unit" class="ds-select" required>
+                {% for u in raw_material_units %}
+                <option value="{{ u }}">{{ u }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="ds-input-group" style="grid-column: 1 / -1;">
+              <label class="ds-label" for="note">توضیحات (اختیاری)</label>
+              <input id="note" name="note" type="text" class="ds-input" placeholder="مثلاً ارسال به آشپزخانه ایرانی">
+            </div>
+          </div>
+
+          <div class="ds-modal__actions" style="justify-content: flex-end;">
+            <button type="submit" class="ds-button primary">ثبت انتقال</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section class="ds-section">
+      <header class="ds-card-header" style="margin-bottom: 0.75rem;">
+        <div>
+          <h3 style="margin:0;">موجودی {{ selected_wh.name if selected_wh else '' }}</h3>
+          <p class="ds-subtitle">
+            {% if selected_wh and central_wh and selected_wh.id == central_wh.id %}
+              موجودی انبار مرکزی = خریدها − مصرف‌ها ± انتقال‌ها
+            {% else %}
+              این انبار تا وقتی انتقالی ثبت نشود خالی است.
+            {% endif %}
+          </p>
+        </div>
+        <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+          {% if selected_wh and selected_wh.code != 'central' %}
+            {% if show_all %}
+              <a class="ds-button ghost" href="{{ url_for('admin.warehouses_management', warehouse_id=selected_wh.id) }}">فقط موارد موجود</a>
+            {% else %}
+              <a class="ds-button ghost" href="{{ url_for('admin.warehouses_management', warehouse_id=selected_wh.id, show_all=1) }}">نمایش همه مواد</a>
+            {% endif %}
+          {% endif %}
+          <span class="ds-pill">کمبود: {{ low_count or 0 }}</span>
+        </div>
+      </header>
+
+      <div class="ds-table-wrapper" style="margin-bottom: 1rem;">
+        <table>
+          <thead>
+            <tr>
+              <th>ماده اولیه</th>
+              <th>موجودی</th>
+              <th>حداقل</th>
+              <th>وضعیت</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if rows %}
+              {% for r in rows %}
+              <tr>
+                <td style="text-align:right;">{{ r.name }}</td>
+                <td>{{ '%.2f'|format(r.stock) }} {{ r.unit }}</td>
+                <td>
+                  {% if r.min_stock and r.min_stock > 0 %}
+                    {{ '%.2f'|format(r.min_stock) }}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+                <td>
+                  {% if r.is_low %}
+                    <span class="badge-pill badge-low">کمبود</span>
+                  {% else %}
+                    <span class="badge-pill badge-ok">مناسب</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr><td colspan="4" style="text-align:center; color: var(--text-secondary);">این انبار فعلاً خالی است.</td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="transfer-history">
+        <header class="ds-card-header" style="margin-bottom: 0.75rem;">
+          <div>
+            <h3 style="margin:0;">آخرین انتقال‌ها</h3>
+            <p class="ds-subtitle">۲۰۰ انتقال مرتبط با همین انبار</p>
+          </div>
+        </header>
+        <div class="ds-table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>تاریخ</th>
+                <th>ماده</th>
+                <th>از</th>
+                <th>به</th>
+                <th>مقدار</th>
+                <th>توضیحات</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% if transfers %}
+                {% for t in transfers %}
+                <tr>
+                  <td>{{ t.transfer_date.isoformat() if t.transfer_date else '-' }}</td>
+                  <td style="text-align:right;">{{ t.raw_material.name if t.raw_material else '-' }}</td>
+                  <td>{{ t.from_warehouse.name if t.from_warehouse else '-' }}</td>
+                  <td>{{ t.to_warehouse.name if t.to_warehouse else '-' }}</td>
+                  <td>{{ '{:,.2f}'.format(t.quantity) }} {{ t.unit }}</td>
+                  <td style="text-align:right; white-space: normal;">{{ t.note or '-' }}</td>
+                </tr>
+                {% endfor %}
+              {% else %}
+                <tr><td colspan="6" style="text-align:center; color: var(--text-secondary);">انتقالی ثبت نشده است.</td></tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}

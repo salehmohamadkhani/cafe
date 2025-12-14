@@ -1,0 +1,491 @@
+{% extends 'base.html' %}
+{% block title %}تنظیمات سیستم{% endblock %}
+
+{% block head %}
+<style>
+    .settings-page {
+        padding: 1.5rem 0 2.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.8rem;
+    }
+
+    .settings-hero {
+        background: linear-gradient(135deg, #22d3ee, #3b82f6);
+        color: #fff;
+        border-radius: 18px;
+        padding: 2rem 2.4rem;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 1.5rem;
+        box-shadow: 0 20px 48px rgba(59, 130, 246, 0.25);
+    }
+
+    .settings-hero h1 {
+        margin: 0;
+        font-size: 1.95rem;
+    }
+
+    .settings-hero p {
+        margin: 0.45rem 0 0;
+        color: rgba(255, 255, 255, 0.85);
+    }
+
+    .settings-actions {
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
+    }
+
+    .settings-actions button,
+    .settings-actions a {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        padding: 0.7rem 1.4rem;
+        border-radius: 12px;
+        border: none;
+        font-weight: 600;
+        cursor: pointer;
+        color: #0f172a;
+        background: #fff;
+        text-decoration: none;
+        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+        transition: transform 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .settings-actions button:hover,
+    .settings-actions a:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 16px 36px rgba(15, 23, 42, 0.18);
+    }
+
+    .settings-sections {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 1.4rem;
+    }
+
+    .settings-card {
+        background: #fff;
+        border-radius: 18px;
+        padding: 1.6rem;
+        box-shadow: 0 16px 38px rgba(15, 23, 42, 0.08);
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .settings-card h3 {
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    .settings-card p {
+        margin: 0;
+        color: #64748b;
+        font-size: 0.9rem;
+    }
+
+    .settings-form {
+        display: flex;
+        flex-direction: column;
+        gap: 0.85rem;
+    }
+
+    .settings-form label {
+        font-size: 0.88rem;
+        font-weight: 600;
+        color: #475569;
+    }
+
+    .settings-form input,
+    .settings-form select,
+    .settings-form textarea {
+        border: 1px solid #d1d5db;
+        border-radius: 10px;
+        padding: 0.6rem 0.75rem;
+        font-size: 0.95rem;
+        transition: border 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .settings-form input:focus,
+    .settings-form select:focus,
+    .settings-form textarea:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
+    }
+
+    .settings-save-btn {
+        border: none;
+        border-radius: 12px;
+        padding: 0.7rem 1.6rem;
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #fff;
+        background: linear-gradient(135deg, #14b8a6, #0ea5e9);
+        cursor: pointer;
+        box-shadow: 0 12px 36px rgba(14, 165, 233, 0.25);
+        transition: transform 0.18s ease, box-shadow 0.18s ease;
+        width: fit-content;
+    }
+
+    .settings-save-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 16px 42px rgba(14, 165, 233, 0.32);
+    }
+
+    .settings-summary {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 0.85rem;
+    }
+
+    .settings-summary .summary-item {
+        background: #f8fafc;
+        border-radius: 14px;
+        padding: 0.85rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+    }
+
+    .settings-summary .summary-item span {
+        font-size: 0.8rem;
+        color: #64748b;
+    }
+
+    .settings-summary .summary-item strong {
+        font-size: 1.1rem;
+        color: #1e293b;
+    }
+
+    .table-area-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+
+    .area-pill {
+        flex: 1 1 220px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        padding: 0.85rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .area-pill strong {
+        color: #0f172a;
+    }
+
+    .area-pill span {
+        font-size: 0.85rem;
+        color: #475569;
+    }
+
+    .area-pill small {
+        font-size: 0.78rem;
+        color: #94a3b8;
+    }
+
+    .area-pill.muted {
+        background: #fff7ed;
+        border-color: #fed7aa;
+    }
+
+    .table-settings-forms {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 1rem;
+    }
+
+    .table-management-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    .table-list {
+        margin-top: 1.2rem;
+        overflow-x: auto;
+    }
+
+    .table-list table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .table-list th,
+    .table-list td {
+        text-align: center;
+        padding: 0.6rem;
+        border-bottom: 1px solid #e2e8f0;
+        font-size: 0.9rem;
+    }
+
+    .table-list th {
+        background: #f8fafc;
+        font-weight: 700;
+        color: #475569;
+    }
+
+    .table-list tr:hover td {
+        background: #fefefe;
+    }
+
+
+    @media (max-width: 768px) {
+        .settings-hero {
+            padding: 1.5rem;
+        }
+        .settings-actions {
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="settings-page">
+    <section class="settings-hero">
+        <div>
+            <h1>تنظیمات سیستم</h1>
+            <p>اطلاعات پایه، تنظیمات کسب‌وکار و نمایش عمومی را از اینجا مدیریت کنید.</p>
+        </div>
+        <div class="settings-actions">
+            <button type="button">بازگردانی پیش‌فرض‌ها</button>
+            <a href="{{ url_for('admin.dashboard') }}">بازگشت به داشبورد</a>
+        </div>
+    </section>
+
+    <section class="settings-summary">
+        <div class="summary-item">
+            <span>نام کافه</span>
+            <strong>{{ settings.cafe_name if settings and settings.cafe_name else '---' }}</strong>
+        </div>
+        <div class="summary-item">
+            <span>شماره تماس</span>
+            <strong>{{ settings.phone if settings and settings.phone else '---' }}</strong>
+        </div>
+        <div class="summary-item">
+            <span>آدرس</span>
+            <strong>{{ settings.address if settings and settings.address else '---' }}</strong>
+        </div>
+        <div class="summary-item">
+            <span>تعداد کارکنان ثبت‌شده</span>
+            <strong>{{ staff_count or 0 }}</strong>
+        </div>
+    </section>
+
+    <section class="settings-sections">
+        <div class="settings-card">
+            <h3>اطلاعات کسب‌وکار</h3>
+            <p>اطلاعاتی که در فاکتورها و صفحات عمومی نمایش داده می‌شوند.</p>
+            <form class="settings-form" method="post">
+                <input type="hidden" name="form_type" value="business">
+                <label for="business-name">نام کافه</label>
+                <input id="business-name" name="business_name" type="text" value="{{ settings.cafe_name if settings else '' }}">
+
+                <label for="business-phone">شماره تماس</label>
+                <input id="business-phone" name="phone" type="text" value="{{ settings.phone if settings else '' }}">
+
+                <label for="business-address">آدرس</label>
+                <textarea id="business-address" name="address" rows="2">{{ settings.address if settings else '' }}</textarea>
+
+                <button type="submit" class="settings-save-btn">ذخیره تنظیمات</button>
+            </form>
+        </div>
+
+        <div class="settings-card">
+            <h3>مالی و مالیاتی</h3>
+            <p>درصدها و سیاست‌های مالیاتی را تنظیم کنید.</p>
+            <form class="settings-form" method="post" action="{{ url_for('admin.settings') }}">
+                <input type="hidden" name="form_type" value="financial">
+                <label for="tax-rate">درصد مالیات</label>
+                <input id="tax-rate" name="tax_rate" type="number" step="0.1" value="{{ settings.tax_percent if settings else 9 }}">
+
+                <label for="service-charge">هزینه سرویس (٪)</label>
+                <input id="service-charge" name="service_charge" type="number" step="0.1" value="{{ settings.service_charge if settings else 0 }}">
+
+                <label for="currency">شماره کارت (برای زیر فاکتور)</label>
+                <input id="currency" name="card_number" type="text" inputmode="numeric"
+                       placeholder="اختیاری — اگر خالی باشد زیر فاکتور چیزی نمایش داده نمی‌شود"
+                       value="{{ settings.card_number if settings and settings.card_number else '' }}">
+
+                <button type="submit" class="settings-save-btn">ذخیره تنظیمات مالی</button>
+            </form>
+        </div>
+
+        <div class="settings-card">
+            <h3>اطلاعات شبکه‌های اجتماعی</h3>
+            <p>لینک‌های نمایش داده شده در سایت یا رسید.</p>
+            <form class="settings-form" method="post" action="{{ url_for('admin.settings') }}">
+                <input type="hidden" name="form_type" value="social">
+                <label for="instagram">اینستاگرام</label>
+                <input id="instagram" name="instagram" type="url" value="{{ settings.instagram if settings else '' }}">
+
+                <label for="telegram">تلگرام</label>
+                <input id="telegram" name="telegram" type="url" value="{{ settings.telegram if settings else '' }}">
+
+                <label for="website">وب‌سایت</label>
+                <input id="website" name="website" type="url" value="{{ settings.website if settings else '' }}">
+
+                <button type="submit" class="settings-save-btn">ذخیره لینک‌ها</button>
+            </form>
+        </div>
+
+        <div class="settings-card">
+            <h3>مدیریت میزها و دسته‌بندی‌ها</h3>
+            <p>دسته‌های مختلف (داخل سالن، تراس، طبقات) را تعریف کنید و به‌صورت گروهی میز اضافه کنید.</p>
+            <div class="table-area-grid">
+                {% for item in area_summaries %}
+                <div class="area-pill">
+                    <strong>{{ item.area.name }}</strong>
+                    <span>{{ item.numbers|length }} میز ثبت شده</span>
+                    {% if item.area.description %}
+                    <small>{{ item.area.description }}</small>
+                    {% endif %}
+                    {% if item.numbers %}
+                    <small>شماره میزها: {{ item.numbers|join(', ') }}</small>
+                    {% endif %}
+                </div>
+                {% endfor %}
+                {% if unassigned_tables %}
+                <div class="area-pill muted">
+                    <strong>بدون دسته‌بندی</strong>
+                    <span>{{ unassigned_tables|length }} میز</span>
+                    <small>شماره میزها: {{ unassigned_tables|join(', ') }}</small>
+                </div>
+                {% endif %}
+                {% if not area_summaries and not unassigned_tables %}
+                <div class="area-pill muted">
+                    <strong>هنوز میزی ثبت نشده است.</strong>
+                    <small>از فرم‌های زیر برای افزودن دسته یا میز جدید استفاده کنید.</small>
+                </div>
+                {% endif %}
+            </div>
+            <div class="table-settings-forms">
+                <form class="settings-form" method="post">
+                    <input type="hidden" name="form_type" value="table_area">
+                    <label for="area-name">نام دسته جدید</label>
+                    <input id="area-name" name="area_name" type="text" placeholder="مثلاً سالن اصلی" required>
+                    <label for="area-description">توضیحات</label>
+                    <textarea id="area-description" name="area_description" rows="2" placeholder="اختیاری"></textarea>
+                    <button type="submit" class="settings-save-btn">افزودن دسته‌بندی</button>
+                </form>
+                <form class="settings-form" method="post">
+                    <input type="hidden" name="form_type" value="add_table">
+                    <label for="table-area-select">انتخاب دسته</label>
+                    <select id="table-area-select" name="area_id">
+                        <option value="">بدون دسته‌بندی</option>
+                        {% for area in table_areas %}
+                        <option value="{{ area.id }}">{{ area.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <label for="table-count">تعداد میز جدید</label>
+                    <input id="table-count" name="table_count" type="number" min="1" value="1">
+                    <label for="start-number">شروع شماره‌گذاری از</label>
+                    <input id="start-number" name="start_number" type="number" placeholder="در صورت خالی بودن از آخرین شماره استفاده می‌شود">
+                    <button type="submit" class="settings-save-btn">افزودن میزها</button>
+                </form>
+            </div>
+            <div class="table-settings-forms">
+                <form class="settings-form" method="post">
+                    <input type="hidden" name="form_type" value="update_area">
+                    <label for="area-edit-select">ویرایش دسته</label>
+                    <select id="area-edit-select" name="area_id" required>
+                        <option value="" disabled selected>انتخاب دسته</option>
+                        {% for area in table_areas %}
+                        <option value="{{ area.id }}">{{ area.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <label for="area-name-update">نام جدید</label>
+                    <input id="area-name-update" name="area_name_update" type="text" placeholder="در صورت خالی بودن، نام قبلی حفظ می‌شود">
+                    <label for="area-description-update">توضیحات</label>
+                    <textarea id="area-description-update" name="area_description_update" rows="2" placeholder="اختیاری"></textarea>
+                    <button type="submit" class="settings-save-btn">ذخیره تغییرات دسته</button>
+                </form>
+                <form class="settings-form" method="post" onsubmit="return confirm('آیا از حذف این دسته‌بندی اطمینان دارید؟ میزهای آن آزاد خواهند شد.');">
+                    <input type="hidden" name="form_type" value="delete_area">
+                    <label for="area-delete-select">حذف دسته</label>
+                    <select id="area-delete-select" name="area_id" required>
+                        <option value="" disabled selected>انتخاب دسته برای حذف</option>
+                        {% for area in table_areas %}
+                        <option value="{{ area.id }}">{{ area.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="settings-save-btn" style="background:linear-gradient(135deg,#f87171,#ef4444);">حذف دسته‌بندی</button>
+                </form>
+            </div>
+        </div>
+        <div class="settings-card">
+            <h3>مدیریت میزهای ثبت‌شده</h3>
+            <p>در این بخش می‌توانید شماره میزها را تغییر دهید، آن‌ها را به دسته‌ای دیگر منتقل کنید یا میزهای بدون استفاده را حذف کنید.</p>
+            <div class="table-management-grid">
+                <form class="settings-form" method="post">
+                    <input type="hidden" name="form_type" value="update_table">
+                    <label for="table-select-edit">انتخاب میز</label>
+                    <select id="table-select-edit" name="table_id" required>
+                        <option value="" disabled selected>انتخاب میز</option>
+                        {% for table in tables %}
+                        <option value="{{ table.id }}">میز {{ table.number }} {% if table.area %}- {{ table.area.name }}{% endif %}</option>
+                        {% endfor %}
+                    </select>
+                    <label for="new-number">شماره جدید</label>
+                    <input id="new-number" name="new_number" type="number" placeholder="در صورت خالی بودن، شماره قبلی حفظ می‌شود">
+                    <label for="target-area">انتخاب دسته</label>
+                    <select id="target-area" name="target_area_id">
+                        <option value="">بدون دسته‌بندی</option>
+                        {% for area in table_areas %}
+                        <option value="{{ area.id }}">{{ area.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="settings-save-btn">به‌روزرسانی میز</button>
+                </form>
+                <form class="settings-form" method="post" onsubmit="return confirm('این میز حذف خواهد شد. آیا مطمئن هستید؟');">
+                    <input type="hidden" name="form_type" value="delete_table">
+                    <label for="table-select-delete">حذف میز</label>
+                    <select id="table-select-delete" name="table_id" required>
+                        <option value="" disabled selected>انتخاب میز</option>
+                        {% for table in tables %}
+                        <option value="{{ table.id }}">میز {{ table.number }} {% if table.area %}- {{ table.area.name }}{% endif %}</option>
+                        {% endfor %}
+                    </select>
+                    <small>توجه: میزهایی که در حال حاضر سفارش فعال دارند قابل حذف نیستند.</small>
+                    <button type="submit" class="settings-save-btn" style="background:linear-gradient(135deg,#f87171,#ef4444);">حذف میز</button>
+                </form>
+            </div>
+            <div class="table-list">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>میز</th>
+                            <th>دسته</th>
+                            <th>وضعیت</th>
+                            <th>سفارش فعال</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for table in tables %}
+                        <tr>
+                            <td>{{ table.number }}</td>
+                            <td>{{ table.area.name if table.area else 'بدون دسته' }}</td>
+                            <td>{{ table.status }}</td>
+                            <td>{{ table.order.invoice_number if table.order else '-' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}
