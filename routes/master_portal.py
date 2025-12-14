@@ -145,9 +145,8 @@ def enter_cafe(slug):
     
     admin_user = None
     with Session() as s:
-        admin_user = s.query(TenantUser).filter_by(username='admin', role='admin').first()
-    
-    return render_template('master/cafe_enter.html', cafe=cafe, admin_user=admin_user)
+        # Redirect to tenant login page
+    return redirect(url_for('tenant_auth.login', slug=slug))
 
 
 @master_bp.route('/cafes/<slug>/users')
