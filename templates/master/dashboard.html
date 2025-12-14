@@ -211,6 +211,7 @@
               <th>کد</th>
               <th>مسیر دیتابیس</th>
               <th>وضعیت</th>
+              <th>عملیات</th>
             </tr>
           </thead>
           <tbody>
@@ -224,6 +225,9 @@
                   <td>{{ c.slug }}</td>
                   <td><div class="muted">{{ c.db_path }}</div></td>
                   <td>{{ 'فعال' if c.is_active else 'غیرفعال' }}</td>
+                  <td>
+                    <a href="{{ url_for('master.enter_cafe', slug=c.slug) }}" style="display:inline-block; padding:6px 12px; background:#4AA8FF; color:#fff; border-radius:8px; text-decoration:none; font-weight:700; font-size:0.85rem;">ورود به کافه</a>
+                  </td>
                 </tr>
               {% endfor %}
             {% else %}

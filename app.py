@@ -10,6 +10,7 @@ from utils.helpers import register_jinja_filters
 from routes.auth import auth_bp
 from routes.master_portal import master_bp
 from routes.tenant_auth import tenant_auth_bp
+from routes.tenant import tenant_bp
 from routes.menu import menu_bp
 from routes.order import order_bp
 from routes.dashboard import dashboard_bp
@@ -122,6 +123,7 @@ def create_app(config_class=Config):
     app.register_blueprint(auth_bp)
     app.register_blueprint(master_bp)
     app.register_blueprint(tenant_auth_bp)
+    app.register_blueprint(tenant_bp)
     app.register_blueprint(menu_bp)
     app.register_blueprint(order_bp)
     app.register_blueprint(dashboard_bp)
