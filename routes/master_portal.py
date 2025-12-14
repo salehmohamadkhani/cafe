@@ -91,8 +91,16 @@ def create_cafe():
     if not tenants_dir:
         tenants_dir = current_app.config.get('CAFE_TENANTS_DIR')  # fallback
 
+    # Source project directory (current project root)
+    source_dir = current_app.config.get('BASEDIR') or os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
     try:
-        provisioned = provision_tenant(tenants_dir=tenants_dir, name=name, slug=slug)
+        provisioned = provision_tenant(
+            tenants_dir=tenants_dir,
+            name=name,
+            slug=slug,
+            source_project_dir=source_dir
+        )
     except Exception as exc:
         flash(f'خطا در ساخت کافه: {exc}', 'danger')
         return redirect(url_for('master.dashboard'))
