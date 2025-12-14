@@ -135,16 +135,18 @@ def provision_tenant(tenants_dir: str, name: str, slug: str, source_project_dir:
     if os.path.exists(config_py_path):
         with open(config_py_path, 'r', encoding='utf-8') as f:
             config_content = f.read()
-        # Replace instance path to point to tenant's instance
-        config_content = config_content.replace(
-            f"sqlite:///{os.path.join(source_project_dir, 'instance', 'cafe.db')}" if source_project_dir else '',
-            f"sqlite:///{db_path}"
-        )
-        # Also update INSTANCE_DIR
-        config_content = config_content.replace(
-            "INSTANCE_DIR = os.path.join(BASEDIR, 'instance')",
-            f"INSTANCE_DIR = os.path.join(BASEDIR, 'instance')  # Tenant: {slug}"
-        )
+        
+        # Replace SQLALCHEMY_DATABASE_URI to point to tenant's DB
+        import re
+        # Pattern to match SQLALCHEMY_DATABASE_URI assignment
+        pattern = r"SQLALCHEMY_DATABASE_URI\s*=\s*\([^)]*\)|SQLALCHEMY_DATABASE_URI\s*=\s*[^\n]+"
+        replacement = f"SQLALCHEMY_DATABASE_URI = f\"sqlite:///{db_path}\""
+        config_content = re.sub(pattern, replacement, config_content)
+        
+        # Remove master DB bind (tenants don't need it)
+        config_content = re.sub(r"SQLALCHEMY_BINDS\s*=\s*\{[^}]*'master'[^}]*\}", "", config_content)
+        config_content = re.sub(r"MASTER_DB_URI\s*=\s*[^\n]+", "", config_content)
+        
         with open(config_py_path, 'w', encoding='utf-8') as f:
             f.write(config_content)
 
