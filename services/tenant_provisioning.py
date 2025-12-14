@@ -64,12 +64,28 @@ def provision_tenant(tenants_dir: str, name: str, slug: str) -> ProvisionedTenan
     db.metadata.create_all(bind=engine)
 
     # Seed settings row so templates can show cafe name early
+    # Also create default admin user
     Session = sessionmaker(bind=engine, future=True)
+    iran_tz = pytz.timezone("Asia/Tehran")
     with Session() as s:
-        existing = s.query(Settings).first()
-        if not existing:
+        existing_settings = s.query(Settings).first()
+        if not existing_settings:
             s.add(Settings(cafe_name=name))
-            s.commit()
+        
+        # Create default admin user if none exists
+        existing_user = s.query(User).first()
+        if not existing_user:
+            admin_user = User(
+                username='admin',
+                password_hash=generate_password_hash('admin123'),
+                name='مدیر سیستم',
+                role='admin',
+                is_active=True,
+                created_at=datetime.now(iran_tz)
+            )
+            s.add(admin_user)
+        
+        s.commit()
 
     return ProvisionedTenant(
         name=name,
