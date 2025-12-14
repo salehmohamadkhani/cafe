@@ -79,20 +79,29 @@ def provision_tenant(tenants_dir: str, name: str, slug: str, source_project_dir:
         def copy_tree(src: str, dst: str):
             os.makedirs(dst, exist_ok=True)
             for item in os.listdir(src):
-                if item.startswith('.'):
+                # Skip hidden files/dirs and excluded items
+                if item.startswith('.') and item not in ['.gitignore']:
                     continue
+                
                 src_path = os.path.join(src, item)
                 dst_path = os.path.join(dst, item)
+                
+                # Skip specific directories
+                if item in ['tenants', '.git', 'venv', '.venv', '__pycache__']:
+                    continue
                 
                 if should_exclude(src_path):
                     continue
                 
                 if os.path.isdir(src_path):
-                    if item not in ['tenants', '.git', 'venv', '.venv']:
-                        copy_tree(src_path, dst_path)
+                    copy_tree(src_path, dst_path)
                 else:
-                    if not should_exclude(src_path):
-                        shutil.copy2(src_path, dst_path)
+                    # Skip specific files
+                    if item.endswith(('.pyc', '.log', '.lock')) or item in ['secret_key']:
+                        continue
+                    if 'instance' in src_path and (item.endswith('.db') or item == 'secret_key'):
+                        continue
+                    shutil.copy2(src_path, dst_path)
         
         copy_tree(source_project_dir, root_dir)
         
