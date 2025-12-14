@@ -24,13 +24,15 @@ def require_tenant_session(view_func):
 
 def get_tenant_db_session(slug: str):
     """Get a session connected to tenant database"""
-    cafe = CafeTenant.query.filter_by(slug=slug).first()
+    from flask import current_app
+    with current_app.app_context():
+        cafe = CafeTenant.query.filter_by(slug=slug).first()
     if not cafe or not os.path.exists(cafe.db_path):
         return None, None
     
     engine = create_engine(f"sqlite:///{cafe.db_path}")
     Session = sessionmaker(bind=engine)
-    return Session(), cafe
+    return Session, cafe
 
 
 @tenant_bp.route('/')
