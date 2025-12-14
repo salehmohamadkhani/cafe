@@ -214,6 +214,18 @@ def dashboard_full(slug):
         ).order_by(Order.created_at.desc()).all()
         
         all_orders = s.query(Order).all()
+        
+        # Eager load all relationships to avoid DetachedInstanceError
+        # Access relationships while session is still active
+        for table in tables:
+            if hasattr(table, 'order'):
+                try:
+                    _ = table.order  # Trigger lazy load
+                except:
+                    pass
+        
+        # Expunge all objects so they can be used outside session
+        s.expunge_all()
     
     # Render main dashboard template (same as original project)
     return render_template('dashboard.html', 
