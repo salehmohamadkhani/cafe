@@ -81,7 +81,14 @@ def dashboard_full(slug):
         # Group tables by area
         table_groups_map = defaultdict(list)
         for table in tables:
-            label = table.area.name if hasattr(table, 'area') and table.area else 'بدون دسته‌بندی'
+            # Check if table has area relationship
+            try:
+                if hasattr(table, 'area') and table.area:
+                    label = table.area.name
+                else:
+                    label = 'بدون دسته‌بندی'
+            except:
+                label = 'بدون دسته‌بندی'
             table_groups_map[label].append(table)
         
         table_groups = []
