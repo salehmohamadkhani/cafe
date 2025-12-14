@@ -38,30 +38,76 @@ def get_tenant_db_session(slug: str):
 @tenant_bp.route('/')
 @require_tenant_session
 def dashboard(slug):
-    """داشبورد کافه"""
+    """Redirect to tenant's own dashboard"""
+    return redirect(url_for('tenant.dashboard_full', slug=slug))
+
+
+@tenant_bp.route('/dashboard/')
+@tenant_bp.route('/dashboard')
+@require_tenant_session
+def dashboard_full(slug):
+    """داشبورد کامل کافه - مثل پروژه اصلی"""
     Session_class, cafe = get_tenant_db_session(slug)
     if not Session_class:
         flash('خطا در اتصال به دیتابیس کافه.', 'danger')
         return redirect(url_for('master.dashboard'))
     
-    from datetime import datetime, date
+    # Import models from tenant's own project
+    from models.models import Order, Category, MenuItem, Customer, Table
+    from datetime import datetime, timedelta, date
     from sqlalchemy import func
+    from collections import defaultdict
     
     with Session_class() as s:
-        today = date.today()
-        orders_today = s.query(Order).filter(func.date(Order.created_at) == today).all()
-        total_orders = len(orders_today)
-        total_sales = sum(o.final_amount for o in orders_today)
-        unpaid_orders = [o for o in orders_today if o.status == 'پرداخت نشده']
-        paid_orders = [o for o in orders_today if o.status == 'پرداخت شده']
+        # Get all menu items
+        menu_items = s.query(MenuItem).filter_by(is_active=True).order_by(MenuItem.name).all()
         
-        summary = {
-            'total_orders': total_orders,
-            'total_sales': total_sales,
-            'unpaid_orders': len(unpaid_orders),
-            'paid_orders': len(paid_orders),
-        }
+        # Get all categories
+        categories = s.query(Category).filter_by(is_active=True).order_by(Category.order, Category.name).all()
         
-        recent_orders = s.query(Order).order_by(Order.created_at.desc()).limit(20).all()
+        # Get all customers
+        customers = s.query(Customer).all()
+        
+        # Get all tables, create default if none exist
+        tables = s.query(Table).order_by(Table.number).all()
+        if not tables:
+            for i in range(1, 5):
+                table = Table(number=i, status='خالی')
+                s.add(table)
+            s.commit()
+            tables = s.query(Table).order_by(Table.number).all()
+        
+        # Group tables by area
+        table_groups_map = defaultdict(list)
+        for table in tables:
+            label = table.area.name if hasattr(table, 'area') and table.area else 'بدون دسته‌بندی'
+            table_groups_map[label].append(table)
+        
+        table_groups = []
+        for label in sorted(table_groups_map.keys()):
+            ordered_tables = sorted(table_groups_map[label], key=lambda t: t.number)
+            table_groups.append({'label': label, 'tables': ordered_tables})
+        
+        # Calculate financial info
+        import pytz
+        iran_tz = pytz.timezone('Asia/Tehran')
+        now = datetime.now(iran_tz)
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        # Today's orders
+        orders_today = s.query(Order).filter(Order.created_at >= today_start).all()
+        total_sales_today = sum(o.final_amount for o in orders_today if o.status == 'پرداخت شده')
+        unpaid_amount = sum(o.final_amount for o in orders_today if o.status == 'پرداخت نشده')
+        
+        # Recent orders
+        recent_orders = s.query(Order).order_by(Order.created_at.desc()).limit(10).all()
     
-    return render_template('tenant/dashboard.html', cafe=cafe, summary=summary, orders=recent_orders)
+    # Render tenant's own dashboard template (which should be a copy of main dashboard)
+    return render_template('dashboard.html', 
+                         menu_items=menu_items,
+                         categories=categories,
+                         customers=customers,
+                         table_groups=table_groups,
+                         total_sales_today=total_sales_today,
+                         unpaid_amount=unpaid_amount,
+                         recent_orders=recent_orders)
