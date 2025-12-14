@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>داشبورد {{ cafe.name }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}?v={{ cache_bust() }}">
+  <style>
+    @font-face {
+      font-family: Vazirmatn;
+      src: url('{{ url_for("static", filename="fonts/Vazirmatn-Regular.woff2") }}') format('woff2');
+      font-weight: normal;
+      font-style: normal;
+    }
+    html, body {
+      font-family: Vazirmatn, Tahoma, Arial, sans-serif;
+      background: #0b1220;
+      color: #e5e7eb;
+      min-height: 100vh;
+    }
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(11,18,32,0.78);
+      border-bottom: 1px solid rgba(255,255,255,0.10);
+      backdrop-filter: blur(10px);
+    }
+    .topbar-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 14px 18px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+    }
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .link {
+      text-decoration: none;
+      color: #fff;
+      background: linear-gradient(135deg, #4AA8FF, #1F3A5F);
+      border-radius: 12px;
+      padding: 8px 12px;
+      font-weight: 800;
+      border: 1px solid rgba(255,255,255,0.10);
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 18px;
+    }
+    .card {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 18px;
+      padding: 16px;
+      box-shadow: 0 18px 50px rgba(0,0,0,0.25);
+      margin-bottom: 16px;
+    }
+    .card h3 {
+      margin: 0 0 10px;
+      font-size: 1.05rem;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .stat {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 12px;
+    }
+    .stat-label {
+      font-size: 0.85rem;
+      color: rgba(229,231,235,0.7);
+    }
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 900;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div>{{ cafe.name }}</div>
+      </div>
+      <div class="actions">
+        <a class="link" href="{{ url_for('tenant_auth.logout', slug=cafe.slug) }}">خروج</a>
+        <a class="link" href="{{ url_for('master.dashboard') }}">پنل مرکزی</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="card">
+      <h3>داشبورد {{ cafe.name }}</h3>
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-label">سفارش‌های امروز</div>
+          <div class="stat-value">{{ summary.total_orders }}</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">فروش امروز</div>
+          <div class="stat-value">{{ "{:,}".format(summary.total_sales) }} تومان</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">پرداخت شده</div>
+          <div class="stat-value">{{ summary.paid_orders }}</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">پرداخت نشده</div>
+          <div class="stat-value">{{ summary.unpaid_orders }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>آخرین سفارش‌ها</h3>
+      {% if orders %}
+        <div style="margin-top: 12px;">
+          {% for order in orders[:10] %}
+            <div style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.08);">
+              سفارش #{{ order.invoice_number }} - {{ order.final_amount }} تومان - {{ order.status }}
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div style="padding: 18px; color: rgba(229,231,235,0.7);">هنوز سفارشی ثبت نشده.</div>
+      {% endif %}
+    </div>
+  </div>
+</body>
+</html>
