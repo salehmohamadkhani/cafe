@@ -72,7 +72,7 @@ def login(slug):
                 user.last_login = datetime.now(iran_tz)
                 s.commit()
                 
-                # Redirect to tenant dashboard
+                # Redirect to tenant dashboard (or main dashboard for now)
                 return redirect(url_for('tenant.dashboard', slug=slug))
             else:
                 flash('نام کاربری یا رمز عبور اشتباه است.', 'danger')
