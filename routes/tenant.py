@@ -39,15 +39,15 @@ def get_tenant_db_session(slug: str):
 @require_tenant_session
 def dashboard(slug):
     """داشبورد کافه"""
-    Session, cafe = get_tenant_db_session(slug)
-    if not Session:
+    Session_class, cafe = get_tenant_db_session(slug)
+    if not Session_class:
         flash('خطا در اتصال به دیتابیس کافه.', 'danger')
         return redirect(url_for('master.dashboard'))
     
     from datetime import datetime, date
     from sqlalchemy import func
     
-    with Session() as s:
+    with Session_class() as s:
         today = date.today()
         orders_today = s.query(Order).filter(func.date(Order.created_at) == today).all()
         total_orders = len(orders_today)
