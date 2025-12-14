@@ -6,8 +6,11 @@ from dataclasses import dataclass
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from werkzeug.security import generate_password_hash
+from datetime import datetime
+import pytz
 
-from models.models import db, Settings
+from models.models import db, Settings, User
 
 
 _SLUG_RE = re.compile(r'^[a-z0-9]+(?:-[a-z0-9]+)*$')
