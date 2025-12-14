@@ -46,17 +46,18 @@ def dashboard(slug):
 @tenant_bp.route('/dashboard')
 @require_tenant_session
 def dashboard_full(slug):
-    """داشبورد کامل کافه - مثل پروژه اصلی"""
+    """داشبورد کامل کافه - مثل پروژه اصلی - استفاده از پروژه خود کافه"""
     Session_class, cafe = get_tenant_db_session(slug)
     if not Session_class:
         flash('خطا در اتصال به دیتابیس کافه.', 'danger')
         return redirect(url_for('master.dashboard'))
     
-    # Import models from tenant's own project
+    # Import models from main project (they work with tenant DB via Session)
     from models.models import Order, Category, MenuItem, Customer, Table
     from datetime import datetime, timedelta, date
     from sqlalchemy import func
     from collections import defaultdict
+    import pytz
     
     with Session_class() as s:
         # Get all menu items
@@ -89,7 +90,6 @@ def dashboard_full(slug):
             table_groups.append({'label': label, 'tables': ordered_tables})
         
         # Calculate financial info
-        import pytz
         iran_tz = pytz.timezone('Asia/Tehran')
         now = datetime.now(iran_tz)
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -102,7 +102,7 @@ def dashboard_full(slug):
         # Recent orders
         recent_orders = s.query(Order).order_by(Order.created_at.desc()).limit(10).all()
     
-    # Render tenant's own dashboard template (which should be a copy of main dashboard)
+    # Render main dashboard template (same as original project)
     return render_template('dashboard.html', 
                          menu_items=menu_items,
                          categories=categories,
