@@ -20,7 +20,9 @@ tenant_auth_bp = Blueprint('tenant_auth', __name__, url_prefix='/cafe/<slug>')
 
 def get_tenant_db_session(slug: str):
     """Get a session connected to tenant database"""
-    cafe = CafeTenant.query.filter_by(slug=slug).first()
+    from flask import current_app
+    with current_app.app_context():
+        cafe = CafeTenant.query.filter_by(slug=slug).first()
     if not cafe or not os.path.exists(cafe.db_path):
         return None, None
     
