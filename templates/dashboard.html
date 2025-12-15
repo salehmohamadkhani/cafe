@@ -1263,7 +1263,6 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/debug.js') }}?v={{ cache_bust() }}"></script>
 <script src="{{ url_for('static', filename='js/dashboard.js') }}?v={{ cache_bust() }}"></script>
 <script src="{{ url_for('static', filename='js/tables.js') }}?v={{ cache_bust() }}"></script>
 <script src="{{ url_for('static', filename='js/takeaway.js') }}?v={{ cache_bust() }}"></script>
