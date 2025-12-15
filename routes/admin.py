@@ -9,6 +9,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta, date
 import pytz
 from utils.seed_inventory import seed_inventory_if_needed
+from werkzeug.security import generate_password_hash
 
 
 DEFAULT_WAREHOUSES = [
@@ -1101,15 +1102,32 @@ def users_list():
 @login_required
 def add_user():
     if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']  # هش کردن رمز عبور را باید اضافه کنی
-        name = request.form.get('name')
-        role = request.form.get('role', 'waiter')
-        phone = request.form.get('phone')
+        username = (request.form.get('username') or '').strip()
+        password = request.form.get('password') or ''
+        name = (request.form.get('name') or '').strip() or None
+        role = (request.form.get('role', 'waiter') or 'waiter').strip()
+        phone = (request.form.get('phone') or '').strip() or None
+
+        if not username or not password:
+            flash('نام کاربری و رمز عبور الزامی است.', 'danger')
+            return redirect(url_for('admin.add_user'))
+
+        if len(password) < 6:
+            flash('رمز عبور باید حداقل ۶ کاراکتر باشد.', 'danger')
+            return redirect(url_for('admin.add_user'))
+
         if User.query.filter_by(username=username).first():
             flash('این نام کاربری قبلاً ثبت شده است.', 'danger')
             return redirect(url_for('admin.add_user'))
-        user = User(username=username, password_hash=password, name=name, role=role, phone=phone)
+        user = User(
+            username=username,
+            password_hash=generate_password_hash(password),
+            name=name,
+            role=role,
+            phone=phone,
+            created_at=datetime.now(pytz.timezone("Asia/Tehran")),
+            is_active=True,
+        )
         db.session.add(user)
         db.session.commit()
         flash('کاربر جدید با موفقیت اضافه شد.', 'success')

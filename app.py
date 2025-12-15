@@ -1,12 +1,17 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, redirect, url_for
 from flask_login import LoginManager
 from sqlalchemy import inspect, text
 from config import Config
 from models.models import db, User, Settings, backfill_invoice_identifiers, assign_random_birth_dates_to_old_customers
+from models.master_models import MasterUser, CafeTenant  # noqa: F401 (register master tables)
 from utils.helpers import register_jinja_filters
 
 # Import blueprints
 from routes.auth import auth_bp
+from routes.master_portal import master_bp
+from routes.tenant_auth import tenant_auth_bp
+from routes.tenant import tenant_bp
+from routes.tenant_dashboard import tenant_dashboard_bp
 from routes.menu import menu_bp
 from routes.order import order_bp
 from routes.dashboard import dashboard_bp
@@ -117,6 +122,10 @@ def create_app(config_class=Config):
 
     # Register blueprints
     app.register_blueprint(auth_bp)
+    app.register_blueprint(master_bp)
+    app.register_blueprint(tenant_auth_bp)
+    app.register_blueprint(tenant_bp)
+    app.register_blueprint(tenant_dashboard_bp)
     app.register_blueprint(menu_bp)
     app.register_blueprint(order_bp)
     app.register_blueprint(dashboard_bp)
@@ -124,6 +133,11 @@ def create_app(config_class=Config):
     app.register_blueprint(pos_bp)
     app.register_blueprint(table_bp)
     app.register_blueprint(takeaway_bp)
+
+    # Convenient alias to master login (main entrypoint for multi-cafe)
+    @app.route('/login')
+    def master_login_alias():
+        return redirect(url_for('master.login'))
     
     # Register index route
     @app.route('/')
