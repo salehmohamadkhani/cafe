@@ -1,9 +1,9 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, abort
 from flask import current_app as app
 from flask_login import login_required, current_user
-from models.models import db, Settings, Order, OrderItem, Customer, User, RawMaterial, MaterialPurchase, Table, TableArea, TableItem, SnapSettlement, Warehouse, WarehouseTransfer, calculate_order_amount, convert_unit
+from models.models import db, Settings, Order, OrderItem, Customer, User, RawMaterial, MaterialPurchase, Table, TableArea, TableItem, SnapSettlement, Warehouse, WarehouseTransfer, RawMaterialUsage, MenuItemMaterial, calculate_order_amount, convert_unit
 from utils.helpers import to_jalali, categorize_payment_method, PAYMENT_BUCKET_LABELS
-from sqlalchemy import func, extract, or_
+from sqlalchemy import func, extract, or_, text
 from services.inventory_service import calculate_material_stock_for_period
 from collections import defaultdict
 from datetime import datetime, timedelta, date
@@ -455,7 +455,8 @@ RAW_MATERIAL_UNITS = ['gr', 'kg', 'ml', 'l', 'عدد', 'تیکه', 'بسته', '
 @admin_bp.route('/inventory')
 @login_required
 def inventory_dashboard():
-    seed_inventory_if_needed()
+    # فقط اگر داده‌ای وجود ندارد seed کن (نه همیشه)
+    # seed_inventory_if_needed()  # غیرفعال شده تا بعد از حذف دوباره نسازد
     seed_warehouses_if_needed()
     central_wh = get_central_warehouse()
 
@@ -835,8 +836,8 @@ def financial_report():
     )
     
     # دیباگ: چاپ اطلاعات برای بررسی
-    print(f"🔍 دوره انتخابی: {period}, از {start_date} تا {end_date}")
-    print(f"🔍 تعداد سفارش‌های پیدا شده: {len(orders)}")
+    print(f"دوره انتخابی: {period}, از {start_date} تا {end_date}")
+    print(f"تعداد سفارش‌های پیدا شده: {len(orders)}")
     
     # محاسبه اطلاعات آیتم‌های حذف شده برای هر سفارش
     orders_with_deleted_info = []
@@ -884,14 +885,14 @@ def financial_report():
     average_ticket = int(total_sales / len(orders)) if orders else 0
 
     # دیباگ: چاپ محاسبات با جزئیات بیشتر
-    print(f"🔍 دوره انتخابی: {period}, از {start_date} تا {end_date}")
-    print(f"🔍 تعداد سفارش‌های پیدا شده: {len(orders)}")
-    print(f"🔍 جمع فروش: {total_sales:,}")
-    print(f"🔍 مالیات: {total_tax:,}")
-    print(f"🔍 تخفیف: {total_discount:,}")
-    print(f"🔍 میانگین سفارش: {average_ticket:,}")
+    print(f"دوره انتخابی: {period}, از {start_date} تا {end_date}")
+    print(f"تعداد سفارش‌های پیدا شده: {len(orders)}")
+    print(f"جمع فروش: {total_sales:,}")
+    print(f"مالیات: {total_tax:,}")
+    print(f"تخفیف: {total_discount:,}")
+    print(f"میانگین سفارش: {average_ticket:,}")
     if orders:
-        print(f"🔍 نمونه سفارش اول:")
+        print(f"نمونه سفارش اول:")
         print(f"   - ID: {orders[0].id}")
         print(f"   - final_amount: {orders[0].final_amount}")
         print(f"   - discount: {orders[0].discount}")
@@ -1307,17 +1308,86 @@ def update_raw_material(material_id):
 def delete_raw_material(material_id):
     material = RawMaterial.query.get_or_404(material_id)
     
-    # بررسی اینکه آیا در منو استفاده شده یا نه
-    if material.menu_materials and len(material.menu_materials) > 0:
-        return jsonify({'status': 'error', 'message': 'این ماده اولیه در منو استفاده شده است. ابتدا آن را از منو حذف کنید.'}), 400
+    # بررسی تمام وابستگی‌ها
+    dependencies = []
     
-    # حذف خریدهای مرتبط
+    # 1. بررسی خریدها
+    purchases = MaterialPurchase.query.filter_by(raw_material_id=material_id).all()
+    if purchases:
+        dependencies.append({
+            'type': 'خریدها',
+            'count': len(purchases),
+            'items': [f"خرید {p.id} ({p.purchase_date})" for p in purchases[:5]]  # فقط 5 تا اول
+        })
+    
+    # 2. بررسی مصرف‌ها
+    usages = RawMaterialUsage.query.filter_by(raw_material_id=material_id).all()
+    if usages:
+        dependencies.append({
+            'type': 'مصرف‌ها',
+            'count': len(usages),
+            'items': [f"مصرف {u.id}" for u in usages[:5]]
+        })
+    
+    # 3. بررسی انتقال‌ها
+    transfers = WarehouseTransfer.query.filter_by(raw_material_id=material_id).all()
+    if transfers:
+        dependencies.append({
+            'type': 'انتقال‌های انبار',
+            'count': len(transfers),
+            'items': [f"انتقال {t.id}" for t in transfers[:5]]
+        })
+    
+    # 4. بررسی ارتباط با منو
+    menu_materials = MenuItemMaterial.query.filter_by(raw_material_id=material_id).all()
+    if menu_materials:
+        menu_items = []
+        for mm in menu_materials[:5]:
+            menu_item_name = mm.menu_item.name if mm.menu_item else f"آیتم {mm.menu_item_id}"
+            menu_items.append(f"{menu_item_name}")
+        dependencies.append({
+            'type': 'آیتم‌های منو',
+            'count': len(menu_materials),
+            'items': menu_items
+        })
+    
+    # اگر وابستگی وجود دارد، اجازه حذف نده
+    if dependencies:
+        # ساخت پیام کامل
+        messages = []
+        for dep in dependencies:
+            items_text = '، '.join(dep['items'])
+            if dep['count'] > 5:
+                items_text += f" و {dep['count'] - 5} مورد دیگر"
+            messages.append(f"{dep['type']}: {dep['count']} مورد ({items_text})")
+        
+        message = f"این ماده اولیه «{material.name}» به موارد زیر وابسته است:\n\n" + "\n".join(messages)
+        message += "\n\nلطفاً ابتدا تمام وابستگی‌ها را حذف کنید و سپس دوباره تلاش کنید."
+        
+        return jsonify({
+            'status': 'error',
+            'message': message,
+            'dependencies': dependencies
+        }), 400
+    
+    # اگر وابستگی وجود ندارد، اجازه حذف بده
+    # حذف خریدهای مرتبط (اگر چیزی باقی مانده باشد)
     MaterialPurchase.query.filter_by(raw_material_id=material_id).delete()
     
+    # حذف مصرف‌های مرتبط
+    RawMaterialUsage.query.filter_by(raw_material_id=material_id).delete()
+    
+    # حذف انتقال‌های مرتبط
+    WarehouseTransfer.query.filter_by(raw_material_id=material_id).delete()
+    
+    # حذف ارتباط با منو
+    MenuItemMaterial.query.filter_by(raw_material_id=material_id).delete()
+    
+    # حذف خود ماده اولیه
     db.session.delete(material)
     db.session.commit()
     
-    return jsonify({'status': 'success', 'message': 'ماده اولیه با موفقیت حذف شد.'})
+    return jsonify({'status': 'success', 'message': f'ماده اولیه «{material.name}» با موفقیت حذف شد.'})
 
 @admin_bp.route('/inventory/purchases', methods=['POST'])
 @login_required
@@ -1422,3 +1492,42 @@ def delete_material_purchase(purchase_id):
     db.session.delete(purchase)
     db.session.commit()
     return jsonify({'status': 'success', 'message': 'خرید با موفقیت حذف شد.'})
+
+
+@admin_bp.route('/inventory/clear-all', methods=['DELETE', 'POST'])
+@login_required
+def clear_all_inventory_data():
+    """حذف تمام داده‌های انبار - مستقیماً با SQL برای اطمینان از حذف کامل"""
+    try:
+        # استفاده از SQL خام برای اطمینان از حذف کامل
+        engine = db.get_engine()
+        
+        with engine.begin() as conn:
+            # شمارش قبل از حذف
+            result = conn.execute(text('SELECT COUNT(*) FROM raw_material'))
+            before_count = result.scalar()
+            
+            # حذف با SQL خام (مستقیماً در دیتابیس)
+            conn.execute(text('DELETE FROM raw_material_usage'))
+            conn.execute(text('DELETE FROM warehouse_transfer'))
+            conn.execute(text('DELETE FROM material_purchase'))
+            conn.execute(text('DELETE FROM menu_item_material'))
+            conn.execute(text('DELETE FROM raw_material'))
+        
+        # Commit تغییرات
+        db.session.commit()
+        
+        # بررسی نهایی
+        final_count = RawMaterial.query.count()
+        
+        if final_count == 0:
+            flash(f'تمام داده‌های انبار ({before_count} ماده اولیه) با موفقیت حذف شدند.', 'success')
+            return jsonify({'status': 'success', 'message': f'تمام داده‌های انبار ({before_count} ماده اولیه) با موفقیت حذف شدند.'})
+        else:
+            flash(f'هشدار: {final_count} ماده اولیه هنوز باقی مانده است.', 'warning')
+            return jsonify({'status': 'warning', 'message': f'هشدار: {final_count} ماده اولیه هنوز باقی مانده است.'}), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'خطا در حذف داده‌ها: {str(e)}', 'danger')
+        return jsonify({'status': 'error', 'message': f'خطا در حذف داده‌ها: {str(e)}'}), 500

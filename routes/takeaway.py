@@ -24,11 +24,28 @@ takeaway_bp = Blueprint('takeaway', __name__, url_prefix='/takeaway')
 def create_takeaway():
     try:
         data = request.get_json()
-        customer_name = data.get('customer_name', 'مشتری ناشناس')
-        customer_phone = data.get('customer_phone', '')
+        customer_name = data.get('customer_name', '').strip()
+        customer_phone = data.get('customer_phone', '').strip()
         discount = int(data.get('discount', 0))
         
-        customer = find_or_create_customer(customer_name, customer_phone)
+        # اگر نام مشتری خالی است، از مشتری پیش‌فرض استفاده نکن
+        # در عوض، یک مشتری موقت با نام خالی ایجاد می‌کنیم که بعداً به‌روزرسانی می‌شود
+        if not customer_name:
+            # اگر شماره تماس هم خالی است، از مشتری عمومی استفاده کن
+            if not customer_phone:
+                # پیدا کردن یا ایجاد مشتری عمومی
+                customer = Customer.query.filter_by(name='عمومی').first()
+                if not customer:
+                    customer = Customer(name='عمومی', phone=None)
+                    db.session.add(customer)
+                    db.session.flush()
+            else:
+                # اگر شماره تماس وجود دارد، مشتری موقت با نام خالی ایجاد کن
+                customer = Customer(name='', phone=customer_phone)
+                db.session.add(customer)
+                db.session.flush()
+        else:
+            customer = find_or_create_customer(customer_name, customer_phone)
         invoice_identifiers = generate_invoice_number()
         settings = Settings.query.first()
         tax_percent = settings.tax_percent if settings else 9.0
@@ -64,7 +81,7 @@ def create_takeaway():
         })
     except Exception as e:
         db.session.rollback()
-        print(f"❌ خطا در ایجاد سفارش بیرون‌بر: {e}")
+        print(f"خطا در ایجاد سفارش بیرون‌بر: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'message': f'خطا در ایجاد سفارش: {str(e)}'}), 500
@@ -256,12 +273,23 @@ def submit_takeaway(order_id):
         customer_name = data.get('customer_name')
         customer_phone = data.get('customer_phone')
         discount = data.get('discount')
+        birth_date_str = data.get('birth_date')
+        
+        # تبدیل تاریخ تولد (اختیاری)
+        birth_date = None
+        if birth_date_str:
+            try:
+                from datetime import datetime
+                birth_date = datetime.strptime(birth_date_str, '%Y-%m-%d').date()
+            except (ValueError, TypeError):
+                pass  # اگر تاریخ معتبر نبود، نادیده بگیر
         
         # به‌روزرسانی اطلاعات مشتری و تخفیف اگر ارسال شده باشد
         if customer_name is not None or customer_phone is not None or discount is not None:
             customer = find_or_create_customer(
                 customer_name or (order.customer.name if order.customer else 'مشتری ناشناس'),
-                customer_phone or (order.customer.phone if order.customer else '')
+                customer_phone or (order.customer.phone if order.customer else ''),
+                birth_date=birth_date
             )
             order.customer_id = customer.id
             if discount is not None:
@@ -299,7 +327,7 @@ def submit_takeaway(order_id):
         })
     except Exception as e:
         db.session.rollback()
-        print(f"❌ خطا در ثبت/به‌روزرسانی سفارش بیرون‌بر: {e}")
+        print(f"خطا در ثبت/به‌روزرسانی سفارش بیرون‌بر: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'message': f'خطا در ثبت/به‌روزرسانی سفارش: {str(e)}'}), 500
@@ -377,34 +405,34 @@ def get_takeaway(order_id):
 @login_required
 def delete_takeaway(order_id):
     try:
-        print(f"🗑️ Attempting to delete takeaway order {order_id}")
+        print(f"Attempting to delete takeaway order {order_id}")
         order = Order.query.get(order_id)
         
         if not order:
-            print(f"❌ Order {order_id} not found")
+            print(f"Order {order_id} not found")
             return jsonify({'success': False, 'message': 'سفارش یافت نشد'}), 404
         
         # بررسی اینکه سفارش از نوع بیرون‌بر است
         if order.type != 'بیرون‌بر':
-            print(f"❌ Order {order_id} is not a takeaway order (type: {order.type})")
+            print(f"Order {order_id} is not a takeaway order (type: {order.type})")
             return jsonify({'success': False, 'message': 'سفارش نامعتبر است'}), 400
         
         # حذف آیتم‌های سفارش
         deleted_items = OrderItem.query.filter_by(order_id=order_id).delete()
-        print(f"🗑️ Deleted {deleted_items} order items")
+        print(f"Deleted {deleted_items} order items")
         
         # حذف سفارش
         db.session.delete(order)
         db.session.commit()
         
-        print(f"✅ Successfully deleted takeaway order {order_id}")
+        print(f"Successfully deleted takeaway order {order_id}")
         return jsonify({
             'success': True,
             'message': 'سفارش با موفقیت حذف شد'
         })
     except Exception as e:
         db.session.rollback()
-        print(f"❌ خطا در حذف سفارش بیرون‌بر: {e}")
+        print(f"خطا در حذف سفارش بیرون‌بر: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'message': f'خطا در حذف سفارش: {str(e)}'}), 500

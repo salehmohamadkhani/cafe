@@ -1,9 +1,12 @@
 let currentTakeawayId = null;
 let currentTakeawayStatus = null;
 let takeawayItems = [];
+let isNewTakeawayCustomer = false; // متغیر global برای نگه‌داری وضعیت مشتری جدید
 
 // باز کردن پاپ‌آپ سفارش بیرون‌بر جدید
-async function openNewTakeawayModal() {
+// اطمینان از اینکه تابع در scope global است
+window.openNewTakeawayModal = async function openNewTakeawayModal() {
+    isNewTakeawayCustomer = false; // ریست کردن وضعیت مشتری جدید
     try {
         const response = await fetch('/takeaway/create', {
             method: 'POST',
@@ -11,7 +14,7 @@ async function openNewTakeawayModal() {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                customer_name: 'مشتری ناشناس',
+                customer_name: '',
                 customer_phone: '',
                 discount: 0
             })
@@ -121,6 +124,93 @@ function initTakeawayCustomerSearch() {
     const phoneInput = document.getElementById('takeaway-customer-phone');
     const nameResults = document.getElementById('takeaway-customer-results');
     const phoneResults = document.getElementById('takeaway-customer-phone-results');
+    const registerBtnGroup = document.getElementById('register-new-takeaway-customer-group');
+    const registerBtn = document.getElementById('register-new-takeaway-customer-btn');
+    
+    // تابع برای بررسی و نمایش/مخفی کردن دکمه ثبت مشتری جدید
+    function checkAndShowRegisterButton() {
+        const name = nameInput ? nameInput.value.trim() : '';
+        const phone = phoneInput ? phoneInput.value.trim() : '';
+        
+        if (!registerBtnGroup) return;
+        
+        // اگر نام و شماره موبایل پر شده باشد
+        if (name && phone) {
+            // بررسی اینکه آیا مشتری در نتایج جستجو پیدا شده است یا نه
+            const hasValidSearchResults = nameResults && 
+                                        nameResults.style.display === 'block' && 
+                                        nameResults.innerHTML !== '' && 
+                                        !nameResults.innerHTML.includes('مشتری یافت نشد') &&
+                                        !nameResults.innerHTML.includes('خطا') &&
+                                        nameResults.querySelector('.customer-result'); // بررسی وجود نتیجه معتبر
+            
+            // اگر مشتری یافت نشده بود (isNewTakeawayCustomer = true) یا هنوز جستجو نشده (hasValidSearchResults = false)
+            // یا اگر پیام "مشتری یافت نشد" نمایش داده شده، دکمه را نمایش بده
+            if (isNewTakeawayCustomer || !hasValidSearchResults || nameResults.innerHTML.includes('مشتری یافت نشد')) {
+                registerBtnGroup.style.display = 'block';
+            } else {
+                // اگر مشتری پیدا شده بود، دکمه را مخفی کن
+                registerBtnGroup.style.display = 'none';
+            }
+        } else {
+            // اگر نام یا شماره موبایل خالی است، دکمه را مخفی کن
+            registerBtnGroup.style.display = 'none';
+        }
+    }
+    
+    // رویداد کلیک روی دکمه ثبت مشتری جدید
+    if (registerBtn) {
+        registerBtn.addEventListener('click', async function() {
+            const name = nameInput ? nameInput.value.trim() : '';
+            const phone = phoneInput ? phoneInput.value.trim() : '';
+            const birthDateInput = document.getElementById('takeaway-customer-birth-date');
+            const birthDate = birthDateInput && birthDateInput.value ? birthDateInput.value : '';
+            
+            if (!name) {
+                alert('لطفاً نام مشتری را وارد کنید');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/customer/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        phone: phone || null,
+                        birth_date: birthDate || null
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    alert('مشتری با موفقیت ثبت شد');
+                    isNewTakeawayCustomer = false;
+                    if (registerBtnGroup) registerBtnGroup.style.display = 'none';
+                    // پاک کردن پیام "مشتری یافت نشد"
+                    if (nameResults) {
+                        nameResults.innerHTML = '';
+                        nameResults.style.display = 'none';
+                    }
+                    if (phoneResults) {
+                        phoneResults.innerHTML = '';
+                        phoneResults.style.display = 'none';
+                    }
+                    // به‌روزرسانی اطلاعات مشتری
+                    if (currentTakeawayId) {
+                        await updateTakeawayCustomer();
+                    }
+                } else {
+                    alert(data.message || 'خطا در ثبت مشتری');
+                }
+            } catch (error) {
+                console.error('خطا در ثبت مشتری:', error);
+                alert('خطا در ثبت مشتری');
+            }
+        });
+    }
     
     // جستجو بر اساس نام
     if (nameInput && nameResults) {
@@ -129,6 +219,9 @@ function initTakeawayCustomerSearch() {
         nameInput.parentNode.replaceChild(newNameInput, nameInput);
         
         newNameInput.addEventListener('input', function() {
+            // بررسی و نمایش دکمه ثبت مشتری جدید
+            checkAndShowRegisterButton();
+            
             clearTimeout(takeawayNameSearchTimeout);
             const q = newNameInput.value.trim();
             if (q.length < 2) {
@@ -142,8 +235,19 @@ function initTakeawayCustomerSearch() {
                     .then(data => {
                         nameResults.innerHTML = '';
                         if (data.length === 0) {
+                            // فقط یک بار پیام "مشتری یافت نشد" را نمایش بده (فقط در فیلد نام)
                             nameResults.innerHTML = '<div class="no-result">مشتری یافت نشد</div>';
+                            isNewTakeawayCustomer = true;
+                            // اگر مشتری پیدا نشد، فیلد تاریخ تولد را نمایش بده (مشتری جدید)
+                            const birthDateGroup = document.getElementById('takeaway-customer-birth-date-group');
+                            if (birthDateGroup) birthDateGroup.style.display = 'block';
+                            // بررسی و نمایش دکمه ثبت مشتری جدید (بعد از نمایش پیام)
+                            setTimeout(() => {
+                                checkAndShowRegisterButton();
+                            }, 100);
                         } else {
+                            isNewTakeawayCustomer = false;
+                            if (registerBtnGroup) registerBtnGroup.style.display = 'none';
                             data.forEach(c => {
                                 const div = document.createElement('div');
                                 div.className = 'customer-result';
@@ -161,6 +265,8 @@ function initTakeawayCustomerSearch() {
                                     
                                     nameResults.innerHTML = '';
                                     nameResults.style.display = 'none';
+                                    isNewTakeawayCustomer = false;
+                                    if (registerBtnGroup) registerBtnGroup.style.display = 'none';
                                     
                                     // به‌روزرسانی اطلاعات مشتری
                                     if (currentTakeawayId) {
@@ -179,6 +285,11 @@ function initTakeawayCustomerSearch() {
                     });
             }, 300);
         });
+        
+        // بررسی هنگام blur (وقتی کاربر از فیلد خارج می‌شود)
+        newNameInput.addEventListener('blur', function() {
+            checkAndShowRegisterButton();
+        });
     }
     
     // جستجو بر اساس شماره تماس
@@ -188,6 +299,9 @@ function initTakeawayCustomerSearch() {
         phoneInput.parentNode.replaceChild(newPhoneInput, phoneInput);
         
         newPhoneInput.addEventListener('input', function() {
+            // بررسی و نمایش دکمه ثبت مشتری جدید
+            checkAndShowRegisterButton();
+            
             clearTimeout(takeawayPhoneSearchTimeout);
             const q = newPhoneInput.value.trim();
             if (q.length < 2) {
@@ -201,8 +315,19 @@ function initTakeawayCustomerSearch() {
                     .then(data => {
                         phoneResults.innerHTML = '';
                         if (data.length === 0) {
-                            phoneResults.innerHTML = '<div class="no-result">مشتری یافت نشد</div>';
+                            // در فیلد شماره تماس پیام "مشتری یافت نشد" را نمایش نده
+                            // اگر قبلاً در فیلد نام یافت نشده بود یا الان یافت نشد، دکمه ثبت را نمایش بده
+                            isNewTakeawayCustomer = true;
+                            // اگر مشتری پیدا نشد، فیلد تاریخ تولد را نمایش بده (مشتری جدید)
+                            const birthDateGroup = document.getElementById('takeaway-customer-birth-date-group');
+                            if (birthDateGroup) birthDateGroup.style.display = 'block';
+                            // بررسی و نمایش دکمه ثبت مشتری جدید
+                            setTimeout(() => {
+                                checkAndShowRegisterButton();
+                            }, 100);
                         } else {
+                            isNewTakeawayCustomer = false;
+                            if (registerBtnGroup) registerBtnGroup.style.display = 'none';
                             data.forEach(c => {
                                 const div = document.createElement('div');
                                 div.className = 'customer-result';
@@ -220,6 +345,8 @@ function initTakeawayCustomerSearch() {
                                     
                                     phoneResults.innerHTML = '';
                                     phoneResults.style.display = 'none';
+                                    isNewTakeawayCustomer = false;
+                                    if (registerBtnGroup) registerBtnGroup.style.display = 'none';
                                     
                                     // به‌روزرسانی اطلاعات مشتری
                                     if (currentTakeawayId) {
@@ -238,16 +365,30 @@ function initTakeawayCustomerSearch() {
                     });
             }, 300);
         });
+        
+        // بررسی هنگام blur (وقتی کاربر از فیلد خارج می‌شود)
+        newPhoneInput.addEventListener('blur', function() {
+            checkAndShowRegisterButton();
+        });
+    }
+    
+    // بررسی تغییر تاریخ تولد برای نمایش دکمه ثبت
+    const birthDateInput = document.getElementById('takeaway-customer-birth-date');
+    if (birthDateInput) {
+        birthDateInput.addEventListener('change', function() {
+            checkAndShowRegisterButton();
+        });
     }
 }
 
 // باز کردن پاپ‌آپ سفارش بیرون‌بر موجود
-async function openTakeawayModal(orderId, event) {
+window.openTakeawayModal = async function openTakeawayModal(orderId, event) {
     if (event) {
         event.stopPropagation();
     }
     
     currentTakeawayId = orderId;
+    isNewTakeawayCustomer = false; // ریست کردن وضعیت مشتری جدید
     const modal = document.getElementById('takeaway-modal');
     modal.style.display = 'flex';
     await loadTakeawayData(orderId);
@@ -284,13 +425,15 @@ async function openTakeawayModal(orderId, event) {
             const newCheckoutBtn = checkoutBtn.cloneNode(true);
             checkoutBtn.parentNode.replaceChild(newCheckoutBtn, checkoutBtn);
             
-            // اضافه کردن event listener جدید برای نمایش dropdown
+            // اضافه کردن event listener جدید برای تسویه مستقیم
             newCheckoutBtn.addEventListener('click', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
                 e.stopImmediatePropagation();
                 console.log('Checkout takeaway button clicked!');
-                toggleTakeawayModalCheckoutOptions();
+                if (currentTakeawayId) {
+                    checkoutTakeawayOrder(currentTakeawayId, e);
+                }
                 return false;
             }, true); // استفاده از capture phase
         }
@@ -326,14 +469,27 @@ async function openTakeawayModal(orderId, event) {
 }
 
 // بستن پاپ‌آپ
-function closeTakeawayModal() {
-    document.getElementById('takeaway-modal').style.display = 'none';
+window.closeTakeawayModal = function closeTakeawayModal() {
+    const modal = document.getElementById('takeaway-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
     currentTakeawayId = null;
     takeawayItems = [];
-    clearTakeawayForm();
+    // فقط اگر element های فرم وجود دارند، فرم را پاک کن
+    // این برای جلوگیری از خطا هنگام reload صفحه است
+    const customerNameEl = document.getElementById('takeaway-customer-name');
+    if (customerNameEl) {
+        clearTakeawayForm();
+    }
 }
 
-async function cancelCurrentTakeawayOrder() {
+window.cancelCurrentTakeawayOrder = async function cancelCurrentTakeawayOrder(event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    
     // اگر هنوز سفارشی ساخته نشده، فقط مودال را ببند
     if (!currentTakeawayId) {
         closeTakeawayModal();
@@ -343,9 +499,16 @@ async function cancelCurrentTakeawayOrder() {
     const confirmed = confirm('آیا از حذف این سفارش بیرون‌بر مطمئن هستید؟');
     if (!confirmed) return;
 
-    // از همان API موجود برای حذف سفارش استفاده می‌کنیم
-    // deleteTakeawayOrder خودش صفحه را reload می‌کند، پس نیازی به بستن مودال نیست
-    await deleteTakeawayOrder(currentTakeawayId);
+    try {
+        console.log('Canceling takeaway order:', currentTakeawayId);
+        // از همان API موجود برای حذف سفارش استفاده می‌کنیم
+        await deleteTakeawayOrder(currentTakeawayId, null);
+        // deleteTakeawayOrder خودش modal را می‌بندد و صفحه را reload می‌کند
+    } catch (error) {
+        console.error('خطا در حذف سفارش:', error);
+        alert('خطا در حذف سفارش: ' + (error.message || 'خطای نامشخص'));
+        // اگر خطا رخ داد، modal را باز نگه دار تا کاربر بتواند دوباره تلاش کند
+    }
 }
 
 // بارگذاری اطلاعات سفارش بیرون‌بر
@@ -366,8 +529,37 @@ async function loadTakeawayData(orderId) {
         }
         
         document.getElementById('takeaway-modal-invoice').textContent = `#${data.invoice_number}`;
-        document.getElementById('takeaway-customer-name').value = data.customer_name || '';
-        document.getElementById('takeaway-customer-phone').value = data.customer_phone || '';
+        // اگر customer_name خالی یا "مشتری ناشناس" یا "عمومی" است، فیلد را خالی نگه دار
+        const customerName = data.customer_name || '';
+        const nameField = document.getElementById('takeaway-customer-name');
+        if (nameField) {
+            if (customerName === 'مشتری ناشناس' || customerName === 'عمومی' || customerName.trim() === '') {
+                nameField.value = '';
+            } else {
+                nameField.value = customerName;
+            }
+        }
+        const phoneField = document.getElementById('takeaway-customer-phone');
+        if (phoneField) {
+            phoneField.value = data.customer_phone || '';
+        }
+        
+        // ریست کردن وضعیت مشتری جدید
+        isNewTakeawayCustomer = false;
+        const registerBtnGroup = document.getElementById('register-new-takeaway-customer-group');
+        if (registerBtnGroup) registerBtnGroup.style.display = 'none';
+        
+        // پاک کردن نتایج جستجو
+        const nameResults = document.getElementById('takeaway-customer-results');
+        const phoneResults = document.getElementById('takeaway-customer-phone-results');
+        if (nameResults) {
+            nameResults.innerHTML = '';
+            nameResults.style.display = 'none';
+        }
+        if (phoneResults) {
+            phoneResults.innerHTML = '';
+            phoneResults.style.display = 'none';
+        }
         
         // پر کردن فیلدهای تخفیف
         const discountAmount = data.discount_amount || 0;
@@ -834,6 +1026,8 @@ async function submitTakeawayOrder(orderId) {
         // دریافت اطلاعات مشتری و تخفیف برای ارسال به سرور
         const customerName = document.getElementById('takeaway-customer-name').value;
         const customerPhone = document.getElementById('takeaway-customer-phone').value;
+        const birthDateInput = document.getElementById('takeaway-customer-birth-date');
+        const birthDate = birthDateInput && birthDateInput.value ? birthDateInput.value : null;
         const discountAmount = parseInt(document.getElementById('takeaway-discount-amount').value) || 0;
         const discountPercent = parseFloat(document.getElementById('takeaway-discount-percent').value) || 0;
         
@@ -850,6 +1044,7 @@ async function submitTakeawayOrder(orderId) {
             body: JSON.stringify({
                 customer_name: customerName,
                 customer_phone: customerPhone,
+                birth_date: birthDate,
                 discount: totalDiscount,
                 discount_amount: discountAmount,
                 discount_percent: discountPercent
@@ -879,7 +1074,7 @@ async function submitTakeawayOrder(orderId) {
 }
 
 // نمایش/مخفی کردن گزینه‌های پرداخت برای سفارش بیرون‌بر (در کارت‌ها)
-function toggleTakeawayCheckoutOptions(orderId, event) {
+window.toggleTakeawayCheckoutOptions = function toggleTakeawayCheckoutOptions(orderId, event) {
     if (event) {
         event.preventDefault();
         event.stopPropagation();
@@ -905,7 +1100,7 @@ function toggleTakeawayModalCheckoutOptions() {
 }
 
 // تسویه سفارش از modal
-function checkoutTakeawayOrderFromModal(paymentMethod) {
+window.checkoutTakeawayOrderFromModal = function checkoutTakeawayOrderFromModal(paymentMethod) {
     if (currentTakeawayId) {
         checkoutTakeawayOrder(currentTakeawayId, null, paymentMethod);
     }
@@ -919,7 +1114,7 @@ document.addEventListener('click', function(e) {
 });
 
 // تسویه سفارش
-async function checkoutTakeawayOrder(orderId, event, paymentMethod = 'کارتخوان') {
+window.checkoutTakeawayOrder = async function checkoutTakeawayOrder(orderId, event, paymentMethod = 'کارتخوان') {
     if (event) {
         event.stopPropagation(); // جلوگیری از باز شدن modal
         event.preventDefault(); // جلوگیری از رفتار پیش‌فرض
@@ -956,7 +1151,7 @@ async function checkoutTakeawayOrder(orderId, event, paymentMethod = 'کارتخ
 }
 
 // حذف سفارش بیرون‌بر
-async function deleteTakeawayOrder(orderId, event) {
+window.deleteTakeawayOrder = async function deleteTakeawayOrder(orderId, event) {
     if (event) {
         event.stopPropagation(); // جلوگیری از باز شدن modal
         event.preventDefault(); // جلوگیری از رفتار پیش‌فرض
@@ -992,11 +1187,22 @@ async function deleteTakeawayOrder(orderId, event) {
         console.log('Delete response:', data);
         
         if (data.success) {
+            // ریست کردن متغیرهای global قبل از reload
+            currentTakeawayId = null;
+            currentTakeawayStatus = null;
+            takeawayItems = [];
+            isNewTakeawayCustomer = false;
+            
             alert('سفارش با موفقیت حذف شد');
             // حذف کارت سفارش از داشبورد
             const card = document.querySelector(`.takeaway-order-card[data-order-id="${orderId}"]`);
             if (card) {
                 card.remove();
+            }
+            // بستن modal (بدون صدا زدن clearTakeawayForm که ممکن است element ها وجود نداشته باشند)
+            const modal = document.getElementById('takeaway-modal');
+            if (modal) {
+                modal.style.display = 'none';
             }
             // برای هماهنگی خلاصه‌های مالی، صفحه را تازه‌سازی می‌کنیم
             window.location.reload();
@@ -1183,23 +1389,42 @@ async function updateTakeawayCard(orderId) {
 
 // پاک کردن فرم
 function clearTakeawayForm() {
-    document.getElementById('takeaway-customer-name').value = '';
-    document.getElementById('takeaway-customer-phone').value = '';
-    document.getElementById('takeaway-discount').value = '0';
-    document.getElementById('takeaway-items-list').innerHTML = '<p class="empty-message">هیچ آیتمی انتخاب نشده است</p>';
+    // بررسی وجود element ها قبل از دسترسی
+    const customerNameEl = document.getElementById('takeaway-customer-name');
+    const customerPhoneEl = document.getElementById('takeaway-customer-phone');
+    const discountAmountEl = document.getElementById('takeaway-discount-amount');
+    const discountPercentEl = document.getElementById('takeaway-discount-percent');
+    const itemsListEl = document.getElementById('takeaway-items-list');
     
-    // فعال کردن دکمه اعمال تخفیف
-    const applyDiscountBtn = document.getElementById('apply-takeaway-discount');
-    if (applyDiscountBtn) {
-        applyDiscountBtn.disabled = false;
-        applyDiscountBtn.style.opacity = '1';
-        applyDiscountBtn.style.cursor = 'pointer';
-        applyDiscountBtn.title = 'اعمال تخفیف';
-        applyDiscountBtn.textContent = '✓';
-        applyDiscountBtn.style.background = '';
+    if (customerNameEl) customerNameEl.value = '';
+    if (customerPhoneEl) customerPhoneEl.value = '';
+    if (discountAmountEl) discountAmountEl.value = '0';
+    if (discountPercentEl) discountPercentEl.value = '0';
+    if (itemsListEl) itemsListEl.innerHTML = '<p class="empty-message">هیچ آیتمی انتخاب نشده است</p>';
+
+    // فعال کردن دکمه‌های اعمال تخفیف
+    const applyDiscountAmountBtn = document.getElementById('apply-takeaway-discount-amount');
+    const applyDiscountPercentBtn = document.getElementById('apply-takeaway-discount-percent');
+    
+    if (applyDiscountAmountBtn) {
+        applyDiscountAmountBtn.disabled = false;
+        applyDiscountAmountBtn.style.opacity = '1';
+        applyDiscountAmountBtn.style.cursor = 'pointer';
+        applyDiscountAmountBtn.title = 'اعمال تخفیف عددی';
     }
     
-    updateTakeawayTotals();
+    if (applyDiscountPercentBtn) {
+        applyDiscountPercentBtn.disabled = false;
+        applyDiscountPercentBtn.style.opacity = '1';
+        applyDiscountPercentBtn.style.cursor = 'pointer';
+        applyDiscountPercentBtn.title = 'اعمال تخفیف درصدی';
+    }
+
+    // فقط اگر element های لازم وجود دارند، updateTakeawayTotals را صدا بزن
+    const totalAmountEl = document.getElementById('takeaway-total-amount');
+    if (totalAmountEl) {
+        updateTakeawayTotals();
+    }
 }
 
 // فیلتر کردن آیتم‌های منو
@@ -1429,7 +1654,7 @@ document.addEventListener('DOMContentLoaded', function() {
             e.stopImmediatePropagation();
             console.log('Checkout takeaway button clicked via delegation!');
             if (currentTakeawayId) {
-                toggleTakeawayModalCheckoutOptions();
+                checkoutTakeawayOrder(currentTakeawayId, e);
             }
             return false;
         }

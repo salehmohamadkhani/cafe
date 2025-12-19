@@ -2,34 +2,6 @@ document.addEventListener('DOMContentLoaded', function () {
     // JS code for cafe app will go here
     console.log("Main.js loaded");
 
-    // حذف دکمه debugger در صورت وجود (برای رفع مشکل cache)
-    function removeDebuggerButton() {
-        // حذف دکمه toggle debugger
-        const debugToggleBtn = document.querySelector('button[style*="position: fixed"][style*="bottom: 20px"][style*="right: 20px"][style*="z-index: 99998"]');
-        if (debugToggleBtn && (debugToggleBtn.textContent.includes('🐛') || debugToggleBtn.textContent.includes('bug'))) {
-            debugToggleBtn.remove();
-        }
-        // حذف پنل debug
-        const debugPanel = document.getElementById('debug-panel');
-        if (debugPanel) {
-            debugPanel.remove();
-        }
-        // حذف هر دکمه دیگه‌ای که ممکنه debugger باشه
-        document.querySelectorAll('button').forEach(btn => {
-            const style = btn.getAttribute('style') || '';
-            if (style.includes('z-index: 99998') || style.includes('z-index: 99999')) {
-                if (btn.textContent.includes('🐛') || btn.textContent.includes('bug')) {
-                    btn.remove();
-                }
-            }
-        });
-    }
-    // اجرای فوری
-    removeDebuggerButton();
-    // اجرای مجدد بعد از یک تاخیر کوتاه (برای اطمینان)
-    setTimeout(removeDebuggerButton, 100);
-    setTimeout(removeDebuggerButton, 500);
-
     // Modal elements (assuming these exist in your HTML)
     const modal = document.getElementById('orderModal'); // Corrected ID
     const modalBody = document.getElementById('modal-body'); // Corrected ID

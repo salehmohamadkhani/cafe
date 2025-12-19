@@ -68,9 +68,9 @@ def dashboard():
     month_end_naive = jalali_month_end.togregorian().replace(hour=23, minute=59, second=59, microsecond=999999)
     
     # دیباگ: چاپ تاریخ‌های محاسبه شده
-    print(f"🔍 دیباگ تاریخ شمسی: ماه {jalali_now.month} سال {jalali_now.year}")
-    print(f"🔍 شروع ماه میلادی: {month_start_naive}")
-    print(f"🔍 پایان ماه میلادی: {month_end_naive}")
+    print(f"ديباگ تاريخ شمسي: ماه {jalali_now.month} سال {jalali_now.year}")
+    print(f"شروع ماه ميلادي: {month_start_naive}")
+    print(f"پايان ماه ميلادي: {month_end_naive}")
     
     def summarize_period(key, label, start_dt, end_dt=None):
         query = Order.query.filter(Order.created_at >= start_dt)
@@ -216,13 +216,13 @@ def mark_all_unpaid_as_paid():
         
         db.session.commit()
         
-        flash(f'✅ {count} سفارش با مجموع {total_amount:,} به وضعیت "پرداخت شده" تغییر یافت.', 'success')
-        print(f"✅ {count} سفارش پرداخت نشده به پرداخت شده تغییر یافت. مجموع: {total_amount:,}")
+        flash(f'{count} سفارش با مجموع {total_amount:,} به وضعیت "پرداخت شده" تغییر یافت.', 'success')
+        print(f"{count} سفارش پرداخت نشده به پرداخت شده تغییر یافت. مجموع: {total_amount:,}")
         
         return redirect(url_for('dashboard.dashboard'))
         
     except Exception as e:
         db.session.rollback()
-        flash(f'❌ خطا در تغییر وضعیت سفارش‌ها: {str(e)}', 'danger')
-        print(f"❌ خطا: {str(e)}")
+        flash(f'خطا در تغییر وضعیت سفارش‌ها: {str(e)}', 'danger')
+        print(f"خطا: {str(e)}")
         return redirect(url_for('dashboard.dashboard'))

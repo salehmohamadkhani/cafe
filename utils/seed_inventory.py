@@ -21,6 +21,9 @@ def _clean_number(value):
 
 
 def seed_inventory_if_needed():
+    # غیرفعال شده: بعد از حذف دستی، دوباره داده‌ها را نساز
+    # اگر می‌خواهید seed کنید، باید دستی این تابع را صدا بزنید
+    return
     if RawMaterial.query.count() > 0:
         return
 

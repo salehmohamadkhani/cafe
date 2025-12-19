@@ -53,6 +53,7 @@ def show_menu():
     # --- Popularity (محبوبیت) بر اساس تعداد سفارش‌های پرداخت‌شده ---
     # معیار: تعداد سفارش‌هایی که آیتم در آنها بوده (count distinct orders)
     # tie-breaker: مجموع تعداد فروش (sum quantity)
+    # استفاده از == 0 برای SQLite به جای is_(False)
     popularity_rows = (
         db.session.query(
             OrderItem.menu_item_id.label('menu_item_id'),
@@ -61,7 +62,7 @@ def show_menu():
         )
         .join(Order, Order.id == OrderItem.order_id)
         .filter(Order.status == 'پرداخت شده')
-        .filter(or_(OrderItem.is_deleted.is_(False), OrderItem.is_deleted.is_(None)))
+        .filter(or_(OrderItem.is_deleted == False, OrderItem.is_deleted == None))
         .group_by(OrderItem.menu_item_id)
         .all()
     )
@@ -530,6 +531,39 @@ def save_menu_item_json():
     
     category_id = data.get('category_id')
     
+    # اگر category_id وجود ندارد یا دسته‌بندی وجود ندارد، یک دسته‌بندی پیش‌فرض ایجاد کن
+    if not category_id:
+        # بررسی وجود دسته‌بندی پیش‌فرض
+        default_category = Category.query.filter_by(name='عمومی').first()
+        if not default_category:
+            default_category = Category(
+                name='عمومی',
+                description='دسته‌بندی پیش‌فرض',
+                order=0,
+                is_active=True,
+                created_at=datetime.utcnow()
+            )
+            db.session.add(default_category)
+            db.session.flush()  # برای گرفتن ID
+        category_id = default_category.id
+    else:
+        # بررسی معتبر بودن category_id
+        category = Category.query.get(category_id)
+        if not category:
+            # اگر دسته‌بندی معتبر نیست، از دسته‌بندی پیش‌فرض استفاده کن
+            default_category = Category.query.filter_by(name='عمومی').first()
+            if not default_category:
+                default_category = Category(
+                    name='عمومی',
+                    description='دسته‌بندی پیش‌فرض',
+                    order=0,
+                    is_active=True,
+                    created_at=datetime.utcnow()
+                )
+                db.session.add(default_category)
+                db.session.flush()
+            category_id = default_category.id
+    
     if item_id:
         item = MenuItem.query.get(item_id)
         if not item:
@@ -537,15 +571,12 @@ def save_menu_item_json():
         item.name = name
         item.price = price
         item.stock = stock
-        if category_id:
-            item.category_id = category_id
+        item.category_id = category_id
         # اگر آیتم ویرایش می‌شود، آن را فعال می‌کنیم (مگر اینکه صراحتاً غیرفعال شده باشد)
         # چون در صفحه مدیریت منو فقط آیتم‌های فعال نمایش داده می‌شوند
         item.is_active = True
     else:
-        item = MenuItem(name=name, price=price, stock=stock, is_active=True)
-        if category_id:
-            item.category_id = category_id
+        item = MenuItem(name=name, price=price, stock=stock, is_active=True, category_id=category_id)
         db.session.add(item)
     
     db.session.commit()

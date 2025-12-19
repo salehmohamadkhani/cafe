@@ -470,7 +470,7 @@ def update_existing_order(table, order):
         })
     except Exception as e:
         db.session.rollback()
-        print(f"❌ خطا در به‌روزرسانی سفارش: {e}")
+        print(f"خطا در به‌روزرسانی سفارش: {e}")
         return jsonify({'success': False, 'message': f'خطا در به‌روزرسانی سفارش: {str(e)}'}), 500
 
 # --- ثبت یا به‌روزرسانی سفارش میز ---
@@ -590,7 +590,7 @@ def submit_table_order(table_id):
         })
     except Exception as e:
         db.session.rollback()
-        print(f"❌ خطا در ثبت سفارش میز: {e}")
+        print(f"خطا در ثبت سفارش میز: {e}")
         return jsonify({'success': False, 'message': f'خطا در ثبت سفارش: {str(e)}'}), 500
 
 # --- تسویه میز ---

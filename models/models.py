@@ -717,6 +717,6 @@ def assign_random_birth_dates_to_old_customers():
     
     if changes:
         db.session.commit()
-        print(f"✅ تاریخ تولد تصادفی به {len(customers_with_orders)} مشتری قدیمی اختصاص داده شد")
+        print(f"تاریخ تولد تصادفی به {len(customers_with_orders)} مشتری قدیمی اختصاص داده شد")
     
     return len(customers_with_orders)

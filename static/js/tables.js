@@ -7,6 +7,7 @@ function openTableModal(tableId, tableNumber) {
     console.log('openTableModal called with:', tableId, tableNumber);
     currentTableId = tableId;
     currentTableNumber = tableNumber;
+    isNewCustomer = false; // ریست کردن وضعیت مشتری جدید
     
     const modal = document.getElementById('table-modal');
     if (!modal) {
@@ -1224,14 +1225,102 @@ function checkAndToggleBirthDateField() {
         });
 }
 
+// متغیر global برای نگه‌داری وضعیت مشتری جدید
+let isNewCustomer = false;
+
 function initTableCustomerSearch() {
     const nameInput = document.getElementById('table-customer-name');
     const phoneInput = document.getElementById('table-customer-phone');
     const nameResults = document.getElementById('table-customer-results');
     const phoneResults = document.getElementById('table-customer-phone-results');
+    const registerBtnGroup = document.getElementById('register-new-customer-group');
+    const registerBtn = document.getElementById('register-new-customer-btn');
     
     let nameSearchTimeout = null;
     let phoneSearchTimeout = null;
+    
+    // تابع برای بررسی و نمایش/مخفی کردن دکمه ثبت مشتری جدید
+    function checkAndShowRegisterButton() {
+        const name = nameInput ? nameInput.value.trim() : '';
+        const phone = phoneInput ? phoneInput.value.trim() : '';
+        
+        if (!registerBtnGroup) return;
+        
+        // اگر نام و شماره موبایل پر شده باشد
+        if (name && phone) {
+            // بررسی اینکه آیا مشتری در نتایج جستجو پیدا شده است یا نه
+            const hasValidSearchResults = nameResults && 
+                                        nameResults.style.display === 'block' && 
+                                        nameResults.innerHTML !== '' && 
+                                        !nameResults.innerHTML.includes('مشتری یافت نشد') &&
+                                        !nameResults.innerHTML.includes('خطا') &&
+                                        nameResults.querySelector('.customer-result'); // بررسی وجود نتیجه معتبر
+            
+            // اگر مشتری یافت نشده بود (isNewCustomer = true) یا هنوز جستجو نشده (hasValidSearchResults = false)
+            // یا اگر پیام "مشتری یافت نشد" نمایش داده شده، دکمه را نمایش بده
+            if (isNewCustomer || !hasValidSearchResults || nameResults.innerHTML.includes('مشتری یافت نشد')) {
+                registerBtnGroup.style.display = 'block';
+            } else {
+                // اگر مشتری پیدا شده بود، دکمه را مخفی کن
+                registerBtnGroup.style.display = 'none';
+            }
+        } else {
+            // اگر نام یا شماره موبایل خالی است، دکمه را مخفی کن
+            registerBtnGroup.style.display = 'none';
+        }
+    }
+    
+    // رویداد کلیک روی دکمه ثبت مشتری جدید
+    if (registerBtn) {
+        registerBtn.addEventListener('click', async function() {
+            const name = nameInput ? nameInput.value.trim() : '';
+            const phone = phoneInput ? phoneInput.value.trim() : '';
+            const birthDateInput = document.getElementById('table-customer-birth-date');
+            const birthDate = birthDateInput && birthDateInput.value ? birthDateInput.value : '';
+            
+            if (!name) {
+                alert('لطفاً نام مشتری را وارد کنید');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/customer/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        phone: phone || null,
+                        birth_date: birthDate || null
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    alert('مشتری با موفقیت ثبت شد');
+                    isNewCustomer = false;
+                    if (registerBtnGroup) registerBtnGroup.style.display = 'none';
+                    // پاک کردن پیام "مشتری یافت نشد"
+                    if (nameResults) {
+                        nameResults.innerHTML = '';
+                        nameResults.style.display = 'none';
+                    }
+                    if (phoneResults) {
+                        phoneResults.innerHTML = '';
+                        phoneResults.style.display = 'none';
+                    }
+                    // به‌روزرسانی اطلاعات مشتری
+                    updateTableCustomer();
+                } else {
+                    alert(data.message || 'خطا در ثبت مشتری');
+                }
+            } catch (error) {
+                console.error('خطا در ثبت مشتری:', error);
+                alert('خطا در ثبت مشتری');
+            }
+        });
+    }
     
     // جستجو بر اساس نام
     if (nameInput && nameResults) {
@@ -1250,11 +1339,19 @@ function initTableCustomerSearch() {
                     .then(data => {
                         nameResults.innerHTML = '';
                         if (data.length === 0) {
+                            // فقط یک بار پیام "مشتری یافت نشد" را نمایش بده (فقط در فیلد نام)
                             nameResults.innerHTML = '<div class="no-result">مشتری یافت نشد</div>';
+                            isNewCustomer = true;
                             // اگر مشتری پیدا نشد، فیلد تاریخ تولد را نمایش بده (مشتری جدید)
                             const birthDateGroup = document.getElementById('table-customer-birth-date-group');
                             if (birthDateGroup) birthDateGroup.style.display = 'block';
+                            // بررسی و نمایش دکمه ثبت مشتری جدید (با تاخیر برای اطمینان از به‌روزرسانی DOM)
+                            setTimeout(() => {
+                                checkAndShowRegisterButton();
+                            }, 100);
                         } else {
+                            isNewCustomer = false;
+                            if (registerBtnGroup) registerBtnGroup.style.display = 'none';
                             data.forEach(c => {
                                 const div = document.createElement('div');
                                 div.className = 'customer-result';
@@ -1264,6 +1361,8 @@ function initTableCustomerSearch() {
                                     if (phoneInput) phoneInput.value = c.phone || '';
                                     nameResults.innerHTML = '';
                                     nameResults.style.display = 'none';
+                                    isNewCustomer = false;
+                                    if (registerBtnGroup) registerBtnGroup.style.display = 'none';
                                     
                                     // بررسی و نمایش/مخفی کردن فیلد تاریخ تولد
                                     const birthDateGroup = document.getElementById('table-customer-birth-date-group');
@@ -1298,6 +1397,12 @@ function initTableCustomerSearch() {
         // بررسی هنگام blur (وقتی کاربر از فیلد خارج می‌شود)
         nameInput.addEventListener('blur', function() {
             setTimeout(checkAndToggleBirthDateField, 200);
+            checkAndShowRegisterButton();
+        });
+        
+        // بررسی هنگام تغییر مقدار برای نمایش دکمه ثبت
+        nameInput.addEventListener('input', function() {
+            checkAndShowRegisterButton();
         });
     }
     
@@ -1318,11 +1423,19 @@ function initTableCustomerSearch() {
                     .then(data => {
                         phoneResults.innerHTML = '';
                         if (data.length === 0) {
-                            phoneResults.innerHTML = '<div class="no-result">مشتری یافت نشد</div>';
+                            // در فیلد شماره تماس پیام "مشتری یافت نشد" را نمایش نده
+                            // اگر قبلاً در فیلد نام یافت نشده بود یا الان یافت نشد، دکمه ثبت را نمایش بده
+                            isNewCustomer = true;
                             // اگر مشتری پیدا نشد، فیلد تاریخ تولد را نمایش بده (مشتری جدید)
                             const birthDateGroup = document.getElementById('table-customer-birth-date-group');
                             if (birthDateGroup) birthDateGroup.style.display = 'block';
+                            // بررسی و نمایش دکمه ثبت مشتری جدید
+                            setTimeout(() => {
+                                checkAndShowRegisterButton();
+                            }, 100);
                         } else {
+                            isNewCustomer = false;
+                            if (registerBtnGroup) registerBtnGroup.style.display = 'none';
                             data.forEach(c => {
                                 const div = document.createElement('div');
                                 div.className = 'customer-result';
@@ -1332,6 +1445,8 @@ function initTableCustomerSearch() {
                                     if (nameInput) nameInput.value = c.name;
                                     phoneResults.innerHTML = '';
                                     phoneResults.style.display = 'none';
+                                    isNewCustomer = false;
+                                    if (registerBtnGroup) registerBtnGroup.style.display = 'none';
                                     
                                     // بررسی و نمایش/مخفی کردن فیلد تاریخ تولد
                                     const birthDateGroup = document.getElementById('table-customer-birth-date-group');
@@ -1366,6 +1481,20 @@ function initTableCustomerSearch() {
         // بررسی هنگام blur (وقتی کاربر از فیلد خارج می‌شود)
         phoneInput.addEventListener('blur', function() {
             setTimeout(checkAndToggleBirthDateField, 200);
+            checkAndShowRegisterButton();
+        });
+        
+        // بررسی هنگام تغییر مقدار برای نمایش دکمه ثبت
+        phoneInput.addEventListener('input', function() {
+            checkAndShowRegisterButton();
+        });
+    }
+    
+    // بررسی تغییر تاریخ تولد برای نمایش دکمه ثبت
+    const birthDateInput = document.getElementById('table-customer-birth-date');
+    if (birthDateInput) {
+        birthDateInput.addEventListener('change', function() {
+            checkAndShowRegisterButton();
         });
     }
     

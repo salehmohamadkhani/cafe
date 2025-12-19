@@ -1,3 +1,11 @@
+import sys
+import io
+
+# تنظیم encoding برای stdout و stderr برای پشتیبانی از فارسی و یونیکد
+if sys.platform == 'win32':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+
 from flask import Flask, render_template, redirect, url_for
 from flask_login import LoginManager
 from sqlalchemy import inspect, text
@@ -67,6 +75,14 @@ def create_app(config_class=Config):
             if 'invoice_uid' not in order_columns:
                 with engine.begin() as conn:
                     conn.execute(text('ALTER TABLE "order" ADD COLUMN invoice_uid VARCHAR(64)'))
+        if 'order_item' in existing_tables:
+            order_item_columns = {col['name'] for col in inspector.get_columns('order_item')}
+            if 'is_deleted' not in order_item_columns:
+                with engine.begin() as conn:
+                    conn.execute(text('ALTER TABLE order_item ADD COLUMN is_deleted BOOLEAN DEFAULT 0'))
+            if 'removal_reason' not in order_item_columns:
+                with engine.begin() as conn:
+                    conn.execute(text('ALTER TABLE order_item ADD COLUMN removal_reason VARCHAR(256)'))
         db.create_all()
         inspector = inspect(engine)
         if 'menu_item_material' in inspector.get_table_names():

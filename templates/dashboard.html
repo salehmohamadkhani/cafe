@@ -23,6 +23,10 @@
         gap: var(--space-3);
         background: var(--color-bg);
         min-height: calc(100vh - 80px);
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        overflow-x: hidden;
     }
 
     .dashboard-grid {
@@ -30,6 +34,9 @@
         grid-template-columns: 2fr 1fr;
         gap: var(--space-3);
         align-items: flex-start;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
     }
 
     .dashboard-grid .dashboard-left,
@@ -37,12 +44,19 @@
         display: flex;
         flex-direction: column;
         gap: var(--space-3);
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        min-width: 0;
     }
 
     .tables-grid.board {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
         gap: var(--space-2);
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
     }
 
     .takeaway-orders-grid.modern {
@@ -50,6 +64,9 @@
         grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
         gap: var(--space-2);
         align-items: stretch;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
     }
 
     @media (min-width: 1200px) {
@@ -68,12 +85,18 @@
         display: grid;
         gap: var(--space-2);
         grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
     }
 
     .orders-columns {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
         gap: var(--space-2);
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
     }
 
     .recent-orders .order-item,
@@ -90,6 +113,9 @@
         align-items: center;
         gap: 1rem;
         flex-wrap: wrap;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
     }
 
     .dashboard-section-header .ds-subtitle {
@@ -548,27 +574,6 @@
         font-family: inherit;
     }
 
-    /* استایل دکمه حذف سفارش در header مودال بیرون‌بر */
-    #takeaway-modal .table-modal-header .btn-danger {
-        background: var(--color-danger, #E44848);
-        color: #ffffff;
-        border: none;
-        padding: 0.5rem 1.25rem;
-        font-size: 0.9rem;
-        font-weight: 600;
-        border-radius: var(--radius-sm, 8px);
-        cursor: pointer;
-        transition: all 0.2s ease;
-        position: relative;
-        z-index: 1;
-        white-space: nowrap;
-    }
-
-    #takeaway-modal .table-modal-header .btn-danger:hover {
-        background: #c93a3a;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 8px rgba(228, 72, 72, 0.3);
-    }
 
     .no-result {
         padding: 0.75rem 1rem;
@@ -698,6 +703,52 @@
         .dashboard-shell {
             padding: 1rem;
         }
+        
+        .dashboard-grid .dashboard-left,
+        .dashboard-grid .dashboard-right {
+            min-width: 0;
+            overflow: hidden;
+        }
+        
+        .tables-grid.board,
+        .takeaway-orders-grid.modern,
+        .financial-metrics,
+        .orders-columns {
+            grid-template-columns: 1fr;
+            min-width: 0;
+        }
+        
+        .dashboard-section-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+    }
+    
+    /* اطمینان از اینکه همه عناصر داخل parent خود باقی بمانند */
+    .dashboard-shell * {
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    
+    .dashboard-shell img,
+    .dashboard-shell video,
+    .dashboard-shell iframe {
+        max-width: 100%;
+        height: auto;
+    }
+    
+    /* اطمینان از responsive بودن section ها */
+    .dashboard-shell .ds-section {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        overflow-x: hidden;
+    }
+    
+    .dashboard-shell .ds-stats-grid {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
     }
 </style>
 {% endblock %}
@@ -1031,6 +1082,30 @@
                         <label for="table-customer-birth-date">تاریخ تولد:</label>
                         <input type="date" id="table-customer-birth-date" autocomplete="off">
                     </div>
+                    <div class="form-group" id="register-new-customer-group" style="display: none;">
+                        <button type="button" id="register-new-customer-btn" class="btn-register-customer">
+                            ✓ ثبت مشتری جدید
+                        </button>
+                    </div>
+                    <style>
+                        .btn-register-customer {
+                            width: 100%;
+                            padding: 0.75rem 1rem;
+                            background: var(--color-success);
+                            color: #fff;
+                            border: none;
+                            border-radius: var(--radius-md);
+                            font-weight: 600;
+                            font-size: 0.95rem;
+                            cursor: pointer;
+                            transition: transform 0.15s ease, box-shadow 0.15s ease;
+                            box-shadow: 0 4px 12px rgba(39, 179, 118, 0.3);
+                        }
+                        .btn-register-customer:hover {
+                            transform: translateY(-2px);
+                            box-shadow: 0 6px 18px rgba(39, 179, 118, 0.4);
+                        }
+                    </style>
                     <div class="form-group">
                         <label>تخفیف:</label>
                         <div class="discount-fields-wrapper">
@@ -1126,7 +1201,7 @@
     <div class="table-modal-content">
         <div class="table-modal-header">
             <h3 id="takeaway-modal-title">سفارش بیرون‌بر <span id="takeaway-modal-invoice"></span></h3>
-            <button class="btn btn-danger" type="button" onclick="cancelCurrentTakeawayOrder()">حذف سفارش</button>
+            <button class="close-modal" onclick="closeTakeawayModal()">&times;</button>
         </div>
         <div class="table-modal-body">
             <!-- سمت راست: اطلاعات سفارش -->
@@ -1136,14 +1211,14 @@
                     <div class="form-group">
                         <label for="takeaway-customer-name">نام و فامیل:</label>
                         <div class="customer-search-wrapper">
-                            <input type="text" id="takeaway-customer-name" placeholder="" autocomplete="off">
+                            <input type="text" id="takeaway-customer-name" placeholder="مثلاً علی احمدی" autocomplete="off">
                             <div id="takeaway-customer-results" class="customer-results"></div>
                         </div>
                     </div>
                     <div class="form-group">
                         <label for="takeaway-customer-phone">شماره تماس:</label>
                         <div class="customer-search-wrapper">
-                            <input type="text" id="takeaway-customer-phone" placeholder="" autocomplete="off">
+                            <input type="text" id="takeaway-customer-phone" placeholder="09xx..." autocomplete="off">
                             <div id="takeaway-customer-phone-results" class="customer-results"></div>
                         </div>
                     </div>
@@ -1151,6 +1226,30 @@
                         <label for="takeaway-customer-birth-date">تاریخ تولد:</label>
                         <input type="date" id="takeaway-customer-birth-date" autocomplete="off">
                     </div>
+                    <div class="form-group" id="register-new-takeaway-customer-group" style="display: none;">
+                        <button type="button" id="register-new-takeaway-customer-btn" class="btn-register-customer">
+                            ✓ ثبت مشتری جدید
+                        </button>
+                    </div>
+                    <style>
+                        .btn-register-customer {
+                            width: 100%;
+                            padding: 0.75rem 1rem;
+                            background: var(--color-success);
+                            color: #fff;
+                            border: none;
+                            border-radius: var(--radius-md);
+                            font-weight: 600;
+                            font-size: 0.95rem;
+                            cursor: pointer;
+                            transition: transform 0.15s ease, box-shadow 0.15s ease;
+                            box-shadow: 0 4px 12px rgba(39, 179, 118, 0.3);
+                        }
+                        .btn-register-customer:hover {
+                            transform: translateY(-2px);
+                            box-shadow: 0 6px 18px rgba(39, 179, 118, 0.4);
+                        }
+                    </style>
                     <div class="form-group">
                         <label>تخفیف:</label>
                         <div class="discount-fields-wrapper">
@@ -1197,14 +1296,7 @@
                 
                 <div class="table-actions">
                     <button id="submit-takeaway-order" class="btn btn-primary">ثبت سفارش</button>
-                    <div class="takeaway-modal-checkout" style="position: relative;">
-                        <button id="checkout-takeaway-order" class="btn btn-success takeaway-modal-checkout-toggle">تسویه سفارش</button>
-                        <div class="takeaway-order-checkout-options" id="takeaway-modal-checkout-options" style="position: absolute; bottom: 100%; right: 0; margin-bottom: 0.5rem;">
-                            <button class="ds-button secondary" onclick="checkoutTakeawayOrderFromModal('کارتخوان')">کارتخوان</button>
-                            <button class="ds-button secondary" onclick="checkoutTakeawayOrderFromModal('کارت به کارت')">کارت به کارت</button>
-                            <button class="ds-button secondary" onclick="checkoutTakeawayOrderFromModal('اسنپ')">اسنپ</button>
-                        </div>
-                    </div>
+                    <button id="checkout-takeaway-order" class="btn btn-success">تسویه سفارش</button>
                 </div>
             </div>
             

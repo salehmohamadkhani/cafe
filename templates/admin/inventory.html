@@ -100,12 +100,21 @@
         grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
         gap: var(--space-3);
         align-items: flex-start;
+        width: 100%;
+        max-width: 100%;
     }
 
     @media (max-width: 960px) {
         .inventory-layout {
             grid-template-columns: 1fr;
         }
+    }
+
+    .inventory-panel {
+        width: 100%;
+        max-width: 100%;
+        overflow: hidden;
+        box-sizing: border-box;
     }
 
     .inventory-panel .panel-header {
@@ -244,8 +253,13 @@
 
     .inventory-panel .ds-table-wrapper {
         overflow-x: auto;
+        overflow-y: visible;
         border-radius: var(--radius-md);
         padding-bottom: 0.25rem;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        -webkit-overflow-scrolling: touch;
     }
 
     .inventory-meta {
@@ -291,8 +305,11 @@
     .inventory-page .inventory-table {
         table-layout: auto;
         min-width: 980px;
+        width: 100%;
+        max-width: 100%;
         background: var(--color-surface);
         color: var(--text-body);
+        box-sizing: border-box;
     }
 
     .inventory-page .inventory-table tbody tr:nth-child(even) {
@@ -307,6 +324,18 @@
     @media (max-width: 700px) {
         .inventory-page .inventory-table {
             min-width: 920px;
+        }
+    }
+
+    /* Fix for responsive overflow */
+    @media (max-width: 1024px) {
+        .inventory-panel {
+            min-width: 0;
+            overflow: hidden;
+        }
+        
+        .inventory-panel .ds-table-wrapper {
+            min-width: 0;
         }
     }
 
@@ -1176,6 +1205,15 @@
 
                     // Add row to table
                     appendMaterialRow(newMaterial);
+                    
+                    // به‌روزرسانی dropdown مواد اولیه در فرم ثبت خرید
+                    const purchaseRawSelect = document.getElementById('purchase-raw');
+                    if (purchaseRawSelect) {
+                        const option = document.createElement('option');
+                        option.value = newMaterial.id;
+                        option.textContent = newMaterial.name;
+                        purchaseRawSelect.appendChild(option);
+                    }
                 } else {
                     alert(data.message || 'ثبت ماده اولیه با خطا مواجه شد.');
                 }
@@ -1314,6 +1352,15 @@
                                 }
                             }
 
+                            // به‌روزرسانی dropdown مواد اولیه در فرم ثبت خرید (اگر نام تغییر کرده)
+                            const purchaseRawSelect = document.getElementById('purchase-raw');
+                            if (purchaseRawSelect) {
+                                const option = purchaseRawSelect.querySelector(`option[value="${materialId}"]`);
+                                if (option) {
+                                    option.textContent = payload.name;
+                                }
+                            }
+
                             toggleMaterialEditMode(row, false);
                             // اگر با این تغییر، موجودی به حداقل رسید، toast نمایش بده
                             checkLowStockAndToast({ initial: false });
@@ -1332,7 +1379,9 @@
             deleteBtn.addEventListener('click', () => {
                 const materialId = row.dataset.materialId;
                 if (!materialId) return;
-                if (!confirm('آیا از حذف این ماده اولیه مطمئن هستید؟')) return;
+                
+                const materialName = row.querySelector('.material-name-display')?.textContent?.trim() || 'این ماده';
+                if (!confirm(`آیا از حذف ماده اولیه «${materialName}» مطمئن هستید؟`)) return;
 
                 deleteBtn.disabled = true;
                 fetch(`/admin/inventory/raw-materials/${materialId}`, {
@@ -1341,14 +1390,23 @@
                     .then(res => res.json())
                     .then(data => {
                         if (data.status === 'success') {
+                            alert('✓ ' + (data.message || 'ماده اولیه با موفقیت حذف شد.'));
                             window.location.reload();
                         } else {
-                            alert(data.message || 'در حذف ماده اولیه خطایی رخ داد.');
+                            // نمایش پیام خطا با جزئیات وابستگی‌ها
+                            let errorMessage = data.message || 'در حذف ماده اولیه خطایی رخ داد.';
+                            
+                            // اگر وابستگی وجود دارد، پیام را به صورت بهتر نمایش بده
+                            if (data.dependencies && data.dependencies.length > 0) {
+                                errorMessage = `⚠️ نمی‌توان این ماده اولیه را حذف کرد!\n\n${errorMessage}`;
+                            }
+                            
+                            alert(errorMessage);
                             deleteBtn.disabled = false;
                         }
                     })
                     .catch(() => {
-                        alert('در حذف ماده اولیه خطایی رخ داد.');
+                        alert('✗ خطا در ارتباط با سرور. لطفاً دوباره تلاش کنید.');
                         deleteBtn.disabled = false;
                     });
             });

@@ -527,6 +527,73 @@ def search_customer():
         })
     return jsonify(results)
 
+# --- ثبت مشتری جدید ---
+@order_bp.route('/customer/register', methods=['POST'])
+@login_required
+def register_customer():
+    """ثبت مشتری جدید در دیتابیس"""
+    try:
+        data = request.get_json()
+        name = data.get('name', '').strip()
+        phone = data.get('phone', '').strip()
+        birth_date_str = data.get('birth_date')
+        
+        if not name:
+            return jsonify({'success': False, 'message': 'نام مشتری الزامی است'}), 400
+        
+        # بررسی اینکه آیا مشتری با این نام یا شماره تماس وجود دارد
+        existing_customer = None
+        if phone:
+            existing_customer = Customer.query.filter_by(phone=phone).first()
+        if not existing_customer and name:
+            existing_customer = Customer.query.filter_by(name=name).first()
+        
+        if existing_customer:
+            return jsonify({
+                'success': True,
+                'message': 'مشتری با این اطلاعات قبلاً ثبت شده است',
+                'customer': {
+                    'id': existing_customer.id,
+                    'name': existing_customer.name,
+                    'phone': existing_customer.phone,
+                    'birth_date': existing_customer.birth_date.isoformat() if existing_customer.birth_date else None
+                }
+            })
+        
+        # ایجاد مشتری جدید
+        birth_date = None
+        if birth_date_str:
+            try:
+                from datetime import datetime as dt
+                birth_date = dt.strptime(birth_date_str, '%Y-%m-%d').date()
+            except (ValueError, TypeError):
+                pass
+        
+        customer = Customer(
+            name=name,
+            phone=phone if phone else None,
+            birth_date=birth_date,
+            created_at=datetime.now(pytz.timezone('Asia/Tehran'))
+        )
+        
+        db.session.add(customer)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'مشتری با موفقیت ثبت شد',
+            'customer': {
+                'id': customer.id,
+                'name': customer.name,
+                'phone': customer.phone,
+                'birth_date': customer.birth_date.isoformat() if customer.birth_date else None
+            }
+        })
+    except Exception as e:
+        db.session.rollback()
+        print(f"خطا در ثبت مشتری: {e}")
+        return jsonify({'success': False, 'message': f'خطا در ثبت مشتری: {str(e)}'}), 500
+
 # --- نمایش سفارش‌های جاری (پرداخت نشده/بیرون‌بر) برای داشبورد ---
 @order_bp.route('/orders/current')
 @login_required
@@ -658,7 +725,7 @@ def create_order_api():
         })
         
     except Exception as e:
-        print("❌ خطای ثبت سفارش:", e)
+        print("خطای ثبت سفارش:", e)
         db.session.rollback()
         return jsonify({'success': False, 'message': 'خطای داخلی سرور'}), 500
 
