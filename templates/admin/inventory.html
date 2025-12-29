@@ -3,7 +3,25 @@
 
 {% block head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}?v={{ cache_bust() }}">
+<!-- jQuery (required for Persian Datepicker) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Persian Datepicker -->
+<link rel="stylesheet" href="https://unpkg.com/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
+<script src="https://unpkg.com/persian-date@1.1.0/dist/persian-date.min.js"></script>
+<script src="https://unpkg.com/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
 <style>
+    /* استایل برای Persian Datepicker */
+    #purchase-date {
+        cursor: pointer;
+    }
+    
+    .pdp-input-wrapper {
+        width: 100%;
+    }
+    
+    .pdp-input-wrapper input {
+        width: 100%;
+    }
     body:has(.inventory-shell) {
         background: var(--color-bg);
     }
@@ -880,7 +898,8 @@
                 </div>
                 <div class="form-field">
                     <label for="purchase-date">تاریخ خرید</label>
-                    <input type="date" class="ds-input" id="purchase-date">
+                    <input type="text" class="ds-input" id="purchase-date" placeholder="انتخاب تاریخ" readonly>
+                    <input type="hidden" id="purchase-date-gregorian">
                 </div>
                 <div class="form-field">
                     <label for="purchase-quantity">مقدار</label>
@@ -1229,9 +1248,15 @@
             const isEditMode = this.dataset.editMode === 'true';
             const purchaseId = this.dataset.purchaseId;
 
+            // Get date from hidden field (Gregorian) or from date picker (Jalali)
+            const purchaseDateInput = document.getElementById('purchase-date-gregorian');
+            const purchaseDate = purchaseDateInput && purchaseDateInput.value 
+                ? purchaseDateInput.value 
+                : document.getElementById('purchase-date').value;
+
             const payload = {
                 raw_material_id: document.getElementById('purchase-raw').value,
-                purchase_date: document.getElementById('purchase-date').value,
+                purchase_date: purchaseDate,
                 quantity: document.getElementById('purchase-quantity').value,
                 unit: document.getElementById('purchase-unit').value,
                 total_price: document.getElementById('purchase-price').value,
@@ -1574,7 +1599,9 @@
             const cells = row.querySelectorAll('td');
             const purchaseDate = cells[0]?.textContent?.trim() || '';
             const materialName = cells[1]?.textContent?.trim() || '';
-            const quantity = cells[2]?.textContent?.replace(/,/g, '').trim() || '';
+            // خواندن مقدار از سلول - باید کاماها را حذف کنیم
+            const quantityText = cells[2]?.textContent?.trim() || '';
+            const quantity = quantityText.replace(/,/g, '').replace(/[^\d.]/g, '') || '';
             const unit = cells[3]?.querySelector('.badge-unit')?.textContent?.trim() || '';
             const totalPrice = cells[4]?.textContent?.replace(/,/g, '').trim() || '';
             const unitPrice = cells[5]?.querySelector('.badge-price')?.textContent?.replace(/,/g, '').trim() || '';
@@ -1607,7 +1634,26 @@
 
             // Fill form with purchase data
             if (document.getElementById('purchase-raw')) document.getElementById('purchase-raw').value = materialId;
-            if (document.getElementById('purchase-date')) document.getElementById('purchase-date').value = purchaseDate;
+            // تاریخ خرید - اگر به صورت جلالی است، همان را نمایش بده، در غیر این صورت تبدیل کن
+            const purchaseDateField = $('#purchase-date');
+            const purchaseDateGregorianField = $('#purchase-date-gregorian');
+            if (purchaseDate && purchaseDateField.length) {
+                // اگر تاریخ به صورت YYYY-MM-DD باشد (میلادی)، تبدیل به جلالی
+                if (/^\d{4}-\d{2}-\d{2}$/.test(purchaseDate)) {
+                    try {
+                        const date = new Date(purchaseDate + 'T00:00:00');
+                        const jalali = persianDate(date);
+                        const jalaliStr = jalali.format('YYYY/MM/DD');
+                        purchaseDateField.val(jalaliStr);
+                        purchaseDateGregorianField.val(purchaseDate);
+                    } catch (err) {
+                        purchaseDateField.val(purchaseDate);
+                    }
+                } else {
+                    // احتمالاً تاریخ جلالی است
+                    purchaseDateField.val(purchaseDate);
+                }
+            }
             if (document.getElementById('purchase-quantity')) document.getElementById('purchase-quantity').value = quantity;
             if (document.getElementById('purchase-unit')) document.getElementById('purchase-unit').value = unit;
             if (document.getElementById('purchase-price')) document.getElementById('purchase-price').value = totalPrice;
@@ -1630,6 +1676,62 @@
             openModal(purchaseModal);
         }
     });
+
+    // راه‌اندازی Persian Datepicker برای فیلد تاریخ خرید
+    (function() {
+        const purchaseDateInput = $('#purchase-date');
+        const purchaseDateGregorian = $('#purchase-date-gregorian');
+        
+        if (purchaseDateInput.length) {
+            // راه‌اندازی date picker
+            purchaseDateInput.persianDatepicker({
+                observer: true,
+                format: 'YYYY/MM/DD',
+                altField: purchaseDateGregorian,
+                altFormat: 'YYYY-MM-DD',
+                calendarType: 'persian',
+                timePicker: {
+                    enabled: false
+                },
+                initialValue: false,
+                onSelect: function() {
+                    // تاریخ انتخاب شده به صورت خودکار در purchaseDateGregorian ذخیره می‌شود
+                }
+            });
+
+            // وقتی فرم reset می‌شود، date picker را هم reset کن
+            const purchaseForm = document.getElementById('purchase-form');
+            if (purchaseForm) {
+                const originalReset = purchaseForm.reset.bind(purchaseForm);
+                purchaseForm.reset = function() {
+                    originalReset();
+                    purchaseDateInput.val('');
+                    purchaseDateGregorian.val('');
+                };
+            }
+
+            // در حالت ویرایش، اگر تاریخ میلادی داریم، آن را به جلالی تبدیل کن
+            document.addEventListener('click', function(e) {
+                if (e.target.classList.contains('btn-edit-purchase')) {
+                    setTimeout(function() {
+                        const dateValue = purchaseDateInput.val();
+                        // اگر تاریخ به صورت YYYY-MM-DD باشد (میلادی)، تبدیل به جلالی
+                        if (dateValue && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+                            try {
+                                const date = new Date(dateValue + 'T00:00:00');
+                                const jalali = persianDate(date);
+                                const jalaliStr = jalali.format('YYYY/MM/DD');
+                                purchaseDateInput.val(jalaliStr);
+                                purchaseDateGregorian.val(dateValue);
+                            } catch (err) {
+                                console.error('Error converting date:', err);
+                            }
+                        }
+                    }, 100);
+                }
+            });
+        }
+    })();
     
     }) ();
 </script>

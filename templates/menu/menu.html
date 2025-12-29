@@ -696,9 +696,14 @@
             <form id="materials-form" class="materials-form">
                 <input type="hidden" id="material-name">
                 <input type="hidden" id="material-raw-id">
+                <input type="hidden" id="material-pre-production-id">
                 <div class="ds-autocomplete" id="material-raw-autocomplete">
-                    <input class="ds-input" type="text" id="material-raw-input" placeholder="انتخاب ماده اولیه" required autocomplete="off">
+                    <input class="ds-input" type="text" id="material-raw-input" placeholder="انتخاب ماده اولیه" autocomplete="off">
                     <div id="material-raw-dropdown" class="ds-autocomplete__menu" role="listbox" aria-label="مواد اولیه" style="display:none;"></div>
+                </div>
+                <div class="ds-autocomplete" id="material-pre-production-autocomplete" style="margin-top: 0.75rem;">
+                    <input class="ds-input" type="text" id="material-pre-production-input" placeholder="انتخاب محصول پیش تولید (اختیاری)" autocomplete="off">
+                    <div id="material-pre-production-dropdown" class="ds-autocomplete__menu" role="listbox" aria-label="محصولات پیش تولید" style="display:none;"></div>
                 </div>
                 <div class="material-quantity-group">
                     <input class="ds-input" type="number" id="material-quantity" placeholder="مقدار مصرف" required min="0" step="any">

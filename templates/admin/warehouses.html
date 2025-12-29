@@ -3,7 +3,116 @@
 
 {% block head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}?v={{ cache_bust() }}">
+<!-- jQuery (required for Persian Datepicker) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Persian Datepicker -->
+<link rel="stylesheet" href="https://unpkg.com/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
+<script src="https://unpkg.com/persian-date@1.1.0/dist/persian-date.min.js"></script>
+<script src="https://unpkg.com/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
 <style>
+  /* Toast notifications */
+  .ds-toast-stack {
+    position: fixed;
+    bottom: 1.25rem;
+    right: 1.25rem;
+    z-index: 2500;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    width: min(380px, calc(100vw - 2rem));
+    pointer-events: none;
+  }
+
+  .ds-toast {
+    pointer-events: auto;
+    background: var(--color-surface);
+    color: var(--text-body);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+    padding: 0.85rem 0.95rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .ds-toast--warning {
+    border-color: rgba(242, 181, 68, 0.55);
+    border-right-width: 3px;
+  }
+
+  .ds-toast--danger {
+    border-color: rgba(228, 72, 72, 0.55);
+    border-right-width: 3px;
+  }
+
+  .ds-toast--success {
+    border-color: rgba(39, 179, 118, 0.55);
+    border-right-width: 3px;
+  }
+
+  .ds-toast__icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    font-weight: 900;
+    font-size: 1.1rem;
+  }
+
+  .ds-toast--warning .ds-toast__icon {
+    background: rgba(242, 181, 68, 0.18);
+    color: var(--color-warning);
+  }
+
+  .ds-toast--danger .ds-toast__icon {
+    background: rgba(228, 72, 72, 0.18);
+    color: var(--color-danger);
+  }
+
+  .ds-toast--success .ds-toast__icon {
+    background: rgba(39, 179, 118, 0.18);
+    color: var(--color-success);
+  }
+
+  .ds-toast__content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .ds-toast__title {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--text-heading);
+    line-height: 1.2;
+  }
+
+  .ds-toast__message {
+    margin: 0.35rem 0 0;
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+  }
+
+  .ds-toast__close {
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0.1rem 0.25rem;
+    font-size: 1.1rem;
+    line-height: 1;
+    flex: 0 0 auto;
+  }
+
+  .ds-toast__close:hover {
+    color: var(--text-heading);
+  }
   body:has(.warehouses-shell) {
     background: var(--color-bg);
   }
@@ -141,6 +250,108 @@
     text-align: center;
   }
 
+  /* Search input for raw materials */
+  #raw-material-group {
+    position: relative;
+  }
+
+  #raw_material_search {
+    width: 100%;
+  }
+
+  #raw-material-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 0.25rem;
+    z-index: 1000;
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-md);
+  }
+
+  #raw-material-dropdown > div {
+    padding: 0.5rem;
+    cursor: pointer;
+    border-bottom: 1px solid var(--color-border);
+    transition: background 0.2s;
+  }
+
+  #raw-material-dropdown > div:hover {
+    background: var(--color-surface-alt);
+  }
+
+  #raw-material-dropdown > div:last-child {
+    border-bottom: none;
+  }
+
+  /* Search input for pre-production items */
+  #pre-production-group {
+    position: relative;
+  }
+
+  #pre_production_item_search {
+    width: 100%;
+  }
+
+  #pre-production-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 0.25rem;
+    z-index: 1000;
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-md);
+  }
+
+  #pre-production-dropdown > div {
+    padding: 0.5rem;
+    cursor: pointer;
+    border-bottom: 1px solid var(--color-border);
+    transition: background 0.2s;
+  }
+
+  #pre-production-dropdown > div:hover {
+    background: var(--color-surface-alt);
+  }
+
+  #pre-production-dropdown > div:last-child {
+    border-bottom: none;
+  }
+
+  /* Warehouse stock display */
+  .warehouse-stock-card {
+    padding: 0.75rem;
+    background: var(--color-surface-alt);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+    transition: all 0.2s ease;
+  }
+
+  .warehouse-stock-card:hover {
+    border-color: var(--color-primary);
+    box-shadow: var(--shadow-xs);
+  }
+
+  #warehouses-stock-display {
+    margin-top: 1rem;
+  }
+
+  @media (max-width: 720px) {
+    #warehouses-stock-display > div {
+      grid-template-columns: 1fr;
+    }
+  }
+
   @media (min-width: 720px) {
     .transfer-grid {
       grid-template-columns: 1fr 1fr;
@@ -152,6 +363,7 @@
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     max-width: 100%;
+    -webkit-overflow-scrolling: touch;
   }
 
   .ds-table-wrapper table {
@@ -160,6 +372,249 @@
     min-width: 860px;
     background: var(--color-surface);
     color: var(--text-body);
+  }
+
+  /* Responsive table for pre-production items */
+  #pre-production-items-tab .ds-table-wrapper table,
+  #pre-production-stock-tab .ds-table-wrapper table {
+    min-width: 600px;
+  }
+
+  /* Responsive table for transfers */
+  .transfer-history .ds-table-wrapper table,
+  #transfers-tab .ds-table-wrapper table {
+    min-width: 700px;
+  }
+
+    /* ستون مواد اولیه می‌تواند wrap شود */
+    #pre-production-items-tab .ds-table-wrapper td:nth-child(4) {
+      white-space: normal;
+    }
+
+    .material-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      align-items: center;
+    }
+
+    .material-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      background: rgba(31, 58, 95, 0.08);
+      color: var(--text-body);
+      white-space: nowrap;
+      transition: all 0.2s ease;
+    }
+
+    .material-chip:hover {
+      background: rgba(31, 58, 95, 0.12);
+      transform: translateY(-1px);
+    }
+
+    .material-chip .material-name {
+      color: var(--color-primary);
+      margin-left: 0.25rem;
+      font-weight: 700;
+    }
+
+    .material-chip .material-separator {
+      color: var(--text-secondary);
+    }
+
+    .material-chip .material-quantity {
+      color: var(--text-body);
+      margin: 0 0.25rem;
+      font-weight: 600;
+    }
+
+    .material-chip .material-unit {
+      color: var(--text-secondary);
+      font-size: 0.75rem;
+    }
+
+  @media (max-width: 980px) {
+    .warehouses-layout {
+      grid-template-columns: 1fr;
+    }
+
+    .ds-table-wrapper {
+      border-radius: var(--radius-sm);
+      margin: 0 -0.5rem;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .ds-table-wrapper table {
+      min-width: 600px;
+    }
+
+    #pre-production-items-tab .ds-table-wrapper table,
+    #pre-production-stock-tab .ds-table-wrapper table {
+      min-width: 450px;
+    }
+
+    .transfer-history .ds-table-wrapper table,
+    #transfers-tab .ds-table-wrapper table {
+      min-width: 550px;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .ds-table-wrapper {
+      border-radius: var(--radius-sm);
+      margin: 0 -0.5rem;
+      padding: 0;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .ds-table-wrapper table {
+      min-width: 500px;
+      font-size: 0.8rem;
+    }
+
+    .ds-table-wrapper th,
+    .ds-table-wrapper td {
+      padding: 0.5rem 0.4rem;
+      font-size: 0.8rem;
+      white-space: nowrap;
+    }
+
+    /* Allow text wrapping for material name column */
+    .ds-table-wrapper td:first-child {
+      white-space: normal;
+      min-width: 120px;
+      max-width: 200px;
+    }
+
+    /* Allow wrapping for status column */
+    .ds-table-wrapper td:nth-last-child(2) {
+      white-space: normal;
+    }
+
+    /* Operations column */
+    .ds-table-wrapper td:last-child {
+      white-space: normal;
+    }
+
+    .min-stock-actions {
+      display: flex;
+      gap: 0.25rem;
+      flex-wrap: wrap;
+    }
+
+    .min-stock-edit {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .min-stock-input {
+      width: 100px;
+      display: inline-block;
+    }
+
+    .btn-edit-min-stock,
+    .btn-save-min-stock,
+    .btn-cancel-min-stock {
+      white-space: nowrap;
+    }
+
+    #pre-production-items-tab .ds-table-wrapper table,
+    #pre-production-stock-tab .ds-table-wrapper table {
+      min-width: 350px;
+    }
+
+    .transfer-history .ds-table-wrapper table,
+    #transfers-tab .ds-table-wrapper table {
+      min-width: 450px;
+    }
+
+    /* Allow wrapping for transfer table columns */
+    .transfer-history .ds-table-wrapper td:nth-child(2),
+    #transfers-tab .ds-table-wrapper td:nth-child(2) {
+      white-space: normal;
+      min-width: 100px;
+    }
+
+    .transfer-history .ds-table-wrapper td:nth-child(3),
+    .transfer-history .ds-table-wrapper td:nth-child(4),
+    #transfers-tab .ds-table-wrapper td:nth-child(3),
+    #transfers-tab .ds-table-wrapper td:nth-child(4) {
+      white-space: normal;
+      min-width: 80px;
+      font-size: 0.75rem;
+    }
+
+    .transfer-history .ds-table-wrapper td:last-child,
+    #transfers-tab .ds-table-wrapper td:last-child {
+      white-space: normal;
+      min-width: 100px;
+      max-width: 150px;
+    }
+
+    /* Stack buttons vertically on mobile */
+    #pre-production-items-tab .ds-table-wrapper td:last-child {
+      white-space: normal;
+    }
+
+    #pre-production-items-tab .ds-table-wrapper td:last-child .ds-button {
+      display: block;
+      width: 100%;
+      margin-bottom: 0.25rem;
+      font-size: 0.75rem;
+      padding: 0.4rem 0.6rem;
+    }
+
+    #pre-production-items-tab .ds-table-wrapper td:last-child .ds-button:last-child {
+      margin-bottom: 0;
+    }
+
+    /* ستون مواد اولیه در موبایل */
+    #pre-production-items-tab .ds-table-wrapper td:nth-child(4) {
+      max-width: 150px;
+      font-size: 0.75rem;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .ds-table-wrapper {
+      margin: 0 -1rem;
+    }
+
+    .ds-table-wrapper table {
+      min-width: 400px;
+      font-size: 0.75rem;
+    }
+
+    .ds-table-wrapper th,
+    .ds-table-wrapper td {
+      padding: 0.4rem 0.3rem;
+      font-size: 0.75rem;
+    }
+
+    .ds-table-wrapper th {
+      font-size: 0.7rem;
+    }
+
+    .transfer-history .ds-table-wrapper table,
+    #transfers-tab .ds-table-wrapper table {
+      min-width: 380px;
+      font-size: 0.7rem;
+    }
+
+    .transfer-history .ds-table-wrapper th,
+    .transfer-history .ds-table-wrapper td,
+    #transfers-tab .ds-table-wrapper th,
+    #transfers-tab .ds-table-wrapper td {
+      padding: 0.35rem 0.25rem;
+      font-size: 0.7rem;
+    }
   }
 
   .ds-table-wrapper thead {
@@ -208,10 +663,230 @@
   [data-theme="dark"] .warehouse-card.active {
     border-color: rgba(97, 181, 255, 0.7);
   }
+
+  /* Modal styles - مطابق با design system */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    z-index: 999;
+    backdrop-filter: blur(2px);
+  }
+
+  .modal-backdrop[style*="display: block"] {
+    display: flex !important;
+  }
+
+  .modal-card {
+    width: min(800px, calc(100% - 2rem));
+    max-width: 90vw;
+    background: var(--color-surface);
+    border-radius: 32px;
+    padding: clamp(1.5rem, 3vw, 2.4rem);
+    box-shadow: var(--card-shadow);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .modal-card h4 {
+    margin: 0 0 0.5rem 0;
+    color: var(--text-heading);
+    font-size: 1.25rem;
+    font-weight: 700;
+  }
+
+  .modal-close {
+    position: absolute;
+    left: 1rem;
+    top: 1rem;
+    font-size: 1.4rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    background: none;
+    border: none;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    transition: all 0.2s ease;
+  }
+
+  .modal-close:hover {
+    background: var(--color-surface-alt);
+    color: var(--text-heading);
+  }
+
+  .modal-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .modal-form__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.9rem 1rem;
+  }
+
+  .modal-form__grid .form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .modal-form__grid .form-field.full {
+    grid-column: 1 / -1;
+  }
+
+  .modal-form__grid .form-field label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-heading);
+  }
+
+  .modal-form__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-top: 0.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-border);
+  }
+
+  /* Material row styles */
+  .material-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr auto;
+    gap: 0.75rem;
+    align-items: end;
+    padding: 0.75rem;
+    background: var(--color-surface-alt);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+  }
+
+  .material-row .ds-input,
+  .material-row .ds-select {
+    width: 100%;
+  }
+
+  .material-row .remove-material-btn {
+    min-width: 40px;
+    height: 40px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #pp-materials-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 0.5rem;
+    background: var(--color-bg);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+  }
+
+  /* Tab styles */
+  .tab-container {
+    width: 100%;
+  }
+
+  .tab-buttons {
+    display: flex;
+    gap: 0.5rem;
+    border-bottom: 2px solid var(--color-border);
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .tab-button {
+    padding: 0.75rem 1.5rem;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    position: relative;
+    top: 2px;
+  }
+
+  .tab-button:hover {
+    color: var(--text-heading);
+  }
+
+  .tab-button.active {
+    color: var(--color-primary);
+    border-bottom-color: var(--color-primary);
+  }
+
+  .tab-content {
+    display: none;
+  }
+
+  .tab-content.active {
+    display: block;
+  }
+
+  @media (max-width: 768px) {
+    .modal-card {
+      width: calc(100% - 1rem);
+      padding: 1.25rem;
+      border-radius: 24px;
+    }
+
+    .modal-form__grid {
+      grid-template-columns: 1fr;
+    }
+
+    .material-row {
+      grid-template-columns: 1fr;
+      gap: 0.5rem;
+    }
+
+    .tab-button {
+      padding: 0.6rem 1rem;
+      font-size: 0.85rem;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .warehouses-layout {
+      grid-template-columns: 1fr;
+    }
+
+    .ds-section {
+      padding: 1rem;
+    }
+  }
 </style>
 {% endblock %}
 
 {% block content %}
+<!-- Toast stack for notifications -->
+<div id="warehouses-toast-stack" class="ds-toast-stack"></div>
+
 <div class="warehouses-shell ds-page">
   <section class="ds-section warehouses-hero">
     <p class="panel-eyebrow">انبارداری چند انباره</p>
@@ -248,47 +923,94 @@
             <p class="ds-subtitle">ورودی خریدها همیشه به انبار مرکزی اضافه می‌شود؛ انتقال فقط از انبار مرکزی انجام می‌شود.</p>
           </div>
         </header>
-        <form class="transfer-form" method="post" action="{{ url_for('admin.create_warehouse_transfer') }}">
+        <form class="transfer-form" method="post" action="{{ url_for('admin.create_warehouse_transfer') }}" id="transfer-form">
           <div class="transfer-grid">
             <div class="ds-input-group">
+              <label class="ds-label" for="transfer_type">نوع انتقال</label>
+              <select id="transfer_type" name="transfer_type" class="ds-select" required>
+                <option value="raw_material" selected>ماده اولیه</option>
+                <option value="pre_production">محصول پیش تولید</option>
+              </select>
+            </div>
+
+            <div class="ds-input-group" id="raw-material-group">
               <label class="ds-label" for="raw_material_id">ماده اولیه</label>
-              <select id="raw_material_id" name="raw_material_id" class="ds-select" required>
+              <input type="text" id="raw_material_search" class="ds-input" placeholder="جستجو و انتخاب ماده اولیه..." autocomplete="off">
+              <select id="raw_material_id" name="raw_material_id" class="ds-select" style="display:none;" required>
                 <option value="" disabled selected>انتخاب ماده اولیه</option>
                 {% for rm in raw_materials %}
-                <option value="{{ rm.id }}">{{ rm.name }}</option>
+                <option value="{{ rm.id }}" data-name="{{ rm.name }}" data-unit="{{ rm.default_unit }}">{{ rm.name }}</option>
                 {% endfor %}
+              </select>
+            </div>
+
+            <div class="ds-input-group" id="pre-production-group" style="display:none; position: relative;">
+              <label class="ds-label" for="pre_production_item_search">محصول پیش تولید</label>
+              <input type="text" id="pre_production_item_search" class="ds-input" placeholder="جستجو و انتخاب محصول پیش تولید..." autocomplete="off">
+              <select id="pre_production_item_id" name="pre_production_item_id" class="ds-select" style="display:none;">
+                <option value="" disabled selected>انتخاب محصول پیش تولید</option>
+                {% if pre_production_items %}
+                  {% for item in pre_production_items %}
+                  <option value="{{ item.id }}" data-name="{{ item.name }}" data-code="{{ item.code or '' }}" data-unit="{{ item.unit }}">{{ item.name }}{% if item.code %} ({{ item.code }}){% endif %}</option>
+                  {% endfor %}
+                {% endif %}
               </select>
             </div>
 
             <div class="ds-input-group">
               <label class="ds-label" for="transfer_date">تاریخ انتقال</label>
-              <input id="transfer_date" name="transfer_date" type="date" class="ds-input" value="{{ today.isoformat() }}">
+              <input type="text" id="transfer_date" class="ds-input persian-datepicker" placeholder="انتخاب تاریخ" autocomplete="off">
+              <input type="hidden" id="transfer_date_gregorian" name="transfer_date" value="{{ today.isoformat() }}">
             </div>
 
-            <div class="ds-input-group">
-              <label class="ds-label">از انبار</label>
-              {% if central_wh %}
-                <div class="ds-pill" style="justify-content:center;">{{ central_wh.name }}</div>
-                <input type="hidden" name="from_warehouse_id" value="{{ central_wh.id }}">
-              {% else %}
-                <select id="from_warehouse_id" name="from_warehouse_id" class="ds-select" required>
-                  {% for wh in warehouses %}
-                  <option value="{{ wh.id }}">{{ wh.name }}</option>
-                  {% endfor %}
-                </select>
-              {% endif %}
-            </div>
-
-            <div class="ds-input-group">
-              <label class="ds-label" for="to_warehouse_id">به انبار</label>
-              <select id="to_warehouse_id" name="to_warehouse_id" class="ds-select" required>
-                <option value="" disabled selected>انتخاب مقصد</option>
-                {% for wh in warehouses %}
-                  {% if not central_wh or wh.id != central_wh.id %}
-                  <option value="{{ wh.id }}" {% if selected_wh and selected_wh.id == wh.id %}selected{% endif %}>{{ wh.name }}</option>
-                  {% endif %}
-                {% endfor %}
-              </select>
+            <div class="ds-input-group" style="grid-column: 1 / -1;">
+              <label class="ds-label">انتخاب انبارها</label>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div>
+                  <label class="ds-label" for="from_warehouse_id" style="font-size: 0.85rem; margin-bottom: 0.5rem;">از انبار</label>
+                  <select id="from_warehouse_id" name="from_warehouse_id" class="ds-select" required>
+                    <option value="" disabled selected>انتخاب انبار مبدأ</option>
+                    {% for wh in warehouses %}
+                    <option value="{{ wh.id }}" {% if central_wh and wh.id == central_wh.id %}selected{% endif %}>{{ wh.name }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div>
+                  <label class="ds-label" for="to_warehouse_id" style="font-size: 0.85rem; margin-bottom: 0.5rem;">به انبار</label>
+                  <select id="to_warehouse_id" name="to_warehouse_id" class="ds-select" required>
+                    <option value="" disabled selected>انتخاب مقصد</option>
+                    {% for wh in warehouses %}
+                      {% if not central_wh or wh.id != central_wh.id %}
+                      <option value="{{ wh.id }}" {% if selected_wh and selected_wh.id == wh.id %}selected{% endif %}>{{ wh.name }}</option>
+                      {% endif %}
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+              <div id="warehouses-stock-display" style="margin-top: 1rem; display: none;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                  <div id="from-warehouse-stock" class="warehouse-stock-card" style="display: none;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                      <span style="color: var(--text-secondary); font-size: 0.85rem;">از انبار:</span>
+                      <span id="from-warehouse-name" style="font-weight: 600; font-size: 0.85rem; color: var(--text-heading);"></span>
+                    </div>
+                    <div style="display: flex; align-items: baseline; gap: 0.5rem;">
+                      <span style="color: var(--text-secondary); font-size: 0.8rem;">موجودی:</span>
+                      <strong id="from-warehouse-stock-value" style="color: var(--color-primary); font-size: 1rem;"></strong>
+                    </div>
+                  </div>
+                  <div id="to-warehouse-stock" class="warehouse-stock-card" style="display: none;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                      <span style="color: var(--text-secondary); font-size: 0.85rem;">به انبار:</span>
+                      <span id="to-warehouse-name" style="font-weight: 600; font-size: 0.85rem; color: var(--text-heading);"></span>
+                    </div>
+                    <div style="display: flex; align-items: baseline; gap: 0.5rem;">
+                      <span style="color: var(--text-secondary); font-size: 0.8rem;">موجودی:</span>
+                      <strong id="to-warehouse-stock-value" style="color: var(--color-primary); font-size: 1rem;"></strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div class="ds-input-group">
@@ -298,11 +1020,12 @@
 
             <div class="ds-input-group">
               <label class="ds-label" for="unit">واحد</label>
-              <select id="unit" name="unit" class="ds-select" required>
+              <select id="unit" name="unit" class="ds-select" required disabled>
                 {% for u in raw_material_units %}
                 <option value="{{ u }}">{{ u }}</option>
                 {% endfor %}
               </select>
+              <input type="hidden" id="unit_hidden" name="unit" value="">
             </div>
 
             <div class="ds-input-group" style="grid-column: 1 / -1;">
@@ -319,107 +1042,1297 @@
     </section>
 
     <section class="ds-section">
-      <header class="ds-card-header" style="margin-bottom: 0.75rem;">
-        <div>
-          <h3 style="margin:0;">موجودی {{ selected_wh.name if selected_wh else '' }}</h3>
-          <p class="ds-subtitle">
-            {% if selected_wh and central_wh and selected_wh.id == central_wh.id %}
-              موجودی انبار مرکزی = خریدها − مصرف‌ها ± انتقال‌ها
-            {% else %}
-              این انبار تا وقتی انتقالی ثبت نشود خالی است.
+      {% if selected_wh %}
+        {# Tab برای همه انبارها #}
+        <div class="tab-container" style="margin-bottom: 1rem;">
+          <div class="tab-buttons">
+            <button class="tab-button active" data-tab="raw-materials">
+              مواد اولیه
+            </button>
+            <button class="tab-button" data-tab="pre-production-stock">
+              محصولات پیش تولید
+            </button>
+            {% if selected_wh.code == 'pre_production' %}
+            <button class="tab-button" data-tab="pre-production-items">
+              تعریف محصولات
+            </button>
             {% endif %}
-          </p>
-        </div>
-        <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
-          {% if selected_wh and selected_wh.code != 'central' %}
-            {% if show_all %}
-              <a class="ds-button ghost" href="{{ url_for('admin.warehouses_management', warehouse_id=selected_wh.id) }}">فقط موارد موجود</a>
-            {% else %}
-              <a class="ds-button ghost" href="{{ url_for('admin.warehouses_management', warehouse_id=selected_wh.id, show_all=1) }}">نمایش همه مواد</a>
-            {% endif %}
-          {% endif %}
-          <span class="ds-pill">کمبود: {{ low_count or 0 }}</span>
-        </div>
-      </header>
-
-      <div class="ds-table-wrapper" style="margin-bottom: 1rem;">
-        <table>
-          <thead>
-            <tr>
-              <th>ماده اولیه</th>
-              <th>موجودی</th>
-              <th>حداقل</th>
-              <th>وضعیت</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% if rows %}
-              {% for r in rows %}
-              <tr>
-                <td style="text-align:right;">{{ r.name }}</td>
-                <td>{{ '%.2f'|format(r.stock) }} {{ r.unit }}</td>
-                <td>
-                  {% if r.min_stock and r.min_stock > 0 %}
-                    {{ '%.2f'|format(r.min_stock) }}
-                  {% else %}
-                    -
-                  {% endif %}
-                </td>
-                <td>
-                  {% if r.is_low %}
-                    <span class="badge-pill badge-low">کمبود</span>
-                  {% else %}
-                    <span class="badge-pill badge-ok">مناسب</span>
-                  {% endif %}
-                </td>
-              </tr>
-              {% endfor %}
-            {% else %}
-              <tr><td colspan="4" style="text-align:center; color: var(--text-secondary);">این انبار فعلاً خالی است.</td></tr>
-            {% endif %}
-          </tbody>
-        </table>
-      </div>
-
-      <div class="transfer-history">
-        <header class="ds-card-header" style="margin-bottom: 0.75rem;">
-          <div>
-            <h3 style="margin:0;">آخرین انتقال‌ها</h3>
-            <p class="ds-subtitle">۲۰۰ انتقال مرتبط با همین انبار</p>
+            <button class="tab-button" data-tab="transfers">
+              آخرین انتقال‌ها
+            </button>
           </div>
-        </header>
-        <div class="ds-table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>تاریخ</th>
-                <th>ماده</th>
-                <th>از</th>
-                <th>به</th>
-                <th>مقدار</th>
-                <th>توضیحات</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% if transfers %}
-                {% for t in transfers %}
-                <tr>
-                  <td>{{ t.transfer_date.isoformat() if t.transfer_date else '-' }}</td>
-                  <td style="text-align:right;">{{ t.raw_material.name if t.raw_material else '-' }}</td>
-                  <td>{{ t.from_warehouse.name if t.from_warehouse else '-' }}</td>
-                  <td>{{ t.to_warehouse.name if t.to_warehouse else '-' }}</td>
-                  <td>{{ '{:,.2f}'.format(t.quantity) }} {{ t.unit }}</td>
-                  <td style="text-align:right; white-space: normal;">{{ t.note or '-' }}</td>
-                </tr>
-                {% endfor %}
-              {% else %}
-                <tr><td colspan="6" style="text-align:center; color: var(--text-secondary);">انتقالی ثبت نشده است.</td></tr>
-              {% endif %}
-            </tbody>
-          </table>
+
+          {# Tab 1: مواد اولیه #}
+          <div class="tab-content active" id="raw-materials-tab">
+            <header class="ds-card-header" style="margin-bottom: 0.75rem;">
+              <div>
+                <h3 style="margin:0;">موجودی مواد اولیه - {{ selected_wh.name if selected_wh else '' }}</h3>
+                <p class="ds-subtitle">
+                  {% if selected_wh and central_wh and selected_wh.id == central_wh.id %}
+                    موجودی انبار مرکزی = خریدها − مصرف‌ها ± انتقال‌ها
+                  {% else %}
+                    این انبار تا وقتی انتقالی ثبت نشود خالی است.
+                  {% endif %}
+                </p>
+              </div>
+              <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+                <span class="ds-pill">کمبود: {{ low_count or 0 }}</span>
+              </div>
+            </header>
+
+            <div class="ds-table-wrapper" style="margin-bottom: 1rem;">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ماده اولیه</th>
+                    <th>موجودی</th>
+                    <th>حداقل</th>
+                    <th>وضعیت</th>
+                    <th>عملیات</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% if rows %}
+                    {% for r in rows %}
+                    <tr data-material-id="{{ r.id }}" data-material-name="{{ r.name }}" data-material-unit="{{ r.unit }}" data-material-min-stock="{{ r.min_stock or '' }}" data-warehouse-id="{{ selected_wh.id if selected_wh else '' }}">
+                      <td style="text-align:right;">{{ r.name }}</td>
+                      <td>{{ '%.2f'|format(r.stock) }} {{ r.unit }}</td>
+                      <td class="min-stock-cell">
+                        <span class="min-stock-display">
+                          {% if r.min_stock and r.min_stock > 0 %}
+                            {{ '%.2f'|format(r.min_stock) }}
+                          {% else %}
+                            -
+                          {% endif %}
+                        </span>
+                        <div class="min-stock-edit" style="display: none;">
+                          <input type="number" class="ds-input min-stock-input" step="0.01" min="0" value="{{ r.min_stock or '' }}" placeholder="حداقل موجودی" style="width: 100px; display: inline-block;">
+                          <span style="margin-right: 0.25rem;">{{ r.unit }}</span>
+                        </div>
+                      </td>
+                      <td>
+                        {% if r.is_low %}
+                          <span class="badge-pill badge-low">کمبود</span>
+                        {% else %}
+                          <span class="badge-pill badge-ok">مناسب</span>
+                        {% endif %}
+                      </td>
+                      <td>
+                        <button type="button" class="ds-button ghost btn-edit-min-stock" style="font-size: 0.8rem; padding: 0.4rem 0.6rem;">ویرایش حداقل</button>
+                        <div class="min-stock-actions" style="display: none; gap: 0.25rem;">
+                          <button type="button" class="ds-button primary btn-save-min-stock" style="font-size: 0.8rem; padding: 0.4rem 0.6rem;">ذخیره</button>
+                          <button type="button" class="ds-button ghost btn-cancel-min-stock" style="font-size: 0.8rem; padding: 0.4rem 0.6rem;">لغو</button>
+                        </div>
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  {% else %}
+                    <tr><td colspan="5" style="text-align:center; color: var(--text-secondary);">این انبار فعلاً خالی است.</td></tr>
+                  {% endif %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {# Tab 2: موجودی محصولات پیش تولید #}
+          <div class="tab-content" id="pre-production-stock-tab" style="display: none;">
+            <header class="ds-card-header" style="margin-bottom: 0.75rem;">
+              <div>
+                <h3 style="margin:0;">موجودی محصولات پیش تولید</h3>
+                <p class="ds-subtitle">محصولات موجود در انبار «{{ selected_wh.name if selected_wh else '' }}»</p>
+              </div>
+            </header>
+            <div class="ds-table-wrapper" style="margin-bottom: 1rem;">
+              <table>
+                <thead>
+                  <tr>
+                    <th>نام محصول</th>
+                    <th>کد</th>
+                    <th>موجودی</th>
+                    <th>واحد</th>
+                    <th>عملیات</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% if pre_production_stocks %}
+                    {% for stock_data in pre_production_stocks %}
+                    <tr>
+                      <td style="text-align:right;">{{ stock_data.item.name }}</td>
+                      <td>{{ stock_data.item.code or '-' }}</td>
+                      <td>{{ '%.2f'|format(stock_data.quantity) }}</td>
+                      <td>{{ stock_data.unit }}</td>
+                      <td>
+                        {% if selected_wh.code == 'pre_production' %}
+                        <button type="button" class="ds-button primary btn-produce-item" data-item-id="{{ stock_data.item.id }}" data-item-name="{{ stock_data.item.name }}" data-item-unit="{{ stock_data.unit }}">تولید</button>
+                        {% else %}
+                        <span class="ds-pill">-</span>
+                        {% endif %}
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  {% else %}
+                    <tr><td colspan="5" style="text-align:center; color: var(--text-secondary);">محصولی در این انبار وجود ندارد.</td></tr>
+                  {% endif %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {# Tab 2: تعریف محصولات پیش تولید #}
+          <div class="tab-content" id="pre-production-items-tab" style="display: none;">
+            <header class="ds-card-header" style="margin-bottom: 0.75rem;">
+              <div>
+                <h3 style="margin:0;">تعریف محصولات پیش تولید</h3>
+                <p class="ds-subtitle">تعریف محصولات و مواد اولیه مورد نیاز آنها (رسپی)</p>
+              </div>
+              <button type="button" class="ds-button primary" id="add-pre-production-item-btn">+ افزودن محصول</button>
+            </header>
+            <div class="ds-table-wrapper" style="margin-bottom: 1rem;">
+              <table>
+                <thead>
+                  <tr>
+                    <th>نام محصول</th>
+                    <th>کد</th>
+                    <th>واحد</th>
+                    <th>مواد اولیه</th>
+                    <th>عملیات</th>
+                  </tr>
+                </thead>
+                <tbody id="pre-production-items-table-body">
+                  {% if pre_production_items %}
+                    {% for item in pre_production_items %}
+                    <tr data-item-id="{{ item.id }}">
+                      <td style="text-align:right;">{{ item.name }}</td>
+                      <td>{{ item.code or '-' }}</td>
+                      <td>{{ item.unit }}</td>
+                      <td>
+                        <div class="material-chips">
+                          {% for mat in item.materials %}
+                          <span class="material-chip">
+                            <span class="material-name">{{ mat.raw_material.name if mat.raw_material else '-' }}</span>
+                            <span class="material-separator">:</span>
+                            <span class="material-quantity">{{ '%.2f'|format(mat.quantity) }}</span>
+                            <span class="material-unit">{{ mat.unit }}</span>
+                          </span>
+                          {% endfor %}
+                        </div>
+                      </td>
+                      <td>
+                        <button type="button" class="btn-edit-pre-production-item ds-button ghost" data-item-id="{{ item.id }}">ویرایش</button>
+                        <button type="button" class="btn-delete-pre-production-item ds-button danger" data-item-id="{{ item.id }}">حذف</button>
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  {% else %}
+                    <tr><td colspan="5" style="text-align:center; color: var(--text-secondary);">محصولی تعریف نشده است.</td></tr>
+                  {% endif %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {# Tab 3: آخرین انتقال‌ها #}
+          <div class="tab-content" id="transfers-tab" style="display: none;">
+            <header class="ds-card-header" style="margin-bottom: 0.75rem;">
+              <div>
+                <h3 style="margin:0;">آخرین انتقال‌ها</h3>
+                <p class="ds-subtitle">۲۰۰ انتقال مرتبط با همین انبار</p>
+              </div>
+            </header>
+            <div class="ds-table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>تاریخ</th>
+                    <th>ماده</th>
+                    <th>از</th>
+                    <th>به</th>
+                    <th>مقدار</th>
+                    <th>توضیحات</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% if transfers %}
+                    {% for t in transfers %}
+                    <tr>
+                      <td>{{ t.date.isoformat() if t.date else '-' }}</td>
+                      <td style="text-align:right;">{{ t.item_name }}</td>
+                      <td>{{ t.from_wh }}</td>
+                      <td>{{ t.to_wh }}</td>
+                      <td>{{ '{:,.2f}'.format(t.quantity) }} {{ t.unit }}</td>
+                      <td style="text-align:right; white-space: normal;">{{ t.note or '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                  {% else %}
+                    <tr><td colspan="6" style="text-align:center; color: var(--text-secondary);">انتقالی ثبت نشده است.</td></tr>
+                  {% endif %}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
-      </div>
+      {% endif %}
     </section>
   </div>
 </div>
+
+{# Modal برای تعریف/ویرایش محصول پیش تولید #}
+<div id="pre-production-item-modal" class="modal-backdrop" style="display:none;">
+  <div class="modal-card">
+    <span class="modal-close" data-close="pre-production-item-modal">×</span>
+    <h4 id="pre-production-modal-title">افزودن محصول پیش تولید</h4>
+    <form id="pre-production-item-form">
+      <div class="modal-form__grid">
+        <div class="form-field">
+          <label for="pp-item-name">نام محصول</label>
+          <input type="text" class="ds-input" id="pp-item-name" required>
+        </div>
+        <div class="form-field">
+          <label for="pp-item-code">کد (اختیاری)</label>
+          <input type="text" class="ds-input" id="pp-item-code">
+        </div>
+        <div class="form-field">
+          <label for="pp-item-unit">واحد</label>
+          <select id="pp-item-unit" class="ds-select" required>
+            <option value="عدد">عدد</option>
+            <option value="کیلو">کیلو</option>
+            <option value="گرم">گرم</option>
+            <option value="لیتر">لیتر</option>
+            <option value="میلی لیتر">میلی لیتر</option>
+          </select>
+        </div>
+        <div class="form-field full">
+          <label for="pp-item-description">توضیحات (اختیاری)</label>
+          <textarea class="ds-input" id="pp-item-description" rows="2"></textarea>
+        </div>
+        <div class="form-field full">
+          <label>مواد اولیه مورد نیاز (رسپی)</label>
+          <div id="pp-materials-list" style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem;">
+            <!-- مواد اولیه اینجا اضافه می‌شوند -->
+          </div>
+          <button type="button" class="ds-button ghost" id="add-material-btn" style="margin-top: 0.5rem;">+ افزودن ماده اولیه</button>
+        </div>
+      </div>
+      <div class="modal-form__actions">
+        <button type="button" class="ds-button ghost modal-close-btn">لغو</button>
+        <button type="submit" class="ds-button primary">ذخیره</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# Modal برای تولید محصول پیش تولید #}
+<div id="produce-item-modal" class="modal-backdrop" style="display:none;">
+  <div class="modal-card">
+    <span class="modal-close" data-close="produce-item-modal">×</span>
+    <h4>تولید محصول پیش تولید</h4>
+    <form id="produce-item-form">
+      <div class="modal-form__grid">
+        <div class="form-field">
+          <label for="produce-item-select">محصول</label>
+          <select id="produce-item-select" class="ds-select" required>
+            <option value="">انتخاب محصول</option>
+            {% for item in pre_production_items %}
+            <option value="{{ item.id }}" data-unit="{{ item.unit }}">{{ item.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="produce-source-warehouse">از انبار</label>
+          <select id="produce-source-warehouse" class="ds-select" required>
+            <option value="">انتخاب انبار</option>
+            {% for wh in warehouses %}
+              {% if wh.code != 'pre_production' %}
+              <option value="{{ wh.id }}">{{ wh.name }}</option>
+              {% endif %}
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="produce-quantity">تعداد</label>
+          <input type="number" class="ds-input" id="produce-quantity" step="0.01" min="0.01" required>
+        </div>
+        <div class="form-field">
+          <label for="produce-date">تاریخ تولید</label>
+          <input type="date" class="ds-input" id="produce-date" value="{{ today.isoformat() }}">
+        </div>
+        <div class="form-field full">
+          <label for="produce-note">توضیحات (اختیاری)</label>
+          <textarea class="ds-input" id="produce-note" rows="2"></textarea>
+        </div>
+      </div>
+      <div class="modal-form__actions">
+        <button type="button" class="ds-button ghost modal-close-btn">لغو</button>
+        <button type="submit" class="ds-button primary">تولید</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(function() {
+  // Tab functionality
+  const tabButtons = document.querySelectorAll('.tab-button');
+  const tabContents = document.querySelectorAll('.tab-content');
+  
+  tabButtons.forEach(button => {
+    button.addEventListener('click', function() {
+      const targetTab = this.dataset.tab;
+      
+      // Remove active class from all buttons and contents
+      tabButtons.forEach(btn => {
+        btn.classList.remove('active');
+        btn.style.color = 'var(--text-secondary)';
+        btn.style.borderBottomColor = 'transparent';
+      });
+      tabContents.forEach(content => {
+        content.classList.remove('active');
+        content.style.display = 'none';
+      });
+      
+      // Add active class to clicked button and corresponding content
+      this.classList.add('active');
+      this.style.color = 'var(--text-heading)';
+      this.style.borderBottomColor = 'var(--color-primary)';
+      
+      const targetContent = document.getElementById(targetTab + '-tab');
+      if (targetContent) {
+        targetContent.classList.add('active');
+        targetContent.style.display = 'block';
+      }
+    });
+  });
+
+  // Pre-production item management
+  let materialCounter = 0;
+  const materialsList = document.getElementById('pp-materials-list');
+  const addMaterialBtn = document.getElementById('add-material-btn');
+  const preProductionForm = document.getElementById('pre-production-item-form');
+  const addItemBtn = document.getElementById('add-pre-production-item-btn');
+  const preProductionModal = document.getElementById('pre-production-item-modal');
+  
+  // Store raw materials data for use in edit mode
+  const rawMaterialsData = [
+    {% for rm in raw_materials %}
+    {id: {{ rm.id }}, name: '{{ rm.name }}', default_unit: '{{ rm.default_unit }}'}{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ];
+  
+  const rawMaterialUnits = [
+    {% for unit in raw_material_units %}
+    '{{ unit }}'{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ];
+  
+  // Function to update all material selects to exclude selected materials
+  function updateMaterialSelects() {
+    const allSelects = document.querySelectorAll('.pp-material-select');
+    const selectedMaterialIds = new Set();
+    
+    // Collect all selected material IDs (except empty selections)
+    allSelects.forEach(sel => {
+      const selectedValue = sel.value;
+      if (selectedValue && selectedValue !== '') {
+        selectedMaterialIds.add(selectedValue);
+      }
+    });
+    
+    // Update each select to hide selected materials (except the one selected in that select)
+    allSelects.forEach(sel => {
+      const currentSelectedValue = sel.value;
+      Array.from(sel.options).forEach(option => {
+        if (option.value === '' || option.value === currentSelectedValue) {
+          // Keep default option and currently selected option visible
+          option.style.display = '';
+          option.disabled = false;
+        } else if (selectedMaterialIds.has(option.value)) {
+          // Hide materials that are selected in other rows
+          option.style.display = 'none';
+          option.disabled = true;
+        } else {
+          // Show materials that are not selected
+          option.style.display = '';
+          option.disabled = false;
+        }
+      });
+    });
+  }
+  
+  // Helper function to create a material row with data
+  function createMaterialRow(materialData = null) {
+    materialCounter++;
+    const row = document.createElement('div');
+    row.className = 'material-row';
+    row.style.display = 'grid';
+    row.style.gridTemplateColumns = '2fr 1fr 1fr auto';
+    row.style.gap = '0.5rem';
+    row.style.alignItems = 'end';
+    
+    const select = document.createElement('select');
+    select.className = 'ds-select pp-material-select';
+    select.required = true;
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = 'انتخاب ماده اولیه';
+    select.appendChild(defaultOption);
+    
+    rawMaterialsData.forEach(rm => {
+      const option = document.createElement('option');
+      option.value = rm.id;
+      option.dataset.unit = rm.default_unit;
+      option.textContent = rm.name;
+      if (materialData && materialData.raw_material_id == rm.id) {
+        option.selected = true;
+      }
+      select.appendChild(option);
+    });
+    
+    const quantityInput = document.createElement('input');
+    quantityInput.type = 'number';
+    quantityInput.className = 'ds-input pp-material-quantity';
+    quantityInput.step = '0.01';
+    quantityInput.min = '0.01';
+    quantityInput.placeholder = 'مقدار';
+    quantityInput.required = true;
+    if (materialData) {
+      quantityInput.value = materialData.quantity || '';
+    }
+    
+    const unitSelect = document.createElement('select');
+    unitSelect.className = 'ds-select pp-material-unit';
+    rawMaterialUnits.forEach(unit => {
+      const option = document.createElement('option');
+      option.value = unit;
+      option.textContent = unit;
+      if (materialData && materialData.unit === unit) {
+        option.selected = true;
+      } else if (!materialData && rawMaterialsData.length > 0 && rawMaterialsData[0].default_unit === unit) {
+        option.selected = true;
+      }
+      unitSelect.appendChild(option);
+    });
+    
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'ds-button danger remove-material-btn';
+    removeBtn.textContent = '×';
+    
+    row.appendChild(select);
+    row.appendChild(quantityInput);
+    row.appendChild(unitSelect);
+    row.appendChild(removeBtn);
+    
+    // Update unit when material is selected
+    select.addEventListener('change', function() {
+      const selectedOption = this.options[this.selectedIndex];
+      const defaultUnit = selectedOption.dataset.unit;
+      if (defaultUnit) {
+        unitSelect.value = defaultUnit;
+      }
+      // Update all selects to hide selected materials
+      updateMaterialSelects();
+    });
+    
+    // Remove row button
+    removeBtn.addEventListener('click', function() {
+      row.remove();
+      // Update all selects to show the removed material again
+      updateMaterialSelects();
+    });
+    
+    return row;
+  }
+  
+  function addMaterialRow(materialData = null) {
+    const row = createMaterialRow(materialData);
+    materialsList.appendChild(row);
+    // Update all selects after adding a new row
+    setTimeout(() => {
+      updateMaterialSelects();
+    }, 0);
+  }
+  
+  if (addMaterialBtn) {
+    addMaterialBtn.addEventListener('click', addMaterialRow);
+  }
+  
+  // Open modal for adding new item
+  if (addItemBtn) {
+    addItemBtn.addEventListener('click', function() {
+      document.getElementById('pre-production-modal-title').textContent = 'افزودن محصول پیش تولید';
+      preProductionForm.reset();
+      materialsList.innerHTML = '';
+      materialCounter = 0;
+      preProductionForm.dataset.itemId = '';
+      preProductionModal.style.display = 'block';
+      addMaterialRow(); // Add one row by default
+    });
+  }
+  
+  // Edit item
+  document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('btn-edit-pre-production-item')) {
+      const itemId = e.target.dataset.itemId;
+      if (!itemId) return;
+      
+      // Show loading state
+      document.getElementById('pre-production-modal-title').textContent = 'در حال بارگذاری...';
+      preProductionModal.style.display = 'block';
+      
+      // Fetch item data
+      fetch(`/admin/pre-production/items/${itemId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.status === 'success' && data.item) {
+            const item = data.item;
+            
+            // Update modal title
+            document.getElementById('pre-production-modal-title').textContent = 'ویرایش محصول پیش تولید';
+            
+            // Populate form fields
+            document.getElementById('pp-item-name').value = item.name || '';
+            document.getElementById('pp-item-code').value = item.code || '';
+            document.getElementById('pp-item-description').value = item.description || '';
+            document.getElementById('pp-item-unit').value = item.unit || 'عدد';
+            
+            // Clear materials list
+            materialsList.innerHTML = '';
+            materialCounter = 0;
+            
+            // Add material rows
+            if (item.materials && item.materials.length > 0) {
+              item.materials.forEach(mat => {
+                addMaterialRow({
+                  raw_material_id: mat.raw_material_id,
+                  quantity: mat.quantity,
+                  unit: mat.unit
+                });
+              });
+            } else {
+              // Add one empty row if no materials
+              addMaterialRow();
+            }
+            
+            // Update selects after loading materials
+            setTimeout(() => {
+              updateMaterialSelects();
+            }, 100);
+            
+            // Set item ID in form
+            preProductionForm.dataset.itemId = itemId;
+          } else {
+            alert('خطا در بارگذاری اطلاعات محصول');
+            preProductionModal.style.display = 'none';
+          }
+        })
+        .catch(err => {
+          console.error('Error loading item:', err);
+          alert('خطا در بارگذاری اطلاعات محصول');
+          preProductionModal.style.display = 'none';
+        });
+    }
+    
+    if (e.target.classList.contains('btn-delete-pre-production-item')) {
+      const itemId = e.target.dataset.itemId;
+      if (confirm('آیا از حذف این محصول مطمئن هستید؟')) {
+        fetch(`/admin/pre-production/items/${itemId}`, {
+          method: 'DELETE'
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.status === 'success') {
+            location.reload();
+          } else {
+            alert(data.message || 'خطا در حذف محصول');
+          }
+        });
+      }
+    }
+  });
+  
+  // Submit pre-production item form
+  if (preProductionForm) {
+    preProductionForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const materials = [];
+      document.querySelectorAll('.material-row').forEach(row => {
+        const materialId = row.querySelector('.pp-material-select').value;
+        const quantity = parseFloat(row.querySelector('.pp-material-quantity').value);
+        const unit = row.querySelector('.pp-material-unit').value;
+        
+        if (materialId && quantity > 0) {
+          materials.push({
+            raw_material_id: parseInt(materialId),
+            quantity: quantity,
+            unit: unit
+          });
+        }
+      });
+      
+      const data = {
+        name: document.getElementById('pp-item-name').value,
+        code: document.getElementById('pp-item-code').value,
+        description: document.getElementById('pp-item-description').value,
+        unit: document.getElementById('pp-item-unit').value,
+        materials: materials
+      };
+      
+      const itemId = this.dataset.itemId;
+      const url = itemId ? `/admin/pre-production/items/${itemId}` : '/admin/pre-production/items';
+      const method = itemId ? 'PUT' : 'POST';
+      
+      fetch(url, {
+        method: method,
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success') {
+          location.reload();
+        } else {
+          alert(data.message || 'خطا در ثبت محصول');
+        }
+      });
+    });
+  }
+  
+  // Produce item
+  const produceForm = document.getElementById('produce-item-form');
+  if (produceForm) {
+    produceForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const data = {
+        item_id: parseInt(document.getElementById('produce-item-select').value),
+        source_warehouse_id: parseInt(document.getElementById('produce-source-warehouse').value),
+        quantity: parseFloat(document.getElementById('produce-quantity').value),
+        production_date: document.getElementById('produce-date').value,
+        note: document.getElementById('produce-note').value
+      };
+      
+      fetch('/admin/pre-production/produce', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success') {
+          alert(data.message);
+          location.reload();
+        } else {
+          alert(data.message || 'خطا در تولید محصول');
+        }
+      });
+    });
+  }
+  
+  // Produce button handlers
+  document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('btn-produce-item')) {
+      const itemId = e.target.dataset.itemId;
+      const itemName = e.target.dataset.itemName;
+      const itemUnit = e.target.dataset.itemUnit;
+      
+      document.getElementById('produce-item-select').value = itemId;
+      document.getElementById('produce-quantity').placeholder = `تعداد ${itemUnit}`;
+      document.getElementById('produce-item-modal').style.display = 'block';
+    }
+  });
+  
+  // Close modals
+  document.querySelectorAll('.modal-close, .modal-close-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const modal = this.closest('.modal-backdrop');
+      if (modal) {
+        modal.style.display = 'none';
+        // Reset pre-production form if closing that modal
+        if (modal.id === 'pre-production-item-modal' && preProductionForm) {
+          preProductionForm.dataset.itemId = '';
+          preProductionForm.reset();
+          materialsList.innerHTML = '';
+          materialCounter = 0;
+          document.getElementById('pre-production-modal-title').textContent = 'افزودن محصول پیش تولید';
+        }
+      }
+    });
+  });
+  
+  // Close modal on backdrop click
+  document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+    backdrop.addEventListener('click', function(e) {
+      if (e.target === this) {
+        this.style.display = 'none';
+        // Reset pre-production form if closing that modal
+        if (this.id === 'pre-production-item-modal' && preProductionForm) {
+          preProductionForm.dataset.itemId = '';
+          preProductionForm.reset();
+          materialsList.innerHTML = '';
+          materialCounter = 0;
+          document.getElementById('pre-production-modal-title').textContent = 'افزودن محصول پیش تولید';
+        }
+      }
+    });
+  });
+
+  // Transfer form functionality
+  const transferForm = document.getElementById('transfer-form');
+  const transferTypeSelect = document.getElementById('transfer_type');
+  const rawMaterialGroup = document.getElementById('raw-material-group');
+  const preProductionGroup = document.getElementById('pre-production-group');
+  const rawMaterialSearch = document.getElementById('raw_material_search');
+  const rawMaterialSelect = document.getElementById('raw_material_id');
+  const preProductionSearch = document.getElementById('pre_production_item_search');
+  const preProductionSelect = document.getElementById('pre_production_item_id');
+
+  // Unit select and hidden field
+  const unitSelect = document.getElementById('unit');
+  const unitHidden = document.getElementById('unit_hidden');
+  const fromWarehouseSelect = document.getElementById('from_warehouse_id');
+  const toWarehouseSelect = document.getElementById('to_warehouse_id');
+  const warehousesStockDisplay = document.getElementById('warehouses-stock-display');
+  const fromWarehouseStockCard = document.getElementById('from-warehouse-stock');
+  const toWarehouseStockCard = document.getElementById('to-warehouse-stock');
+  const fromWarehouseStockValue = document.getElementById('from-warehouse-stock-value');
+  const toWarehouseStockValue = document.getElementById('to-warehouse-stock-value');
+  const fromWarehouseName = document.getElementById('from-warehouse-name');
+  const toWarehouseName = document.getElementById('to-warehouse-name');
+
+  // Function to update warehouse stock display
+  function updateWarehouseStock() {
+    const rawMaterialId = rawMaterialSelect ? rawMaterialSelect.value : null;
+    const fromWarehouseId = fromWarehouseSelect ? fromWarehouseSelect.value : null;
+    const toWarehouseId = toWarehouseSelect ? toWarehouseSelect.value : null;
+    
+    // Only show for raw materials, not pre-production
+    if (!rawMaterialId || (transferTypeSelect && transferTypeSelect.value !== 'raw_material')) {
+      if (warehousesStockDisplay) {
+        warehousesStockDisplay.style.display = 'none';
+      }
+      return;
+    }
+    
+    let hasAnyStock = false;
+    
+    // Update from warehouse stock
+    if (fromWarehouseId) {
+      fetch(`/admin/warehouses/stock-check?raw_material_id=${rawMaterialId}&warehouse_id=${fromWarehouseId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.status === 'success' && fromWarehouseStockCard && fromWarehouseStockValue) {
+            const stock = parseFloat(data.stock || 0);
+            const unit = data.unit || '';
+            fromWarehouseStockValue.textContent = `${stock.toLocaleString('fa-IR')} ${unit}`;
+            if (fromWarehouseName) {
+              fromWarehouseName.textContent = data.warehouse_name || '';
+            }
+            fromWarehouseStockCard.style.display = 'block';
+            hasAnyStock = true;
+            if (warehousesStockDisplay) {
+              warehousesStockDisplay.style.display = 'block';
+            }
+          } else {
+            if (fromWarehouseStockCard) {
+              fromWarehouseStockCard.style.display = 'none';
+            }
+          }
+        })
+        .catch(err => {
+          console.error('Error fetching from warehouse stock:', err);
+          if (fromWarehouseStockCard) {
+            fromWarehouseStockCard.style.display = 'none';
+          }
+        });
+    } else {
+      if (fromWarehouseStockCard) {
+        fromWarehouseStockCard.style.display = 'none';
+      }
+    }
+    
+    // Update to warehouse stock
+    if (toWarehouseId) {
+      fetch(`/admin/warehouses/stock-check?raw_material_id=${rawMaterialId}&warehouse_id=${toWarehouseId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.status === 'success' && toWarehouseStockCard && toWarehouseStockValue) {
+            const stock = parseFloat(data.stock || 0);
+            const unit = data.unit || '';
+            toWarehouseStockValue.textContent = `${stock.toLocaleString('fa-IR')} ${unit}`;
+            if (toWarehouseName) {
+              toWarehouseName.textContent = data.warehouse_name || '';
+            }
+            toWarehouseStockCard.style.display = 'block';
+            hasAnyStock = true;
+            if (warehousesStockDisplay) {
+              warehousesStockDisplay.style.display = 'block';
+            }
+          } else {
+            if (toWarehouseStockCard) {
+              toWarehouseStockCard.style.display = 'none';
+            }
+          }
+        })
+        .catch(err => {
+          console.error('Error fetching to warehouse stock:', err);
+          if (toWarehouseStockCard) {
+            toWarehouseStockCard.style.display = 'none';
+          }
+        });
+    } else {
+      if (toWarehouseStockCard) {
+        toWarehouseStockCard.style.display = 'none';
+      }
+    }
+  }
+
+  // Update stock when material or warehouse changes
+  if (rawMaterialSelect && fromWarehouseSelect && toWarehouseSelect) {
+    rawMaterialSelect.addEventListener('change', updateWarehouseStock);
+    fromWarehouseSelect.addEventListener('change', updateWarehouseStock);
+    toWarehouseSelect.addEventListener('change', updateWarehouseStock);
+  }
+
+  // Toggle between raw material and pre-production
+  if (transferTypeSelect) {
+    transferTypeSelect.addEventListener('change', function() {
+      // Reset unit when switching types
+      if (unitSelect) {
+        unitSelect.value = '';
+        if (unitHidden) {
+          unitHidden.value = '';
+        }
+      }
+      
+      if (this.value === 'raw_material') {
+        rawMaterialGroup.style.display = 'block';
+        preProductionGroup.style.display = 'none';
+        rawMaterialSelect.required = true;
+        preProductionSelect.required = false;
+        preProductionSelect.removeAttribute('name');
+        // Update stock display when switching to raw material
+        if (typeof updateWarehouseStock === 'function') {
+          setTimeout(updateWarehouseStock, 100);
+        }
+      } else {
+        rawMaterialGroup.style.display = 'none';
+        preProductionGroup.style.display = 'block';
+        rawMaterialSelect.required = false;
+        rawMaterialSelect.removeAttribute('name');
+        preProductionSelect.required = true;
+        preProductionSelect.setAttribute('name', 'pre_production_item_id');
+        // Hide stock display when switching to pre-production
+        if (warehousesStockDisplay) {
+          warehousesStockDisplay.style.display = 'none';
+        }
+      }
+    });
+  }
+
+  // Search functionality for raw materials
+  if (rawMaterialSearch && rawMaterialSelect) {
+    const rawMaterialOptions = Array.from(rawMaterialSelect.options).slice(1); // Skip first option
+    let dropdownVisible = false;
+    
+    // Create a custom dropdown
+    const dropdown = document.createElement('div');
+    dropdown.id = 'raw-material-dropdown';
+    rawMaterialGroup.style.position = 'relative';
+    rawMaterialGroup.appendChild(dropdown);
+    
+    function showDropdown() {
+      dropdownVisible = true;
+      dropdown.style.display = 'block';
+      filterOptions();
+    }
+    
+    function hideDropdown() {
+      dropdownVisible = false;
+      dropdown.style.display = 'none';
+    }
+    
+    function filterOptions() {
+      const searchTerm = rawMaterialSearch.value.toLowerCase().trim();
+      dropdown.innerHTML = '';
+      
+      const filtered = rawMaterialOptions.filter(opt => 
+        opt.textContent.toLowerCase().includes(searchTerm)
+      );
+      
+      if (filtered.length === 0) {
+        dropdown.innerHTML = '<div style="padding: 0.5rem; text-align: center; color: var(--text-secondary);">نتیجه‌ای یافت نشد</div>';
+        return;
+      }
+      
+      filtered.forEach(opt => {
+        const item = document.createElement('div');
+        item.textContent = opt.textContent;
+        item.addEventListener('click', function() {
+          rawMaterialSearch.value = opt.textContent;
+          rawMaterialSelect.value = opt.value;
+          rawMaterialSelect.setAttribute('name', 'raw_material_id');
+          
+          // Update warehouse stock display
+          if (typeof updateWarehouseStock === 'function') {
+            setTimeout(updateWarehouseStock, 100);
+          }
+          
+          // Set unit based on selected material
+          const defaultUnit = opt.dataset.unit;
+          if (defaultUnit) {
+            const unitSelect = document.getElementById('unit');
+            const unitHidden = document.getElementById('unit_hidden');
+            if (unitSelect) {
+              unitSelect.value = defaultUnit;
+              if (unitHidden) {
+                unitHidden.value = defaultUnit;
+              }
+            }
+          }
+          
+          hideDropdown();
+        });
+        dropdown.appendChild(item);
+      });
+    }
+    
+    rawMaterialSearch.addEventListener('input', function() {
+      if (dropdownVisible) {
+        filterOptions();
+      }
+    });
+
+    rawMaterialSearch.addEventListener('focus', function() {
+      showDropdown();
+    });
+
+    // Hide dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+      if (!rawMaterialGroup.contains(e.target)) {
+        hideDropdown();
+      }
+    });
+  }
+
+  // Search functionality for pre-production items
+  if (preProductionSearch && preProductionSelect) {
+    const preProductionOptions = Array.from(preProductionSelect.options).slice(1); // Skip first option
+    let dropdownVisible = false;
+    
+    // Create a custom dropdown
+    const dropdown = document.createElement('div');
+    dropdown.id = 'pre-production-dropdown';
+    preProductionGroup.style.position = 'relative';
+    preProductionGroup.appendChild(dropdown);
+    
+    function showDropdown() {
+      dropdownVisible = true;
+      dropdown.style.display = 'block';
+      filterOptions();
+    }
+    
+    function hideDropdown() {
+      dropdownVisible = false;
+      dropdown.style.display = 'none';
+    }
+    
+    function filterOptions() {
+      const searchTerm = preProductionSearch.value.toLowerCase().trim();
+      dropdown.innerHTML = '';
+      
+      const filtered = preProductionOptions.filter(opt => {
+        const name = (opt.dataset.name || '').toLowerCase();
+        const code = (opt.dataset.code || '').toLowerCase();
+        const text = opt.textContent.toLowerCase();
+        return name.includes(searchTerm) || code.includes(searchTerm) || text.includes(searchTerm);
+      });
+      
+      if (filtered.length === 0) {
+        dropdown.innerHTML = '<div style="padding: 0.5rem; text-align: center; color: var(--text-secondary);">نتیجه‌ای یافت نشد</div>';
+        return;
+      }
+      
+      filtered.forEach(opt => {
+        const item = document.createElement('div');
+        item.textContent = opt.textContent;
+        item.addEventListener('click', function() {
+          preProductionSearch.value = opt.textContent;
+          preProductionSelect.value = opt.value;
+          preProductionSelect.setAttribute('name', 'pre_production_item_id');
+          
+          // Set unit based on selected pre-production item
+          const itemUnit = opt.dataset.unit || opt.getAttribute('data-unit');
+          const unitSelect = document.getElementById('unit');
+          const unitHidden = document.getElementById('unit_hidden');
+          
+          if (itemUnit) {
+            if (unitSelect) {
+              // Check if the unit exists in the select options
+              const unitOption = Array.from(unitSelect.options).find(opt => opt.value === itemUnit);
+              if (unitOption) {
+                unitSelect.value = itemUnit;
+              } else {
+                // If unit doesn't exist, add it
+                const newOption = document.createElement('option');
+                newOption.value = itemUnit;
+                newOption.textContent = itemUnit;
+                unitSelect.appendChild(newOption);
+                unitSelect.value = itemUnit;
+              }
+            }
+            
+            // Always set hidden field
+            if (unitHidden) {
+              unitHidden.value = itemUnit;
+            }
+          }
+          
+          hideDropdown();
+        });
+        dropdown.appendChild(item);
+      });
+    }
+    
+    preProductionSearch.addEventListener('input', function() {
+      if (dropdownVisible) {
+        filterOptions();
+      }
+    });
+
+    preProductionSearch.addEventListener('focus', function() {
+      showDropdown();
+    });
+
+    // Hide dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+      if (!preProductionGroup.contains(e.target)) {
+        hideDropdown();
+      }
+    });
+  }
+
+  // Persian Datepicker for transfer date
+  if ($('#transfer_date').length) {
+    $('#transfer_date').persianDatepicker({
+      observer: true,
+      format: 'YYYY/MM/DD',
+      altField: $('#transfer_date_gregorian'),
+      altFormat: 'YYYY-MM-DD',
+      calendarType: 'persian',
+      timePicker: {
+        enabled: false
+      },
+      initialValue: false
+    });
+  }
+
+  // Update form submission to handle both types
+  if (transferForm) {
+    transferForm.addEventListener('submit', function(e) {
+      // Ensure the correct field is set based on transfer type
+      if (transferTypeSelect && transferTypeSelect.value === 'pre_production') {
+        // For pre-production, we need to handle it differently
+        // This will be handled by the backend
+      } else {
+        // For raw material, ensure raw_material_id is set
+        if (rawMaterialSelect && rawMaterialSelect.value) {
+          rawMaterialSelect.setAttribute('name', 'raw_material_id');
+        }
+      }
+      
+      // Ensure unit is set from hidden field
+      if (unitSelect && unitHidden) {
+        unitHidden.value = unitSelect.value;
+      }
+    });
+  }
+
+  // Edit min_stock functionality
+  document.addEventListener('click', function(e) {
+    // Edit button clicked
+    if (e.target.classList.contains('btn-edit-min-stock')) {
+      const row = e.target.closest('tr');
+      if (!row) return;
+      
+      const displaySpan = row.querySelector('.min-stock-display');
+      const editDiv = row.querySelector('.min-stock-edit');
+      const editBtn = row.querySelector('.btn-edit-min-stock');
+      const actionsDiv = row.querySelector('.min-stock-actions');
+      
+      if (displaySpan && editDiv && editBtn && actionsDiv) {
+        displaySpan.style.display = 'none';
+        editDiv.style.display = 'block';
+        editBtn.style.display = 'none';
+        actionsDiv.style.display = 'flex';
+        
+        // Focus on input
+        const input = editDiv.querySelector('.min-stock-input');
+        if (input) {
+          input.focus();
+          input.select();
+        }
+      }
+    }
+    
+    // Cancel button clicked
+    if (e.target.classList.contains('btn-cancel-min-stock')) {
+      const row = e.target.closest('tr');
+      if (!row) return;
+      
+      const displaySpan = row.querySelector('.min-stock-display');
+      const editDiv = row.querySelector('.min-stock-edit');
+      const editBtn = row.querySelector('.btn-edit-min-stock');
+      const actionsDiv = row.querySelector('.min-stock-actions');
+      const input = editDiv.querySelector('.min-stock-input');
+      
+      if (displaySpan && editDiv && editBtn && actionsDiv && input) {
+        // Restore original value
+        const originalValue = row.dataset.materialMinStock || '';
+        input.value = originalValue;
+        
+        displaySpan.style.display = 'inline';
+        editDiv.style.display = 'none';
+        editBtn.style.display = 'inline-block';
+        actionsDiv.style.display = 'none';
+      }
+    }
+    
+    // Save button clicked
+    if (e.target.classList.contains('btn-save-min-stock')) {
+      const row = e.target.closest('tr');
+      if (!row) return;
+      
+      const materialId = row.dataset.materialId;
+      if (!materialId) return;
+      
+      const editDiv = row.querySelector('.min-stock-edit');
+      const input = editDiv ? editDiv.querySelector('.min-stock-input') : null;
+      const unit = row.dataset.materialUnit || '';
+      
+      if (!input) return;
+      
+      const minStockValue = input.value.trim();
+      const minStock = minStockValue ? parseFloat(minStockValue) : null;
+      
+      if (minStock !== null && minStock < 0) {
+        alert('حداقل موجودی نمی‌تواند منفی باشد.');
+        return;
+      }
+      
+      const saveBtn = e.target;
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'در حال ذخیره...';
+      
+      // Get material name and warehouse_id from row
+      const materialName = row.dataset.materialName || '';
+      const materialNameCell = row.querySelector('td:first-child');
+      const materialNameText = materialNameCell ? materialNameCell.textContent.trim() : materialName;
+      const warehouseId = row.dataset.warehouseId || null;
+      
+      fetch(`/admin/inventory/raw-materials/${materialId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: materialNameText,
+          unit: unit,
+          min_stock: minStock,
+          warehouse_id: warehouseId
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success') {
+          // Update row data
+          row.dataset.materialMinStock = minStock !== null ? minStock.toString() : '';
+          
+          // Update display
+          const displaySpan = row.querySelector('.min-stock-display');
+          if (displaySpan) {
+            if (minStock !== null && minStock > 0) {
+              displaySpan.textContent = minStock.toFixed(2);
+            } else {
+              displaySpan.textContent = '-';
+            }
+          }
+          
+          // Hide edit mode
+          const editDiv = row.querySelector('.min-stock-edit');
+          const editBtn = row.querySelector('.btn-edit-min-stock');
+          const actionsDiv = row.querySelector('.min-stock-actions');
+          
+          if (displaySpan && editDiv && editBtn && actionsDiv) {
+            displaySpan.style.display = 'inline';
+            editDiv.style.display = 'none';
+            editBtn.style.display = 'inline-block';
+            actionsDiv.style.display = 'none';
+          }
+          
+          // Reload page to update status badges
+          setTimeout(() => {
+            window.location.reload();
+          }, 500);
+        } else {
+          alert(data.message || 'خطا در به‌روزرسانی حداقل موجودی');
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'ذخیره';
+        }
+      })
+      .catch(err => {
+        console.error('Error updating min_stock:', err);
+        alert('خطا در به‌روزرسانی حداقل موجودی');
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'ذخیره';
+      });
+    }
+  });
+
+  // Toast notification system
+  const toastStack = document.getElementById('warehouses-toast-stack');
+  
+  function showToast({ title, message, variant = 'warning', timeout = 8000 } = {}) {
+    if (!toastStack) return;
+    const toast = document.createElement('div');
+    toast.className = `ds-toast ds-toast--${variant}`;
+    toast.innerHTML = `
+      <div class="ds-toast__icon">${variant === 'success' ? '✓' : variant === 'danger' ? '✕' : '!'}</div>
+      <div class="ds-toast__content">
+        <p class="ds-toast__title">${title || 'هشدار'}</p>
+        <p class="ds-toast__message">${message || ''}</p>
+      </div>
+      <button type="button" class="ds-toast__close" aria-label="بستن">×</button>
+    `;
+    const closeBtn = toast.querySelector('.ds-toast__close');
+    if (closeBtn) closeBtn.addEventListener('click', () => toast.remove());
+    toastStack.appendChild(toast);
+    if (timeout && timeout > 0) {
+      setTimeout(() => {
+        if (toast && toast.parentNode) {
+          toast.style.opacity = '0';
+          toast.style.transform = 'translateX(100%)';
+          toast.style.transition = 'all 0.3s ease';
+          setTimeout(() => toast.remove(), 300);
+        }
+      }, timeout);
+    }
+  }
+
+  // Show flash messages as toasts
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        {% if category == 'warning' %}
+          showToast({ title: 'هشدار', message: '{{ message|safe }}', variant: 'warning', timeout: 10000 });
+        {% elif category == 'danger' or category == 'error' %}
+          showToast({ title: 'خطا', message: '{{ message|safe }}', variant: 'danger', timeout: 10000 });
+        {% elif category == 'success' %}
+          showToast({ title: 'موفق', message: '{{ message|safe }}', variant: 'success', timeout: 6000 });
+        {% else %}
+          showToast({ title: 'اطلاعیه', message: '{{ message|safe }}', variant: 'warning', timeout: 6000 });
+        {% endif %}
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+})();
+</script>
 {% endblock %}

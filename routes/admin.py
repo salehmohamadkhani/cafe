@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, abort
 from flask import current_app as app
 from flask_login import login_required, current_user
-from models.models import db, Settings, Order, OrderItem, Customer, User, RawMaterial, MaterialPurchase, Table, TableArea, TableItem, SnapSettlement, Warehouse, WarehouseTransfer, RawMaterialUsage, MenuItemMaterial, calculate_order_amount, convert_unit
+from models.models import db, Settings, Order, OrderItem, Customer, User, RawMaterial, MaterialPurchase, Table, TableArea, TableItem, SnapSettlement, Warehouse, WarehouseTransfer, RawMaterialUsage, MenuItemMaterial, PreProductionItem, PreProductionItemMaterial, PreProductionStock, PreProductionProduction, PreProductionTransfer, WarehouseMaterialMinStock, calculate_order_amount, convert_unit
 from utils.helpers import to_jalali, categorize_payment_method, PAYMENT_BUCKET_LABELS
 from sqlalchemy import func, extract, or_, text
 from services.inventory_service import calculate_material_stock_for_period
@@ -18,6 +18,8 @@ DEFAULT_WAREHOUSES = [
     ("kitchen_iranian", "انبار آشپزخانه ایرانی"),
     ("hookah", "انبار قلیان"),
     ("bar", "انبار بار"),
+    ("pre_production", "انبار پیش تولید"),
+    ("waste", "انبار ضایعات"),
 ]
 
 
@@ -27,6 +29,10 @@ def seed_warehouses_if_needed():
     for code, name in DEFAULT_WAREHOUSES:
         existing = Warehouse.query.filter_by(code=code).first()
         if existing:
+            # Update name if it has changed
+            if existing.name != name:
+                existing.name = name
+                created_any = True
             continue
         wh = Warehouse(code=code, name=name, is_active=True)
         db.session.add(wh)
@@ -37,6 +43,10 @@ def seed_warehouses_if_needed():
 
 def get_central_warehouse() -> Warehouse | None:
     return Warehouse.query.filter_by(code='central').first()
+
+
+def get_waste_warehouse() -> Warehouse | None:
+    return Warehouse.query.filter_by(code='waste').first()
 
 
 def warehouse_transfer_sums(warehouse_id: int, direction: str, end_date: date | None = None) -> dict[int, float]:
@@ -594,11 +604,22 @@ def warehouses_management():
     in_sums = warehouse_transfer_sums(selected_wh.id, 'in')
     out_sums = warehouse_transfer_sums(selected_wh.id, 'out')
 
+    # Get min_stock for each material in this warehouse
+    warehouse_min_stocks = {}
+    for wmms in WarehouseMaterialMinStock.query.filter_by(warehouse_id=selected_wh.id).all():
+        warehouse_min_stocks[wmms.raw_material_id] = float(wmms.min_stock)
+
     rows = []
     for rm in raw_materials:
         base = float(rm.current_stock or 0) if selected_wh.code == 'central' else 0.0
         stock = max(0.0, base + float(in_sums.get(rm.id, 0.0)) - float(out_sums.get(rm.id, 0.0)))
-        is_low = bool(rm.min_stock and stock <= float(rm.min_stock))
+        
+        # Get min_stock for this warehouse, fallback to global min_stock if not set
+        min_stock = warehouse_min_stocks.get(rm.id)
+        if min_stock is None:
+            min_stock = float(rm.min_stock or 0)
+        
+        is_low = bool(min_stock and min_stock > 0 and stock <= min_stock)
         # برای انبارهای غیر مرکزی، پیش‌فرض: فقط مواردی را نشان بده که واقعاً موجودی دارند
         if selected_wh.code != 'central' and not show_all and stock <= 0:
             continue
@@ -607,25 +628,90 @@ def warehouses_management():
             'id': rm.id,
             'name': rm.name,
             'unit': rm.default_unit,
-            'min_stock': float(rm.min_stock or 0),
+            'min_stock': float(min_stock),
             'stock': float(stock),
             'is_low': is_low,
         })
 
-    transfers_query = WarehouseTransfer.query.filter(
+    # Get raw material transfers
+    raw_material_transfers_query = WarehouseTransfer.query.filter(
         or_(
             WarehouseTransfer.from_warehouse_id == selected_wh.id,
             WarehouseTransfer.to_warehouse_id == selected_wh.id
         )
     )
-    transfers = (
-        transfers_query
+    raw_material_transfers = (
+        raw_material_transfers_query
         .order_by(WarehouseTransfer.transfer_date.desc(), WarehouseTransfer.created_at.desc())
         .limit(200)
         .all()
     )
+    
+    # Get pre-production transfers
+    pre_production_transfers_query = PreProductionTransfer.query.filter(
+        or_(
+            PreProductionTransfer.from_warehouse_id == selected_wh.id,
+            PreProductionTransfer.to_warehouse_id == selected_wh.id
+        )
+    )
+    pre_production_transfers = (
+        pre_production_transfers_query
+        .order_by(PreProductionTransfer.transfer_date.desc(), PreProductionTransfer.created_at.desc())
+        .limit(200)
+        .all()
+    )
+    
+    # Combine and sort all transfers
+    all_transfers = []
+    for t in raw_material_transfers:
+        all_transfers.append({
+            'type': 'raw_material',
+            'date': t.transfer_date,
+            'item_name': t.raw_material.name if t.raw_material else '-',
+            'from_wh': t.from_warehouse.name if t.from_warehouse else '-',
+            'to_wh': t.to_warehouse.name if t.to_warehouse else '-',
+            'quantity': t.quantity,
+            'unit': t.unit,
+            'note': t.note,
+            'created_at': t.created_at
+        })
+    for t in pre_production_transfers:
+        all_transfers.append({
+            'type': 'pre_production',
+            'date': t.transfer_date,
+            'item_name': t.pre_production_item.name if t.pre_production_item else '-',
+            'from_wh': t.from_warehouse.name if t.from_warehouse else '-',
+            'to_wh': t.to_warehouse.name if t.to_warehouse else '-',
+            'quantity': t.quantity,
+            'unit': t.unit,
+            'note': t.note,
+            'created_at': t.created_at
+        })
+    
+    # Sort by date and created_at descending
+    all_transfers.sort(key=lambda x: (x['date'] or date.min, x['created_at'] or datetime.min), reverse=True)
+    transfers = all_transfers[:200]
 
     low_count = sum(1 for r in rows if r.get('is_low'))
+
+    # Always load pre-production items for the transfer form
+    pre_production_items = PreProductionItem.query.filter_by(is_active=True).order_by(PreProductionItem.name.asc()).all()
+    
+    pre_production_stocks = []
+    if selected_wh:
+        # فقط محصولاتی که در این انبار موجودی دارند (موجودی > 0)
+        stocks = PreProductionStock.query.filter_by(
+            warehouse_id=selected_wh.id
+        ).filter(PreProductionStock.quantity > 0).all()
+        
+        for stock in stocks:
+            item = stock.pre_production_item
+            if item and item.is_active:
+                pre_production_stocks.append({
+                    'item': item,
+                    'quantity': float(stock.quantity),
+                    'unit': stock.unit
+                })
 
     return render_template(
         'admin/warehouses.html',
@@ -639,17 +725,21 @@ def warehouses_management():
         transfers=transfers,
         raw_material_units=RAW_MATERIAL_UNITS,
         today=date.today(),
+        pre_production_items=pre_production_items,
+        pre_production_stocks=pre_production_stocks,
     )
 
 
 @admin_bp.route('/warehouses/transfers', methods=['POST'])
 @login_required
 def create_warehouse_transfer():
-    """ثبت انتقال موجودی بین انبارها."""
+    """ثبت انتقال موجودی بین انبارها (مواد اولیه یا محصولات پیش تولید)."""
     seed_warehouses_if_needed()
     central_wh = get_central_warehouse()
 
+    transfer_type = request.form.get('transfer_type', 'raw_material')
     raw_material_id = request.form.get('raw_material_id')
+    pre_production_item_id = request.form.get('pre_production_item_id')
     from_id = request.form.get('from_warehouse_id')
     to_id = request.form.get('to_warehouse_id')
     quantity_raw = (request.form.get('quantity') or '').strip()
@@ -658,7 +748,6 @@ def create_warehouse_transfer():
     transfer_date = parse_date(request.form.get('transfer_date')) or date.today()
 
     try:
-        raw_material_id_int = int(raw_material_id)
         from_id_int = int(from_id) if from_id else None
         to_id_int = int(to_id) if to_id else None
         quantity = float(str(quantity_raw).replace(',', '').strip())
@@ -670,11 +759,6 @@ def create_warehouse_transfer():
         flash('مبدأ و مقصد انتقال را انتخاب کنید.', 'warning')
         return redirect(url_for('admin.warehouses_management'))
 
-    # سیاست کسب‌وکار: انتقال‌ها فقط از انبار مرکزی انجام می‌شود
-    if central_wh and from_id_int != central_wh.id:
-        flash('انتقال فقط از انبار مرکزی امکان‌پذیر است.', 'warning')
-        return redirect(url_for('admin.warehouses_management'))
-
     if from_id_int == to_id_int:
         flash('انبار مبدأ و مقصد نمی‌تواند یکسان باشد.', 'warning')
         return redirect(url_for('admin.warehouses_management'))
@@ -683,15 +767,220 @@ def create_warehouse_transfer():
         flash('مقدار انتقال باید بزرگتر از صفر باشد.', 'warning')
         return redirect(url_for('admin.warehouses_management'))
 
-    rm = RawMaterial.query.get(raw_material_id_int)
-    if not rm:
-        flash('ماده اولیه یافت نشد.', 'warning')
-        return redirect(url_for('admin.warehouses_management'))
-
     from_wh = Warehouse.query.get(from_id_int)
     to_wh = Warehouse.query.get(to_id_int)
     if not from_wh or not to_wh:
         flash('انبار مبدأ یا مقصد یافت نشد.', 'warning')
+        return redirect(url_for('admin.warehouses_management'))
+
+    # Handle pre-production item transfer
+    if transfer_type == 'pre_production':
+        if not pre_production_item_id:
+            flash('محصول پیش تولید را انتخاب کنید.', 'warning')
+            return redirect(url_for('admin.warehouses_management'))
+        
+        try:
+            item_id_int = int(pre_production_item_id)
+        except (TypeError, ValueError):
+            flash('محصول پیش تولید نامعتبر است.', 'warning')
+            return redirect(url_for('admin.warehouses_management'))
+
+        item = PreProductionItem.query.get(item_id_int)
+        if not item:
+            flash('محصول پیش تولید یافت نشد.', 'warning')
+            return redirect(url_for('admin.warehouses_management'))
+
+        pre_production_wh = Warehouse.query.filter_by(code='pre_production').first()
+        if not pre_production_wh:
+            flash('انبار پیش تولید یافت نشد.', 'warning')
+            return redirect(url_for('admin.warehouses_management'))
+        
+        # If transferring FROM another warehouse TO pre_production warehouse: this is production
+        # Materials will be deducted from source warehouse and product added to pre_production warehouse
+        if from_wh.id != pre_production_wh.id and to_wh.id == pre_production_wh.id:
+            # Production: deduct raw materials from source warehouse, add product to pre_production warehouse
+            insufficient_materials = []
+            transfers_to_create = []
+            
+            # First, check all materials before creating any transfers
+            for item_material in item.materials:
+                raw_material = item_material.raw_material
+                if not raw_material:
+                    continue
+
+                # مقدار مورد نیاز برای تولید (مقدار هر واحد * تعداد)
+                required_qty = item_material.quantity * quantity
+                required_unit = item_material.unit
+
+                # تبدیل به واحد پایه
+                required_base_qty = convert_unit(required_qty, required_unit, raw_material.default_unit)
+
+                # بررسی موجودی در انبار منبع
+                available = compute_warehouse_stock_for_material(raw_material, from_wh, end_date=transfer_date)
+                
+                if required_base_qty > (available + 1e-9):
+                    insufficient_materials.append({
+                        'material': raw_material.name,
+                        'required': f'{required_qty:.2f} {required_unit}',
+                        'required_base': f'{required_base_qty:.2f} {raw_material.default_unit}',
+                        'available': f'{available:.2f} {raw_material.default_unit}',
+                        'shortage': f'{(required_base_qty - available):.2f} {raw_material.default_unit}'
+                    })
+                else:
+                    # Prepare transfer (don't add yet, wait for validation)
+                    transfer = WarehouseTransfer(
+                        raw_material_id=raw_material.id,
+                        from_warehouse_id=from_wh.id,
+                        to_warehouse_id=pre_production_wh.id,
+                        quantity=required_qty,
+                        unit=required_unit,
+                        base_quantity=required_base_qty,
+                        transfer_date=transfer_date,
+                        note=f'تولید {quantity} {item.unit} {item.name}' + (f' - {note}' if note else ''),
+                        user_id=getattr(current_user, 'id', None)
+                    )
+                    transfers_to_create.append(transfer)
+
+            # If any material is insufficient, show error and don't create any transfers
+            if insufficient_materials:
+                # Create a detailed error message
+                if len(insufficient_materials) == 1:
+                    m = insufficient_materials[0]
+                    error_msg = f'برای انتقال {quantity} {item.unit} «{item.name}» از انبار «{from_wh.name}»، موجودی ماده اولیه «{m["material"]}» کافی نیست. (نیاز: {m["required_base"]}, موجود: {m["available"]}, کمبود: {m["shortage"]})'
+                else:
+                    materials_list = '، '.join([f'«{m["material"]}» (نیاز: {m["required_base"]}, موجود: {m["available"]}, کمبود: {m["shortage"]})' for m in insufficient_materials])
+                    error_msg = f'برای انتقال {quantity} {item.unit} «{item.name}» از انبار «{from_wh.name}»، موجودی {len(insufficient_materials)} ماده اولیه کافی نیست: {materials_list}'
+                
+                flash(error_msg, 'warning')
+                return redirect(url_for('admin.warehouses_management', warehouse_id=from_wh.id))
+            
+            # All materials are sufficient, now create all transfers
+            for transfer in transfers_to_create:
+                db.session.add(transfer)
+
+            # اضافه کردن محصول به انبار پیش تولید
+            target_stock = PreProductionStock.query.filter_by(
+                pre_production_item_id=item.id,
+                warehouse_id=pre_production_wh.id
+            ).first()
+            
+            if target_stock:
+                target_stock.quantity += quantity
+            else:
+                target_stock = PreProductionStock(
+                    pre_production_item_id=item.id,
+                    warehouse_id=pre_production_wh.id,
+                    quantity=quantity,
+                    unit=item.unit
+                )
+                db.session.add(target_stock)
+
+            if not note:
+                note = f'تولید {quantity} {item.unit} {item.name} از {from_wh.name}'
+
+            try:
+                db.session.commit()
+                flash(f'تولید {quantity} {item.unit} {item.name} با موفقیت ثبت شد. مواد اولیه از انبار «{from_wh.name}» کسر شد.', 'success')
+            except Exception as exc:
+                db.session.rollback()
+                flash(f'خطا در ثبت تولید: {exc}', 'danger')
+
+            return redirect(url_for('admin.warehouses_management', warehouse_id=to_wh.id))
+        
+        # If transferring FROM pre_production warehouse: this is a simple transfer
+        elif from_wh.id == pre_production_wh.id:
+            # Simple transfer: check stock in pre_production warehouse
+            source_stock = PreProductionStock.query.filter_by(
+                pre_production_item_id=item.id,
+                warehouse_id=from_wh.id
+            ).first()
+            
+            available_qty = float(source_stock.quantity) if source_stock else 0.0
+            
+            if quantity > (available_qty + 1e-9):
+                flash(f'موجودی انبار «{from_wh.name}» برای «{item.name}» کافی نیست. (موجودی: {available_qty:.2f} {item.unit})', 'warning')
+                return redirect(url_for('admin.warehouses_management', warehouse_id=from_wh.id))
+
+            # Update source warehouse stock (pre_production warehouse)
+            if source_stock:
+                source_stock.quantity = max(0.0, source_stock.quantity - quantity)
+                if source_stock.quantity <= 0:
+                    db.session.delete(source_stock)
+            else:
+                flash(f'محصول «{item.name}» در انبار «{from_wh.name}» موجود نیست.', 'warning')
+                return redirect(url_for('admin.warehouses_management', warehouse_id=from_wh.id))
+
+            # Add stock to destination warehouse
+            target_stock = PreProductionStock.query.filter_by(
+                pre_production_item_id=item.id,
+                warehouse_id=to_wh.id
+            ).first()
+            
+            if target_stock:
+                target_stock.quantity += quantity
+            else:
+                target_stock = PreProductionStock(
+                    pre_production_item_id=item.id,
+                    warehouse_id=to_wh.id,
+                    quantity=quantity,
+                    unit=item.unit
+                )
+                db.session.add(target_stock)
+
+            # Record the transfer
+            if not note:
+                note = f'انتقال {quantity} {item.unit} {item.name} از {from_wh.name} به {to_wh.name}'
+            
+            transfer_record = PreProductionTransfer(
+                pre_production_item_id=item.id,
+                from_warehouse_id=from_wh.id,
+                to_warehouse_id=to_wh.id,
+                quantity=quantity,
+                unit=item.unit,
+                transfer_date=transfer_date,
+                note=note,
+                user_id=getattr(current_user, 'id', None)
+            )
+            db.session.add(transfer_record)
+
+            try:
+                db.session.commit()
+                flash(f'انتقال {quantity} {item.unit} {item.name} با موفقیت ثبت شد. موجودی در انبار «{to_wh.name}» اضافه شد.', 'success')
+            except Exception as exc:
+                db.session.rollback()
+                flash(f'خطا در ثبت انتقال: {exc}', 'danger')
+
+            return redirect(url_for('admin.warehouses_management', warehouse_id=to_wh.id))
+        else:
+            flash('انتقال محصولات پیش تولید فقط به/از انبار پیش تولید امکان‌پذیر است.', 'warning')
+            return redirect(url_for('admin.warehouses_management'))
+
+    # Handle raw material transfer (existing logic)
+    if not raw_material_id:
+        flash('ماده اولیه را انتخاب کنید.', 'warning')
+        return redirect(url_for('admin.warehouses_management'))
+
+    try:
+        raw_material_id_int = int(raw_material_id)
+    except (TypeError, ValueError):
+        flash('ماده اولیه نامعتبر است.', 'warning')
+        return redirect(url_for('admin.warehouses_management'))
+
+    # برای مواد اولیه:
+    # - انتقال به انبار مرکزی: از هر انباری مجاز است
+    # - انتقال به انبار ضایعات: از هر انباری مجاز است
+    # - انتقال به سایر انبارها: فقط از انبار مرکزی مجاز است
+    if transfer_type == 'raw_material':
+        waste_wh = get_waste_warehouse()
+        # اگر مقصد انبار مرکزی یا انبار ضایعات نیست، فقط از انبار مرکزی می‌توان انتقال داد
+        if central_wh and to_id_int != central_wh.id and (not waste_wh or to_id_int != waste_wh.id):
+            if from_id_int != central_wh.id:
+                flash('انتقال مواد اولیه به این انبار فقط از انبار مرکزی امکان‌پذیر است.', 'warning')
+                return redirect(url_for('admin.warehouses_management'))
+
+    rm = RawMaterial.query.get(raw_material_id_int)
+    if not rm:
+        flash('ماده اولیه یافت نشد.', 'warning')
         return redirect(url_for('admin.warehouses_management'))
 
     if not unit:
@@ -727,6 +1016,40 @@ def create_warehouse_transfer():
         flash(f'خطا در ثبت انتقال: {exc}', 'danger')
 
     return redirect(url_for('admin.warehouses_management', warehouse_id=to_wh.id))
+
+
+@admin_bp.route('/warehouses/stock-check', methods=['GET'])
+@login_required
+def check_warehouse_stock():
+    """بررسی موجودی ماده اولیه در یک انبار خاص"""
+    raw_material_id = request.args.get('raw_material_id')
+    warehouse_id = request.args.get('warehouse_id')
+    
+    if not raw_material_id or not warehouse_id:
+        return jsonify({'status': 'error', 'message': 'ماده اولیه و انبار را انتخاب کنید.'}), 400
+    
+    try:
+        raw_material_id_int = int(raw_material_id)
+        warehouse_id_int = int(warehouse_id)
+    except (TypeError, ValueError):
+        return jsonify({'status': 'error', 'message': 'شناسه نامعتبر است.'}), 400
+    
+    raw_material = RawMaterial.query.get(raw_material_id_int)
+    warehouse = Warehouse.query.get(warehouse_id_int)
+    
+    if not raw_material or not warehouse:
+        return jsonify({'status': 'error', 'message': 'ماده اولیه یا انبار یافت نشد.'}), 404
+    
+    stock = compute_warehouse_stock_for_material(raw_material, warehouse)
+    
+    return jsonify({
+        'status': 'success',
+        'stock': stock,
+        'unit': raw_material.default_unit,
+        'material_name': raw_material.name,
+        'warehouse_name': warehouse.name
+    })
+
 
 # --- عملیات پرداخت سفارش ---
 @admin_bp.route('/orders/<int:order_id>/pay', methods=['POST'])
@@ -1281,6 +1604,7 @@ def update_raw_material(material_id):
     name = (data.get('name') or '').strip()
     default_unit = (data.get('unit') or 'gr').strip()
     min_stock = data.get('min_stock')
+    warehouse_id = data.get('warehouse_id')  # Optional: if provided, update warehouse-specific min_stock
     
     if not name:
         return jsonify({'status': 'error', 'message': 'نام ماده اولیه الزامی است.'}), 400
@@ -1298,7 +1622,44 @@ def update_raw_material(material_id):
     
     material.name = name
     material.default_unit = default_unit
-    material.min_stock = min_stock
+    
+    # If warehouse_id is provided, update warehouse-specific min_stock
+    if warehouse_id:
+        try:
+            warehouse_id_int = int(warehouse_id)
+            warehouse = Warehouse.query.get(warehouse_id_int)
+            if warehouse:
+                wmms = WarehouseMaterialMinStock.query.filter_by(
+                    raw_material_id=material_id,
+                    warehouse_id=warehouse_id_int
+                ).first()
+                
+                if min_stock is not None and min_stock > 0:
+                    if wmms:
+                        wmms.min_stock = min_stock
+                        iran_tz = pytz.timezone('Asia/Tehran')
+                        wmms.updated_at = datetime.now(iran_tz)
+                    else:
+                        wmms = WarehouseMaterialMinStock(
+                            raw_material_id=material_id,
+                            warehouse_id=warehouse_id_int,
+                            min_stock=min_stock
+                        )
+                        db.session.add(wmms)
+                else:
+                    # If min_stock is None or 0, delete the warehouse-specific setting
+                    if wmms:
+                        db.session.delete(wmms)
+            else:
+                # If warehouse not found, fall back to global min_stock
+                material.min_stock = min_stock
+        except (TypeError, ValueError):
+            # Invalid warehouse_id, fall back to global min_stock
+            material.min_stock = min_stock
+    else:
+        # No warehouse_id, update global min_stock
+        material.min_stock = min_stock
+    
     db.session.commit()
     
     return jsonify({'status': 'success', 'message': 'ماده اولیه با موفقیت به‌روزرسانی شد.'})
@@ -1531,3 +1892,347 @@ def clear_all_inventory_data():
         db.session.rollback()
         flash(f'خطا در حذف داده‌ها: {str(e)}', 'danger')
         return jsonify({'status': 'error', 'message': f'خطا در حذف داده‌ها: {str(e)}'}), 500
+
+
+# ========== محصولات پیش تولید ==========
+
+@admin_bp.route('/pre-production/items', methods=['GET'])
+@login_required
+def list_pre_production_items():
+    """لیست محصولات پیش تولید"""
+    items = PreProductionItem.query.filter_by(is_active=True).order_by(PreProductionItem.name.asc()).all()
+    result = []
+    for item in items:
+        materials = []
+        for mat in item.materials:
+            materials.append({
+                'id': mat.id,
+                'raw_material_id': mat.raw_material_id,
+                'raw_material_name': mat.raw_material.name if mat.raw_material else '',
+                'quantity': mat.quantity,
+                'unit': mat.unit
+            })
+        # Stock is warehouse-specific, but for API we return stock from pre_production warehouse
+        pre_production_wh = Warehouse.query.filter_by(code='pre_production').first()
+        stock = None
+        if pre_production_wh:
+            stock = PreProductionStock.query.filter_by(
+                pre_production_item_id=item.id,
+                warehouse_id=pre_production_wh.id
+            ).first()
+        result.append({
+            'id': item.id,
+            'name': item.name,
+            'code': item.code,
+            'description': item.description,
+            'unit': item.unit,
+            'materials': materials,
+            'stock_quantity': float(stock.quantity) if stock else 0.0,
+            'stock_unit': stock.unit if stock else item.unit
+        })
+    return jsonify({'status': 'success', 'items': result})
+
+
+@admin_bp.route('/pre-production/items', methods=['POST'])
+@login_required
+def create_pre_production_item():
+    """ایجاد محصول پیش تولید جدید"""
+    data = request.get_json() or {}
+    name = (data.get('name') or '').strip()
+    code = (data.get('code') or '').strip() or None
+    description = (data.get('description') or '').strip() or None
+    unit = (data.get('unit') or 'عدد').strip()
+    materials = data.get('materials', [])
+
+    if not name:
+        return jsonify({'status': 'error', 'message': 'نام محصول الزامی است.'}), 400
+
+    # بررسی تکراری نبودن نام
+    existing = PreProductionItem.query.filter_by(name=name).first()
+    if existing:
+        return jsonify({'status': 'error', 'message': 'محصولی با این نام از قبل وجود دارد.'}), 400
+
+    # بررسی تکراری نبودن کد
+    if code:
+        existing_code = PreProductionItem.query.filter_by(code=code).first()
+        if existing_code:
+            return jsonify({'status': 'error', 'message': 'محصولی با این کد از قبل وجود دارد.'}), 400
+
+    item = PreProductionItem(
+        name=name,
+        code=code,
+        description=description,
+        unit=unit,
+        is_active=True
+    )
+    db.session.add(item)
+    db.session.flush()  # برای گرفتن ID
+
+    # اضافه کردن مواد اولیه
+    for mat_data in materials:
+        raw_material_id = mat_data.get('raw_material_id')
+        quantity = float(mat_data.get('quantity', 0))
+        mat_unit = (mat_data.get('unit') or '').strip()
+
+        if not raw_material_id or quantity <= 0:
+            continue
+
+        raw_material = RawMaterial.query.get(raw_material_id)
+        if not raw_material:
+            continue
+
+        if not mat_unit:
+            mat_unit = raw_material.default_unit
+
+        item_material = PreProductionItemMaterial(
+            pre_production_item_id=item.id,
+            raw_material_id=raw_material_id,
+            quantity=quantity,
+            unit=mat_unit
+        )
+        db.session.add(item_material)
+
+    # ایجاد موجودی اولیه (صفر)
+    stock = PreProductionStock(
+        pre_production_item_id=item.id,
+        quantity=0.0,
+        unit=unit
+    )
+    db.session.add(stock)
+
+    try:
+        db.session.commit()
+        return jsonify({'status': 'success', 'message': f'محصول «{name}» با موفقیت ثبت شد.', 'item_id': item.id})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': f'خطا در ثبت محصول: {str(e)}'}), 500
+
+
+@admin_bp.route('/pre-production/items/<int:item_id>', methods=['GET'])
+@login_required
+def get_pre_production_item(item_id):
+    """دریافت یک محصول پیش تولید"""
+    item = PreProductionItem.query.get_or_404(item_id)
+    materials = []
+    for mat in item.materials:
+        materials.append({
+            'id': mat.id,
+            'raw_material_id': mat.raw_material_id,
+            'raw_material_name': mat.raw_material.name if mat.raw_material else '',
+            'quantity': float(mat.quantity),
+            'unit': mat.unit
+        })
+    
+    return jsonify({
+        'status': 'success',
+        'item': {
+            'id': item.id,
+            'name': item.name,
+            'code': item.code,
+            'description': item.description,
+            'unit': item.unit,
+            'materials': materials
+        }
+    })
+
+
+@admin_bp.route('/pre-production/items/<int:item_id>', methods=['PUT'])
+@login_required
+def update_pre_production_item(item_id):
+    """ویرایش محصول پیش تولید"""
+    item = PreProductionItem.query.get_or_404(item_id)
+    data = request.get_json() or {}
+    name = (data.get('name') or '').strip()
+    code = (data.get('code') or '').strip() or None
+    description = (data.get('description') or '').strip() or None
+    unit = (data.get('unit') or item.unit).strip()
+    materials = data.get('materials', [])
+
+    if not name:
+        return jsonify({'status': 'error', 'message': 'نام محصول الزامی است.'}), 400
+
+    # بررسی تکراری نبودن نام
+    existing = PreProductionItem.query.filter(PreProductionItem.name == name, PreProductionItem.id != item_id).first()
+    if existing:
+        return jsonify({'status': 'error', 'message': 'محصولی با این نام از قبل وجود دارد.'}), 400
+
+    # بررسی تکراری نبودن کد
+    if code:
+        existing_code = PreProductionItem.query.filter(PreProductionItem.code == code, PreProductionItem.id != item_id).first()
+        if existing_code:
+            return jsonify({'status': 'error', 'message': 'محصولی با این کد از قبل وجود دارد.'}), 400
+
+    item.name = name
+    item.code = code
+    item.description = description
+    item.unit = unit
+
+    # حذف مواد اولیه قدیمی
+    PreProductionItemMaterial.query.filter_by(pre_production_item_id=item.id).delete()
+
+    # اضافه کردن مواد اولیه جدید
+    for mat_data in materials:
+        raw_material_id = mat_data.get('raw_material_id')
+        quantity = float(mat_data.get('quantity', 0))
+        mat_unit = (mat_data.get('unit') or '').strip()
+
+        if not raw_material_id or quantity <= 0:
+            continue
+
+        raw_material = RawMaterial.query.get(raw_material_id)
+        if not raw_material:
+            continue
+
+        if not mat_unit:
+            mat_unit = raw_material.default_unit
+
+        item_material = PreProductionItemMaterial(
+            pre_production_item_id=item.id,
+            raw_material_id=raw_material_id,
+            quantity=quantity,
+            unit=mat_unit
+        )
+        db.session.add(item_material)
+
+    try:
+        db.session.commit()
+        return jsonify({'status': 'success', 'message': f'محصول «{name}» با موفقیت به‌روزرسانی شد.'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': f'خطا در به‌روزرسانی محصول: {str(e)}'}), 500
+
+
+@admin_bp.route('/pre-production/items/<int:item_id>', methods=['DELETE'])
+@login_required
+def delete_pre_production_item(item_id):
+    """حذف محصول پیش تولید"""
+    item = PreProductionItem.query.get_or_404(item_id)
+    name = item.name
+    
+    # حذف موجودی از همه انبارها
+    PreProductionStock.query.filter_by(pre_production_item_id=item.id).delete()
+    
+    # حذف محصول (مواد اولیه به صورت cascade حذف می‌شوند)
+    db.session.delete(item)
+    
+    try:
+        db.session.commit()
+        return jsonify({'status': 'success', 'message': f'محصول «{name}» با موفقیت حذف شد.'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': f'خطا در حذف محصول: {str(e)}'}), 500
+
+
+@admin_bp.route('/pre-production/produce', methods=['POST'])
+@login_required
+def produce_pre_production_item():
+    """تولید محصول پیش تولید - مواد اولیه از انبار منبع کم می‌شود و محصول به انبار پیش تولید اضافه می‌شود"""
+    data = request.get_json() or {}
+    item_id = data.get('item_id')
+    source_warehouse_id = data.get('source_warehouse_id')
+    quantity = float(data.get('quantity', 0))
+    production_date_str = data.get('production_date')
+    note = (data.get('note') or '').strip() or None
+
+    if not item_id or not source_warehouse_id or quantity <= 0:
+        return jsonify({'status': 'error', 'message': 'اطلاعات ناقص است.'}), 400
+
+    item = PreProductionItem.query.get(item_id)
+    if not item:
+        return jsonify({'status': 'error', 'message': 'محصول یافت نشد.'}), 404
+
+    source_warehouse = Warehouse.query.get(source_warehouse_id)
+    if not source_warehouse:
+        return jsonify({'status': 'error', 'message': 'انبار منبع یافت نشد.'}), 404
+
+    pre_production_warehouse = Warehouse.query.filter_by(code='pre_production').first()
+    if not pre_production_warehouse:
+        return jsonify({'status': 'error', 'message': 'انبار پیش تولید یافت نشد.'}), 404
+
+    # بررسی موجودی مواد اولیه در انبار منبع
+    from utils.helpers import parse_jalali_date
+    production_date = parse_jalali_date(production_date_str) if production_date_str else date.today()
+    
+    insufficient_materials = []
+    transfers_to_create = []
+
+    for item_material in item.materials:
+        raw_material = item_material.raw_material
+        if not raw_material:
+            continue
+
+        # مقدار مورد نیاز برای تولید
+        required_qty = item_material.quantity * quantity
+        required_unit = item_material.unit
+
+        # تبدیل به واحد پایه
+        required_base_qty = convert_unit(required_qty, required_unit, raw_material.default_unit)
+
+        # بررسی موجودی در انبار منبع
+        available = compute_warehouse_stock_for_material(raw_material, source_warehouse, end_date=production_date)
+        
+        if required_base_qty > (available + 1e-9):
+            insufficient_materials.append({
+                'material': raw_material.name,
+                'required': f'{required_qty:.2f} {required_unit}',
+                'available': f'{available:.2f} {raw_material.default_unit}'
+            })
+        else:
+            # ایجاد انتقال از انبار منبع به انبار پیش تولید
+            transfer = WarehouseTransfer(
+                raw_material_id=raw_material.id,
+                from_warehouse_id=source_warehouse.id,
+                to_warehouse_id=pre_production_warehouse.id,
+                quantity=required_qty,
+                unit=required_unit,
+                base_quantity=required_base_qty,
+                transfer_date=production_date,
+                note=f'تولید {quantity} {item.unit} {item.name}',
+                user_id=getattr(current_user, 'id', None)
+            )
+            transfers_to_create.append(transfer)
+
+    if insufficient_materials:
+        materials_list = ', '.join([f"{m['material']} (نیاز: {m['required']}, موجود: {m['available']})" for m in insufficient_materials])
+        return jsonify({'status': 'error', 'message': f'موجودی کافی نیست: {materials_list}'}), 400
+
+    # ثبت تمام انتقال‌ها
+    for transfer in transfers_to_create:
+        db.session.add(transfer)
+
+    # ثبت تولید
+    production = PreProductionProduction(
+        pre_production_item_id=item.id,
+        source_warehouse_id=source_warehouse.id,
+        quantity=quantity,
+        unit=item.unit,
+        production_date=production_date,
+        note=note,
+        user_id=getattr(current_user, 'id', None)
+    )
+    db.session.add(production)
+
+    # به‌روزرسانی موجودی محصول در انبار پیش تولید
+    pre_production_wh = Warehouse.query.filter_by(code='pre_production').first()
+    if pre_production_wh:
+        stock = PreProductionStock.query.filter_by(
+            pre_production_item_id=item.id,
+            warehouse_id=pre_production_wh.id
+        ).first()
+        if stock:
+            stock.quantity += quantity
+        else:
+            stock = PreProductionStock(
+                pre_production_item_id=item.id,
+                warehouse_id=pre_production_wh.id,
+                quantity=quantity,
+                unit=item.unit
+            )
+        db.session.add(stock)
+
+    try:
+        db.session.commit()
+        return jsonify({'status': 'success', 'message': f'{quantity} {item.unit} «{item.name}» با موفقیت تولید شد.'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': f'خطا در تولید محصول: {str(e)}'}), 500

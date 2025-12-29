@@ -635,6 +635,125 @@ def checkout_table(table_id):
     })
 
 # --- تابع کمکی برای به‌روزرسانی مبلغ کل میز ---
+@table_bp.route('/list', methods=['GET'])
+@login_required
+def list_tables():
+    """دریافت لیست تمام میزها"""
+    tables = Table.query.order_by(Table.number).all()
+    tables_data = []
+    for table in tables:
+        tables_data.append({
+            'id': table.id,
+            'number': table.number,
+            'status': table.status,
+            'area_name': table.area.name if table.area else 'بدون دسته‌بندی'
+        })
+    return jsonify({'success': True, 'tables': tables_data})
+
+
+@table_bp.route('/<int:table_id>/transfer', methods=['POST'])
+@login_required
+def transfer_table(table_id):
+    """انتقال تمام سفارش‌های یک میز به میز دیگر"""
+    try:
+        source_table = Table.query.get_or_404(table_id)
+        data = request.get_json()
+        target_table_id = data.get('target_table_id')
+        
+        if not target_table_id:
+            return jsonify({'success': False, 'message': 'لطفاً میز مقصد را انتخاب کنید.'}), 400
+        
+        target_table = Table.query.get_or_404(target_table_id)
+        
+        if source_table.id == target_table.id:
+            return jsonify({'success': False, 'message': 'نمی‌توانید میز را به خودش منتقل کنید.'}), 400
+        
+        # بررسی اینکه میز مقصد خالی باشد یا نه (اگر سفارش ثبت شده داشته باشد)
+        if target_table.order_id and target_table.status == 'اشغال شده':
+            return jsonify({'success': False, 'message': f'میز {target_table.number} در حال استفاده است. لطفاً ابتدا آن را تسویه کنید.'}), 400
+        
+        # انتقال TableItem ها (اگر سفارش ثبت نشده باشد)
+        if not source_table.order_id:
+            table_items = TableItem.query.filter_by(table_id=source_table.id).all()
+            if table_items:
+                # اگر میز مقصد هم TableItem دارد، آنها را هم اضافه می‌کنیم
+                for item in table_items:
+                    item.table_id = target_table_id
+                
+                # به‌روزرسانی اطلاعات میز مقصد
+                if source_table.customer_name:
+                    target_table.customer_name = source_table.customer_name
+                if source_table.customer_phone:
+                    target_table.customer_phone = source_table.customer_phone
+                if source_table.started_at:
+                    target_table.started_at = source_table.started_at
+                
+                # محاسبه مجدد مجموع میز مقصد
+                update_table_totals(target_table)
+                
+                # پاک کردن اطلاعات میز مبدا
+                source_table.customer_name = None
+                source_table.customer_phone = None
+                source_table.started_at = None
+                source_table.total_amount = 0
+                source_table.discount = 0
+                source_table.tax_amount = 0
+                source_table.final_amount = 0
+                source_table.status = 'خالی'
+                
+                # به‌روزرسانی وضعیت میز مقصد
+                target_table.status = 'اشغال شده'
+        
+        # انتقال Order (اگر سفارش ثبت شده باشد)
+        elif source_table.order_id:
+            order = Order.query.get(source_table.order_id)
+            if order:
+                # تغییر table_id در Order
+                order.table_id = target_table_id
+                
+                # به‌روزرسانی order_id در میزها
+                target_table.order_id = source_table.order_id
+                source_table.order_id = None
+                
+                # به‌روزرسانی وضعیت میزها
+                target_table.status = 'اشغال شده'
+                source_table.status = 'خالی'
+                
+                # به‌روزرسانی اطلاعات میز مقصد
+                if source_table.customer_name:
+                    target_table.customer_name = source_table.customer_name
+                if source_table.customer_phone:
+                    target_table.customer_phone = source_table.customer_phone
+                if source_table.started_at:
+                    target_table.started_at = source_table.started_at
+                
+                # استفاده از مقادیر Order برای میز مقصد
+                target_table.total_amount = order.total_amount
+                target_table.discount = order.discount
+                target_table.tax_amount = order.tax_amount
+                target_table.final_amount = order.final_amount
+                
+                # پاک کردن اطلاعات میز مبدا
+                source_table.customer_name = None
+                source_table.customer_phone = None
+                source_table.started_at = None
+                source_table.total_amount = 0
+                source_table.discount = 0
+                source_table.tax_amount = 0
+                source_table.final_amount = 0
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'سفارش‌های میز {source_table.number} با موفقیت به میز {target_table.number} منتقل شد.'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'خطا در انتقال میز: {str(e)}'}), 500
+
+
 def update_table_totals(table):
     table_items = TableItem.query.filter_by(table_id=table.id).all()
     settings = Settings.query.first()

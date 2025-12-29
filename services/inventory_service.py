@@ -42,51 +42,70 @@ def calculate_material_stock_for_period(
             
             opening[m.id] = max(0.0, stock_before)
         else:
-            # اگر start_date مشخص نیست، از current_stock استفاده می‌کنیم
-            opening[m.id] = float(getattr(m, "current_stock", 0) or 0)
+            # اگر start_date مشخص نیست، موجودی را از تمام خریدها و مصرف‌ها محاسبه می‌کنیم
+            # (نه از current_stock که ممکن است به‌روز نباشد)
+            purchases_all = MaterialPurchase.query.filter(
+                MaterialPurchase.raw_material_id == m.id
+            ).all()
+            
+            usages_all = RawMaterialUsage.query.filter(
+                RawMaterialUsage.raw_material_id == m.id
+            ).all()
+            
+            base_unit = m.default_unit
+            stock_calculated = 0.0
+            for p in purchases_all:
+                stock_calculated += convert_unit(p.quantity, p.unit, base_unit)
+            for u in usages_all:
+                stock_calculated -= convert_unit(u.quantity, u.unit, base_unit)
+            
+            opening[m.id] = max(0.0, stock_calculated)
 
     # ۲) تغییرات موجودی در بازه را بر اساس خریدها حساب کن
+    # فقط اگر start_date مشخص باشد، باید تغییرات را محاسبه کنیم
+    # در غیر این صورت، opening قبلاً شامل تمام خریدهاست
     delta = defaultdict(float)
     
-    for p in purchases:
-        rm_id = p.raw_material_id
-        if not rm_id:
-            continue
-        raw_material = next((m for m in raw_materials if m.id == rm_id), None)
-        if not raw_material:
-            continue
-        
-        qty = float(getattr(p, "quantity", 0) or 0)
-        base_unit = raw_material.default_unit
-        converted_qty = convert_unit(qty, p.unit, base_unit)
-        delta[rm_id] += converted_qty
-
-    # ۳) مصرف در سفارش‌ها/رسپی‌ها را هم در همین بازه کم کن
-    usages_query = RawMaterialUsage.query
-    
     if start_date:
+        # فقط اگر start_date مشخص باشد، تغییرات در بازه را محاسبه می‌کنیم
+        for p in purchases:
+            rm_id = p.raw_material_id
+            if not rm_id:
+                continue
+            raw_material = next((m for m in raw_materials if m.id == rm_id), None)
+            if not raw_material:
+                continue
+            
+            qty = float(getattr(p, "quantity", 0) or 0)
+            base_unit = raw_material.default_unit
+            converted_qty = convert_unit(qty, p.unit, base_unit)
+            delta[rm_id] += converted_qty
+
+        # ۳) مصرف در سفارش‌ها/رسپی‌ها را هم در همین بازه کم کن
+        usages_query = RawMaterialUsage.query
+        
         usages_query = usages_query.filter(
             cast(RawMaterialUsage.created_at, Date) >= start_date
         )
-    if end_date:
-        usages_query = usages_query.filter(
-            cast(RawMaterialUsage.created_at, Date) <= end_date
-        )
-    
-    usages_in_period = usages_query.all()
-    
-    for usage in usages_in_period:
-        rm_id = usage.raw_material_id
-        if not rm_id:
-            continue
-        raw_material = next((m for m in raw_materials if m.id == rm_id), None)
-        if not raw_material:
-            continue
+        if end_date:
+            usages_query = usages_query.filter(
+                cast(RawMaterialUsage.created_at, Date) <= end_date
+            )
         
-        qty = float(getattr(usage, "quantity", 0) or 0)
-        base_unit = raw_material.default_unit
-        converted_qty = convert_unit(qty, usage.unit, base_unit)
-        delta[rm_id] -= converted_qty
+        usages_in_period = usages_query.all()
+        
+        for usage in usages_in_period:
+            rm_id = usage.raw_material_id
+            if not rm_id:
+                continue
+            raw_material = next((m for m in raw_materials if m.id == rm_id), None)
+            if not raw_material:
+                continue
+            
+            qty = float(getattr(usage, "quantity", 0) or 0)
+            base_unit = raw_material.default_unit
+            converted_qty = convert_unit(qty, usage.unit, base_unit)
+            delta[rm_id] -= converted_qty
 
     # محاسبه نتیجه نهایی
     result = {}

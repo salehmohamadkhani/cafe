@@ -67,6 +67,63 @@ def create_app(config_class=Config):
             if 'raw_material_id' not in material_columns:
                 with engine.begin() as conn:
                     conn.execute(text('ALTER TABLE "menu_item_material" ADD COLUMN raw_material_id INTEGER REFERENCES raw_material(id)'))
+        # Create warehouse_material_min_stock table if it doesn't exist
+        if 'warehouse_material_min_stock' not in existing_tables:
+            with engine.begin() as conn:
+                conn.execute(text('''
+                    CREATE TABLE warehouse_material_min_stock (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        raw_material_id INTEGER NOT NULL,
+                        warehouse_id INTEGER NOT NULL,
+                        min_stock REAL NOT NULL DEFAULT 0.0,
+                        created_at DATETIME,
+                        updated_at DATETIME,
+                        FOREIGN KEY (raw_material_id) REFERENCES raw_material(id),
+                        FOREIGN KEY (warehouse_id) REFERENCES warehouse(id),
+                        UNIQUE(raw_material_id, warehouse_id)
+                    )
+                '''))
+        # Migrate pre_production_stock table to add warehouse_id
+        if 'pre_production_stock' in existing_tables:
+            pre_production_stock_columns = {col['name'] for col in inspector.get_columns('pre_production_stock')}
+            if 'warehouse_id' not in pre_production_stock_columns:
+                # Get pre_production warehouse ID
+                with engine.begin() as conn:
+                    # First, add the warehouse_id column (nullable initially)
+                    conn.execute(text('ALTER TABLE pre_production_stock ADD COLUMN warehouse_id INTEGER'))
+                    # Get pre_production warehouse ID
+                    result = conn.execute(text('SELECT id FROM warehouse WHERE code = :code'), {'code': 'pre_production'})
+                    pre_prod_wh_row = result.fetchone()
+                    if pre_prod_wh_row:
+                        pre_prod_wh_id = pre_prod_wh_row[0]
+                        # Update all existing records to point to pre_production warehouse
+                        conn.execute(text('UPDATE pre_production_stock SET warehouse_id = :wh_id WHERE warehouse_id IS NULL'), {'wh_id': pre_prod_wh_id})
+                    # Make warehouse_id NOT NULL and add foreign key
+                    # SQLite doesn't support ALTER COLUMN, so we need to recreate the table
+                    conn.execute(text('''
+                        CREATE TABLE pre_production_stock_new (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            pre_production_item_id INTEGER NOT NULL,
+                            warehouse_id INTEGER NOT NULL,
+                            quantity REAL NOT NULL DEFAULT 0.0,
+                            unit VARCHAR(32) NOT NULL DEFAULT 'عدد',
+                            created_at DATETIME,
+                            updated_at DATETIME,
+                            FOREIGN KEY (pre_production_item_id) REFERENCES pre_production_item(id),
+                            FOREIGN KEY (warehouse_id) REFERENCES warehouse(id),
+                            UNIQUE(pre_production_item_id, warehouse_id)
+                        )
+                    '''))
+                    # Copy data
+                    conn.execute(text('''
+                        INSERT INTO pre_production_stock_new 
+                        (id, pre_production_item_id, warehouse_id, quantity, unit, created_at, updated_at)
+                        SELECT id, pre_production_item_id, warehouse_id, quantity, unit, created_at, updated_at
+                        FROM pre_production_stock
+                    '''))
+                    # Drop old table and rename new one
+                    conn.execute(text('DROP TABLE pre_production_stock'))
+                    conn.execute(text('ALTER TABLE pre_production_stock_new RENAME TO pre_production_stock'))
         if 'order' in existing_tables:
             order_columns = {col['name'] for col in inspector.get_columns('order')}
             if 'daily_sequence' not in order_columns:
@@ -90,6 +147,9 @@ def create_app(config_class=Config):
             if 'unit' not in material_columns:
                 with engine.begin() as conn:
                     conn.execute(text('ALTER TABLE "menu_item_material" ADD COLUMN unit VARCHAR(32) DEFAULT \'عدد\''))
+            if 'pre_production_item_id' not in material_columns:
+                with engine.begin() as conn:
+                    conn.execute(text('ALTER TABLE "menu_item_material" ADD COLUMN pre_production_item_id INTEGER REFERENCES pre_production_item(id)'))
         if 'raw_material' in inspector.get_table_names():
             raw_material_columns = {col['name'] for col in inspector.get_columns('raw_material')}
             if 'min_stock' not in raw_material_columns:

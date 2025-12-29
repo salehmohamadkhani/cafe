@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, abort
-from models.models import db, Category, MenuItem, MenuItemMaterial, RawMaterial, MaterialPurchase, Order, OrderItem, CostFormulaSettings
+from models.models import db, Category, MenuItem, MenuItemMaterial, RawMaterial, MaterialPurchase, Order, OrderItem, CostFormulaSettings, PreProductionItem
 from flask_login import login_required
 from sqlalchemy import func, or_
 from datetime import datetime, timedelta
@@ -609,6 +609,8 @@ def get_menu_item_materials(item_id):
             'raw_material_id': material.raw_material_id,
             'raw_material_name': material.raw_material.name if material.raw_material else None,
             'raw_material_unit_display': normalize_unit(material.raw_material.default_unit) if material.raw_material else None,
+            'pre_production_item_id': material.pre_production_item_id,
+            'pre_production_item_name': material.pre_production_item.name if material.pre_production_item else None,
             'latest_unit_price': material.latest_unit_price,
             'estimated_cost': material.estimated_cost
         })
@@ -622,7 +624,24 @@ def get_menu_item_materials(item_id):
             'latest_unit_price': rm.latest_unit_price
         } for rm in raw_materials
     ]
-    return jsonify({'status': 'success', 'materials': materials, 'units': MATERIAL_UNITS, 'raw_materials': raw_material_options})
+    # Get pre-production items
+    pre_production_items = PreProductionItem.query.filter_by(is_active=True).order_by(PreProductionItem.name.asc()).all()
+    pre_production_options = [
+        {
+            'id': item.id,
+            'name': item.name,
+            'unit': item.unit,
+            'unit_display': normalize_unit(item.unit)
+        } for item in pre_production_items
+    ]
+    
+    return jsonify({
+        'status': 'success',
+        'materials': materials,
+        'units': MATERIAL_UNITS,
+        'raw_materials': raw_material_options,
+        'pre_production_items': pre_production_options
+    })
 
 
 @menu_bp.route('/menu/item/<int:item_id>/materials', methods=['POST'])
@@ -632,17 +651,29 @@ def create_menu_item_material(item_id):
     data = request.get_json() or {}
     quantity = (data.get('quantity') or '').strip()
     raw_material_id = data.get('raw_material_id')
+    pre_production_item_id = data.get('pre_production_item_id')
 
-    if not raw_material_id:
-        return jsonify({'status': 'error', 'message': 'انتخاب ماده اولیه الزامی است.'}), 400
+    # باید یا ماده اولیه یا محصول پیش تولید انتخاب شده باشد
+    if not raw_material_id and not pre_production_item_id:
+        return jsonify({'status': 'error', 'message': 'انتخاب ماده اولیه یا محصول پیش تولید الزامی است.'}), 400
 
-    raw_material = RawMaterial.query.get(raw_material_id)
-    if not raw_material:
-        return jsonify({'status': 'error', 'message': 'ماده اولیه انتخاب شده یافت نشد.'}), 404
+    name = None
+    unit = None
+    raw_material = None
+    pre_production_item = None
 
-    name = raw_material.name
-
-    unit = normalize_unit(data.get('unit') or raw_material.default_unit or MATERIAL_UNITS[0])
+    if raw_material_id:
+        raw_material = RawMaterial.query.get(raw_material_id)
+        if not raw_material:
+            return jsonify({'status': 'error', 'message': 'ماده اولیه انتخاب شده یافت نشد.'}), 404
+        name = raw_material.name
+        unit = normalize_unit(data.get('unit') or raw_material.default_unit or MATERIAL_UNITS[0])
+    elif pre_production_item_id:
+        pre_production_item = PreProductionItem.query.get(pre_production_item_id)
+        if not pre_production_item:
+            return jsonify({'status': 'error', 'message': 'محصول پیش تولید انتخاب شده یافت نشد.'}), 404
+        name = pre_production_item.name
+        unit = normalize_unit(data.get('unit') or pre_production_item.unit or MATERIAL_UNITS[0])
 
     if unit not in MATERIAL_UNITS:
         unit = MATERIAL_UNITS[0]
@@ -655,7 +686,8 @@ def create_menu_item_material(item_id):
         name=name,
         quantity=quantity,
         unit=unit,
-        raw_material=raw_material
+        raw_material=raw_material,
+        pre_production_item=pre_production_item
     )
     db.session.add(material)
     db.session.commit()

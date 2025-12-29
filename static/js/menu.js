@@ -19,13 +19,20 @@ document.addEventListener('DOMContentLoaded', function () {
     const materialRawDropdown = document.getElementById('material-raw-dropdown');
     const materialRawAutocomplete = document.getElementById('material-raw-autocomplete');
     const materialRawIdInput = document.getElementById('material-raw-id');
+    const materialPreProductionInput = document.getElementById('material-pre-production-input');
+    const materialPreProductionDropdown = document.getElementById('material-pre-production-dropdown');
+    const materialPreProductionAutocomplete = document.getElementById('material-pre-production-autocomplete');
+    const materialPreProductionIdInput = document.getElementById('material-pre-production-id');
     const materialUnitBadge = document.getElementById('material-unit-badge');
     const materialsSummaryCount = document.getElementById('materials-summary-count');
     let activeMaterialsItemId = null;
     let rawMaterialsCache = [];
+    let preProductionItemsCache = [];
     let availableRawMaterials = [];
     let rawDropdownActiveIndex = -1;
     let rawDropdownItems = [];
+    let preProductionDropdownActiveIndex = -1;
+    let preProductionDropdownItems = [];
 
     // باز کردن مودال برای افزودن
     if (addNewItemBtn) {
@@ -203,18 +210,52 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             const rawMaterialId = materialRawIdInput ? materialRawIdInput.value : '';
-            const selectedMaterial = rawMaterialsCache.find(rm => String(rm.id) === String(rawMaterialId));
-            if (!selectedMaterial) {
-                alert('لطفاً ماده اولیه معتبری را انتخاب کنید.');
-                if (materialRawInput) materialRawInput.focus();
+            const preProductionItemId = materialPreProductionIdInput ? materialPreProductionIdInput.value : '';
+            
+            if (!rawMaterialId && !preProductionItemId) {
+                alert('لطفاً ماده اولیه یا محصول پیش تولید را انتخاب کنید.');
                 return;
             }
 
-            const name = selectedMaterial.name.trim();
-            const quantity = materialQuantityInput.value.trim();
+            let name = '';
+            let unit = 'عدد';
+            let payload = {};
 
+            if (rawMaterialId) {
+                const selectedMaterial = rawMaterialsCache.find(rm => String(rm.id) === String(rawMaterialId));
+                if (!selectedMaterial) {
+                    alert('لطفاً ماده اولیه معتبری را انتخاب کنید.');
+                    if (materialRawInput) materialRawInput.focus();
+                    return;
+                }
+                name = selectedMaterial.name.trim();
+                unit = selectedMaterial.default_unit || 'عدد';
+                payload = {
+                    name,
+                    quantity: materialQuantityInput.value.trim(),
+                    unit: unit,
+                    raw_material_id: parseInt(selectedMaterial.id, 10)
+                };
+            } else if (preProductionItemId) {
+                const selectedItem = preProductionItemsCache.find(item => String(item.id) === String(preProductionItemId));
+                if (!selectedItem) {
+                    alert('لطفاً محصول پیش تولید معتبری را انتخاب کنید.');
+                    if (materialPreProductionInput) materialPreProductionInput.focus();
+                    return;
+                }
+                name = selectedItem.name.trim();
+                unit = selectedItem.unit || 'عدد';
+                payload = {
+                    name,
+                    quantity: materialQuantityInput.value.trim(),
+                    unit: unit,
+                    pre_production_item_id: parseInt(selectedItem.id, 10)
+                };
+            }
+
+            const quantity = materialQuantityInput.value.trim();
             if (!name || !quantity) {
-                alert('لطفاً ماده اولیه و مقدار مصرف را مشخص کنید.');
+                alert('لطفاً ماده اولیه یا محصول پیش تولید و مقدار مصرف را مشخص کنید.');
                 return;
             }
 
@@ -223,15 +264,8 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             if (materialUnitBadge) {
-                materialUnitBadge.textContent = selectedMaterial.default_unit || 'عدد';
+                materialUnitBadge.textContent = unit;
             }
-
-            const payload = {
-                name,
-                quantity,
-                unit: selectedMaterial.default_unit || undefined,
-                raw_material_id: parseInt(selectedMaterial.id, 10)
-            };
 
             fetch(`/menu/item/${activeMaterialsItemId}/materials`, {
                 method: 'POST',
@@ -252,6 +286,12 @@ document.addEventListener('DOMContentLoaded', function () {
                         }
                         if (materialRawIdInput) {
                             materialRawIdInput.value = '';
+                        }
+                        if (materialPreProductionInput) {
+                            materialPreProductionInput.value = '';
+                        }
+                        if (materialPreProductionIdInput) {
+                            materialPreProductionIdInput.value = '';
                         }
                         if (materialNameInput) {
                             materialNameInput.value = '';
@@ -351,6 +391,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (data.status === 'success') {
                     if (data.raw_materials) {
                         setRawMaterialOptions(data.raw_materials);
+                    }
+                    if (data.pre_production_items) {
+                        preProductionItemsCache = Array.isArray(data.pre_production_items) ? data.pre_production_items : [];
                     }
                     renderMaterialsList(data.materials || []);
                 } else {
@@ -547,6 +590,176 @@ document.addEventListener('DOMContentLoaded', function () {
         if (materialRawAutocomplete.contains(e.target)) return;
         closeRawDropdown();
     });
+
+    // Pre-production items dropdown functions
+    function isPreProductionDropdownOpen() {
+        return materialPreProductionDropdown && materialPreProductionDropdown.style.display !== 'none';
+    }
+
+    function openPreProductionDropdown() {
+        if (materialPreProductionDropdown) {
+            materialPreProductionDropdown.style.display = 'block';
+        }
+    }
+
+    function closePreProductionDropdown() {
+        if (materialPreProductionDropdown) {
+            materialPreProductionDropdown.style.display = 'none';
+        }
+        preProductionDropdownActiveIndex = -1;
+    }
+
+    function renderPreProductionDropdown(query = '') {
+        if (!materialPreProductionDropdown) return;
+        const q = query.trim().toLowerCase();
+        const filtered = preProductionItemsCache
+            .filter(item => (item && item.name ? String(item.name).toLowerCase().includes(q) : false))
+            .slice(0, 40);
+
+        preProductionDropdownItems = filtered;
+        preProductionDropdownActiveIndex = filtered.length ? 0 : -1;
+
+        if (filtered.length === 0) {
+            materialPreProductionDropdown.innerHTML = '<div class="ds-autocomplete__option">نتیجه‌ای یافت نشد</div>';
+            return;
+        }
+
+        materialPreProductionDropdown.innerHTML = filtered.map(item => {
+            return `<div class="ds-autocomplete__option" data-id="${item.id}" role="option">${item.name || ''}</div>`;
+        }).join('');
+    }
+
+    function updatePreProductionDropdownActive() {
+        if (!materialPreProductionDropdown) return;
+        const options = materialPreProductionDropdown.querySelectorAll('.ds-autocomplete__option');
+        options.forEach((opt, idx) => {
+            if (idx === preProductionDropdownActiveIndex) {
+                opt.classList.add('active');
+            } else {
+                opt.classList.remove('active');
+            }
+        });
+    }
+
+    function selectPreProductionItemById(id) {
+        const match = preProductionItemsCache.find(item => String(item.id) === String(id));
+        if (!match) return;
+        if (materialPreProductionInput) materialPreProductionInput.value = match.name || '';
+        if (materialPreProductionIdInput) materialPreProductionIdInput.value = match.id;
+        if (materialNameInput) materialNameInput.value = match.name || '';
+        if (materialUnitBadge) materialUnitBadge.textContent = match.unit_display || match.unit || '-';
+        // Clear raw material selection when pre-production item is selected
+        if (materialRawInput) materialRawInput.value = '';
+        if (materialRawIdInput) materialRawIdInput.value = '';
+        closePreProductionDropdown();
+    }
+
+    function syncPreProductionSelection() {
+        if (!materialPreProductionInput) return;
+        const value = materialPreProductionInput.value.trim().toLowerCase();
+        let match = preProductionItemsCache.find(item => (item.name || '').toLowerCase() === value);
+
+        if (!match && value.length > 0) {
+            const partialMatches = preProductionItemsCache.filter(item => (item.name || '').toLowerCase().includes(value));
+            if (partialMatches.length === 1) {
+                match = partialMatches[0];
+                if (materialPreProductionInput) {
+                    materialPreProductionInput.value = partialMatches[0].name || '';
+                }
+            }
+        }
+
+        if (match) {
+            if (materialPreProductionIdInput) {
+                materialPreProductionIdInput.value = match.id;
+            }
+            if (materialNameInput) {
+                materialNameInput.value = match.name;
+            }
+            if (materialUnitBadge) {
+                materialUnitBadge.textContent = match.unit_display || match.unit || '-';
+            }
+            // Clear raw material selection
+            if (materialRawInput) materialRawInput.value = '';
+            if (materialRawIdInput) materialRawIdInput.value = '';
+        } else {
+            if (materialPreProductionIdInput) {
+                materialPreProductionIdInput.value = '';
+            }
+            if (materialNameInput && !materialRawIdInput?.value) {
+                materialNameInput.value = '';
+            }
+            if (materialUnitBadge && !materialRawIdInput?.value) {
+                materialUnitBadge.textContent = '-';
+            }
+        }
+    }
+
+    if (materialPreProductionInput) {
+        materialPreProductionInput.addEventListener('focus', function () {
+            renderPreProductionDropdown(materialPreProductionInput.value);
+            openPreProductionDropdown();
+        });
+        materialPreProductionInput.addEventListener('input', function () {
+            renderPreProductionDropdown(materialPreProductionInput.value);
+            openPreProductionDropdown();
+            syncPreProductionSelection();
+            // Clear raw material selection when typing in pre-production input
+            if (materialRawInput) materialRawInput.value = '';
+            if (materialRawIdInput) materialRawIdInput.value = '';
+        });
+        materialPreProductionInput.addEventListener('change', syncPreProductionSelection);
+        materialPreProductionInput.addEventListener('keydown', function (e) {
+            if (!preProductionDropdownItems || preProductionDropdownItems.length === 0) return;
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (!isPreProductionDropdownOpen()) openPreProductionDropdown();
+                preProductionDropdownActiveIndex = Math.min(preProductionDropdownActiveIndex + 1, preProductionDropdownItems.length - 1);
+                updatePreProductionDropdownActive();
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (!isPreProductionDropdownOpen()) openPreProductionDropdown();
+                preProductionDropdownActiveIndex = Math.max(preProductionDropdownActiveIndex - 1, 0);
+                updatePreProductionDropdownActive();
+            } else if (e.key === 'Enter') {
+                if (!isPreProductionDropdownOpen()) return;
+                e.preventDefault();
+                const current = preProductionDropdownItems[preProductionDropdownActiveIndex];
+                if (current && current.id != null) {
+                    selectPreProductionItemById(current.id);
+                }
+            } else if (e.key === 'Escape') {
+                closePreProductionDropdown();
+            }
+        });
+    }
+
+    if (materialPreProductionDropdown) {
+        materialPreProductionDropdown.addEventListener('click', function (e) {
+            const option = e.target.closest('.ds-autocomplete__option');
+            if (!option) return;
+            const id = option.getAttribute('data-id');
+            if (id) {
+                selectPreProductionItemById(id);
+            }
+        });
+    }
+
+    document.addEventListener('click', function (e) {
+        if (!materialPreProductionAutocomplete || !materialPreProductionDropdown) return;
+        if (materialPreProductionAutocomplete.contains(e.target)) return;
+        closePreProductionDropdown();
+    });
+
+    // Clear pre-production selection when raw material is selected
+    if (materialRawInput) {
+        const originalSync = syncRawMaterialSelection;
+        syncRawMaterialSelection = function() {
+            originalSync();
+            if (materialPreProductionInput) materialPreProductionInput.value = '';
+            if (materialPreProductionIdInput) materialPreProductionIdInput.value = '';
+        };
+    }
 
     function renderMaterialsList(materials) {
         if (!materialsListEl) return;

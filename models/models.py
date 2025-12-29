@@ -353,16 +353,18 @@ class SnapSettlement(db.Model):
 
 
 class MenuItemMaterial(db.Model):
-    """مواد اولیه مورد نیاز هر آیتم منو"""
+    """مواد اولیه یا محصولات پیش تولید مورد نیاز هر آیتم منو"""
     id = db.Column(db.Integer, primary_key=True)
     menu_item_id = db.Column(db.Integer, db.ForeignKey('menu_item.id'), nullable=False)
     raw_material_id = db.Column(db.Integer, db.ForeignKey('raw_material.id'), nullable=True)
+    pre_production_item_id = db.Column(db.Integer, db.ForeignKey('pre_production_item.id'), nullable=True)
     name = db.Column(db.String(128), nullable=False)
     quantity = db.Column(db.String(64), nullable=False)
     unit = db.Column(db.String(32), nullable=False, default='عدد')
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(iran_tz))
 
     raw_material = db.relationship('RawMaterial', backref='menu_materials', lazy=True)
+    pre_production_item = db.relationship('PreProductionItem', backref='menu_materials', lazy=True)
 
     @property
     def quantity_value(self):
@@ -375,6 +377,35 @@ class MenuItemMaterial(db.Model):
     def latest_unit_price(self):
         if self.raw_material:
             return self.raw_material.latest_unit_price
+        elif self.pre_production_item:
+            # محاسبه قیمت محصول پیش تولید بر اساس مواد اولیه تشکیل‌دهنده آن
+            total_cost = 0.0
+            for item_material in self.pre_production_item.materials:
+                raw_material = item_material.raw_material
+                if not raw_material:
+                    continue
+                
+                # قیمت واحد ماده اولیه (در واحد default ماده اولیه)
+                unit_price = raw_material.latest_unit_price
+                if unit_price is None:
+                    continue
+                
+                # مقدار ماده اولیه در واحد خودش
+                material_qty = item_material.quantity
+                try:
+                    material_qty_float = float(material_qty)
+                except (TypeError, ValueError):
+                    continue
+                
+                # تبدیل مقدار ماده اولیه به واحد default ماده اولیه
+                material_qty_in_base_unit = convert_unit(material_qty_float, item_material.unit, raw_material.default_unit)
+                
+                # هزینه این ماده اولیه برای یک واحد محصول پیش تولید
+                # unit_price در واحد default ماده اولیه است
+                material_cost = material_qty_in_base_unit * unit_price
+                total_cost += material_cost
+            
+            return int(total_cost) if total_cost > 0 else None
         return None
 
     @property
@@ -519,6 +550,120 @@ class WarehouseTransfer(db.Model):
 
     def __repr__(self):
         return f"<WarehouseTransfer rm={self.raw_material_id} {self.from_warehouse_id}->{self.to_warehouse_id} qty={self.quantity} {self.unit}>"
+
+
+class WarehouseMaterialMinStock(db.Model):
+    """حداقل موجودی هر ماده اولیه در هر انبار"""
+    id = db.Column(db.Integer, primary_key=True)
+    raw_material_id = db.Column(db.Integer, db.ForeignKey('raw_material.id'), nullable=False, index=True)
+    warehouse_id = db.Column(db.Integer, db.ForeignKey('warehouse.id'), nullable=False, index=True)
+    min_stock = db.Column(db.Float, nullable=False, default=0.0)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(iran_tz))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(iran_tz), onupdate=lambda: datetime.now(iran_tz))
+
+    raw_material = db.relationship('RawMaterial', backref=db.backref('warehouse_min_stocks', lazy=True))
+    warehouse = db.relationship('Warehouse', backref=db.backref('material_min_stocks', lazy=True))
+
+    __table_args__ = (db.UniqueConstraint('raw_material_id', 'warehouse_id', name='uq_warehouse_material_min_stock'),)
+
+    def __repr__(self):
+        return f"<WarehouseMaterialMinStock rm={self.raw_material_id} wh={self.warehouse_id} min={self.min_stock}>"
+
+
+class PreProductionItem(db.Model):
+    """محصولات پیش تولید (مثل burger, pizza و...)"""
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(128), unique=True, nullable=False)
+    code = db.Column(db.String(64), unique=True, nullable=True)
+    description = db.Column(db.String(512), nullable=True)
+    unit = db.Column(db.String(32), nullable=False, default='عدد')  # واحد محصول (عدد، کیلو، ...)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(iran_tz))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(iran_tz), onupdate=lambda: datetime.now(iran_tz))
+
+    # Relationship to materials
+    materials = db.relationship('PreProductionItemMaterial', backref='pre_production_item', lazy=True, cascade='all, delete-orphan')
+
+    def __repr__(self):
+        return f"<PreProductionItem {self.name}>"
+
+
+class PreProductionItemMaterial(db.Model):
+    """مواد اولیه مورد نیاز برای تولید هر محصول پیش تولید (رسپی)"""
+    id = db.Column(db.Integer, primary_key=True)
+    pre_production_item_id = db.Column(db.Integer, db.ForeignKey('pre_production_item.id'), nullable=False, index=True)
+    raw_material_id = db.Column(db.Integer, db.ForeignKey('raw_material.id'), nullable=False, index=True)
+    quantity = db.Column(db.Float, nullable=False)  # مقدار ماده اولیه
+    unit = db.Column(db.String(32), nullable=False)  # واحد ماده اولیه
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(iran_tz))
+
+    raw_material = db.relationship('RawMaterial', backref=db.backref('pre_production_usage', lazy=True))
+
+    def __repr__(self):
+        return f"<PreProductionItemMaterial item={self.pre_production_item_id} material={self.raw_material_id} qty={self.quantity} {self.unit}>"
+
+
+class PreProductionStock(db.Model):
+    """موجودی محصولات پیش تولید در انبارها"""
+    id = db.Column(db.Integer, primary_key=True)
+    pre_production_item_id = db.Column(db.Integer, db.ForeignKey('pre_production_item.id'), nullable=False, index=True)
+    warehouse_id = db.Column(db.Integer, db.ForeignKey('warehouse.id'), nullable=False, index=True)
+    quantity = db.Column(db.Float, nullable=False, default=0.0)
+    unit = db.Column(db.String(32), nullable=False, default='عدد')
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(iran_tz))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(iran_tz), onupdate=lambda: datetime.now(iran_tz))
+
+    pre_production_item = db.relationship('PreProductionItem', backref=db.backref('stock', lazy=True))
+    warehouse = db.relationship('Warehouse', backref=db.backref('pre_production_stocks', lazy=True))
+
+    __table_args__ = (db.UniqueConstraint('pre_production_item_id', 'warehouse_id', name='uq_pre_production_stock'),)
+
+    def __repr__(self):
+        return f"<PreProductionStock item={self.pre_production_item_id} wh={self.warehouse_id} qty={self.quantity} {self.unit}>"
+
+
+class PreProductionProduction(db.Model):
+    """تاریخچه تولید محصولات پیش تولید"""
+    id = db.Column(db.Integer, primary_key=True)
+    pre_production_item_id = db.Column(db.Integer, db.ForeignKey('pre_production_item.id'), nullable=False, index=True)
+    source_warehouse_id = db.Column(db.Integer, db.ForeignKey('warehouse.id'), nullable=False, index=True)
+    quantity = db.Column(db.Float, nullable=False)  # تعداد محصول تولید شده
+    unit = db.Column(db.String(32), nullable=False, default='عدد')
+    production_date = db.Column(db.Date, default=lambda: datetime.now(iran_tz).date(), index=True)
+    note = db.Column(db.String(512), nullable=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(iran_tz))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+
+    pre_production_item = db.relationship('PreProductionItem', backref=db.backref('productions', lazy=True))
+    source_warehouse = db.relationship('Warehouse', foreign_keys=[source_warehouse_id], backref=db.backref('pre_production_sources', lazy=True))
+    user = db.relationship('User', backref='pre_production_productions', lazy=True)
+
+    def __repr__(self):
+        return f"<PreProductionProduction item={self.pre_production_item_id} qty={self.quantity} from_wh={self.source_warehouse_id}>"
+
+
+class PreProductionTransfer(db.Model):
+    """انتقال محصولات پیش تولید بین انبارها"""
+    id = db.Column(db.Integer, primary_key=True)
+    pre_production_item_id = db.Column(db.Integer, db.ForeignKey('pre_production_item.id'), nullable=False, index=True)
+    from_warehouse_id = db.Column(db.Integer, db.ForeignKey('warehouse.id'), nullable=True, index=True)
+    to_warehouse_id = db.Column(db.Integer, db.ForeignKey('warehouse.id'), nullable=True, index=True)
+    
+    quantity = db.Column(db.Float, nullable=False)
+    unit = db.Column(db.String(32), nullable=False)
+    
+    transfer_date = db.Column(db.Date, default=lambda: datetime.now(iran_tz).date(), index=True)
+    note = db.Column(db.String(256), nullable=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(iran_tz))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    
+    pre_production_item = db.relationship('PreProductionItem', backref=db.backref('transfers', lazy=True))
+    from_warehouse = db.relationship('Warehouse', foreign_keys=[from_warehouse_id], lazy=True)
+    to_warehouse = db.relationship('Warehouse', foreign_keys=[to_warehouse_id], lazy=True)
+    user = db.relationship('User', backref='pre_production_transfers', lazy=True)
+    
+    def __repr__(self):
+        return f"<PreProductionTransfer item={self.pre_production_item_id} {self.from_warehouse_id}->{self.to_warehouse_id} qty={self.quantity} {self.unit}>"
 
 # --- توابع کمکی برای جستجو و ثبت مشتری ---
 def find_or_create_customer(name: str, phone: str = None, email: str = None, birth_date = None) -> Customer:

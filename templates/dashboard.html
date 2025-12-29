@@ -864,7 +864,6 @@
                                 <div class="table-card__checkout-options" id="checkout-options-{{ table.id }}">
                                     <button class="ds-button secondary" onclick="settleTableFromDashboard({{ table.id }}, event, 'کارت به کارت')">کارت به کارت</button>
                                     <button class="ds-button secondary" onclick="settleTableFromDashboard({{ table.id }}, event, 'کارتخوان')">کارتخوان</button>
-                                    <button class="ds-button secondary" onclick="settleTableFromDashboard({{ table.id }}, event, 'اسنپ')">اسنپ</button>
                                 </div>
                             </div>
                         </div>
@@ -1057,7 +1056,10 @@
     <div class="table-modal-content">
         <div class="table-modal-header">
             <h3 id="table-modal-title">میز <span id="table-modal-number"></span></h3>
-            <button class="close-modal" onclick="closeTableModal()">&times;</button>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <button class="ds-button secondary" id="transfer-table-btn" onclick="openTransferTableModal()" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">انتقال میز</button>
+                <button class="close-modal" onclick="closeTableModal()">&times;</button>
+            </div>
         </div>
         <div class="table-modal-body">
             <!-- سمت راست: اطلاعات میز -->
@@ -1349,6 +1351,33 @@
         </div>
         <div class="table-modal-body" style="height: calc(90vh - 80px); overflow-y: auto;">
             <iframe id="menu-iframe" src="{{ url_for('menu.show_menu') }}" style="width: 100%; height: 100%; border: none;"></iframe>
+        </div>
+    </div>
+</div>
+
+<!-- مودال انتقال میز -->
+<div id="transfer-table-modal" class="table-modal" style="display: none;">
+    <div class="table-modal-content" style="max-width: 500px;">
+        <div class="table-modal-header">
+            <h3>انتقال میز</h3>
+            <button class="close-modal" onclick="closeTransferTableModal()">&times;</button>
+        </div>
+        <div class="table-modal-body">
+            <div style="padding: 1rem;">
+                <p style="margin-bottom: 1rem; color: var(--text-body);">
+                    تمام سفارش‌های میز <strong id="transfer-from-table-number"></strong> به میز مقصد منتقل خواهد شد.
+                </p>
+                <div class="form-group">
+                    <label for="transfer-to-table-select">انتخاب میز مقصد:</label>
+                    <select id="transfer-to-table-select" class="ds-select" style="width: 100%;">
+                        <option value="">-- انتخاب میز --</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem; justify-content: flex-end;">
+                    <button class="ds-button ghost" onclick="closeTransferTableModal()">لغو</button>
+                    <button class="ds-button primary" onclick="confirmTransferTable()">انتقال</button>
+                </div>
+            </div>
         </div>
     </div>
 </div>

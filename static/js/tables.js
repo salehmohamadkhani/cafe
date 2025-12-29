@@ -1733,7 +1733,115 @@ document.addEventListener('DOMContentLoaded', function() {
     initTableCustomerSearch();
 });
 
+// توابع انتقال میز
+async function openTransferTableModal() {
+    if (!currentTableId || !currentTableNumber) {
+        alert('لطفاً ابتدا یک میز را انتخاب کنید');
+        return;
+    }
+    
+    const modal = document.getElementById('transfer-table-modal');
+    const fromTableNumberEl = document.getElementById('transfer-from-table-number');
+    const selectEl = document.getElementById('transfer-to-table-select');
+    
+    if (!modal || !fromTableNumberEl || !selectEl) {
+        console.error('Transfer table modal elements not found');
+        return;
+    }
+    
+    // نمایش شماره میز مبدا
+    fromTableNumberEl.textContent = currentTableNumber;
+    
+    // بارگذاری لیست میزها
+    try {
+        const response = await fetch('/table/list');
+        const data = await response.json();
+        
+        if (data.success && data.tables) {
+            // پاک کردن options قبلی (به جز option اول)
+            selectEl.innerHTML = '<option value="">-- انتخاب میز --</option>';
+            
+            // اضافه کردن میزها (به جز میز فعلی)
+            data.tables.forEach(table => {
+                if (table.id !== currentTableId) {
+                    const option = document.createElement('option');
+                    option.value = table.id;
+                    const statusLabel = table.status === 'خالی' ? ' (خالی)' : ' (اشغال شده)';
+                    option.textContent = `میز ${table.number}${statusLabel}`;
+                    selectEl.appendChild(option);
+                }
+            });
+        }
+    } catch (error) {
+        console.error('خطا در دریافت لیست میزها:', error);
+        alert('خطا در دریافت لیست میزها');
+        return;
+    }
+    
+    modal.style.display = 'flex';
+}
+
+function closeTransferTableModal() {
+    const modal = document.getElementById('transfer-table-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+async function confirmTransferTable() {
+    if (!currentTableId) {
+        alert('خطا: میز انتخاب نشده است');
+        return;
+    }
+    
+    const selectEl = document.getElementById('transfer-to-table-select');
+    if (!selectEl) {
+        alert('خطا: عنصر انتخاب میز یافت نشد');
+        return;
+    }
+    
+    const targetTableId = selectEl.value;
+    if (!targetTableId) {
+        alert('لطفاً میز مقصد را انتخاب کنید');
+        return;
+    }
+    
+    if (!confirm('آیا مطمئن هستید که می‌خواهید تمام سفارش‌های این میز را منتقل کنید؟')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/table/${currentTableId}/transfer`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                target_table_id: parseInt(targetTableId)
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert(data.message);
+            closeTransferTableModal();
+            closeTableModal();
+            // به‌روزرسانی صفحه برای نمایش تغییرات
+            location.reload();
+        } else {
+            alert(data.message || 'خطا در انتقال میز');
+        }
+    } catch (error) {
+        console.error('خطا در انتقال میز:', error);
+        alert('خطا در انتقال میز: ' + error.message);
+    }
+}
+
 // اطمینان از دسترسی global به توابع برای onclick handlers
 window.printTableInvoice = printTableInvoice;
 window.settleTableFromDashboard = settleTableFromDashboard;
 window.toggleCheckoutOptions = toggleCheckoutOptions;
+window.openTransferTableModal = openTransferTableModal;
+window.closeTransferTableModal = closeTransferTableModal;
+window.confirmTransferTable = confirmTransferTable;
