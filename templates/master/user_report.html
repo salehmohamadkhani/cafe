@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>گزارش کاربر - {{ user.username }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}">
+  <style>
+    @font-face {
+      font-family: Vazirmatn;
+      src: url('{{ url_for("static", filename="fonts/Vazirmatn-Regular.woff2") }}') format('woff2');
+      font-weight: normal;
+      font-style: normal;
+    }
+    html, body {
+      font-family: Vazirmatn, Tahoma, Arial, sans-serif;
+      background: radial-gradient(1200px 600px at 50% 0%, rgba(74,168,255,0.20), transparent 55%),
+                  radial-gradient(900px 450px at 0% 20%, rgba(241,231,208,0.25), transparent 60%),
+                  #0f172a;
+      color: #e5e7eb;
+      min-height: 100vh;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 32px 20px;
+    }
+    .card {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 18px;
+      box-shadow: 0 18px 60px rgba(0,0,0,0.35);
+      padding: 24px;
+      backdrop-filter: blur(10px);
+      margin-bottom: 24px;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .card-header h2 {
+      margin: 0;
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+    .back-link {
+      display: inline-block;
+      margin-bottom: 16px;
+      color: rgba(229,231,235,0.8);
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+    .back-link:hover {
+      color: #e5e7eb;
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .info-item {
+      background: rgba(255,255,255,0.03);
+      padding: 16px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .info-label {
+      font-size: 0.85rem;
+      color: rgba(229,231,235,0.6);
+      margin-bottom: 8px;
+    }
+    .info-value {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #e5e7eb;
+    }
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 16px;
+    }
+    .table thead {
+      background: rgba(255,255,255,0.05);
+    }
+    .table th {
+      padding: 12px;
+      text-align: right;
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: rgba(229,231,235,0.9);
+      border-bottom: 2px solid rgba(255,255,255,0.12);
+    }
+    .table td {
+      padding: 12px;
+      text-align: right;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      color: rgba(229,231,235,0.8);
+      font-size: 0.9rem;
+    }
+    .table tbody tr:hover {
+      background: rgba(255,255,255,0.03);
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .badge-success {
+      background: rgba(34,197,94,0.2);
+      color: #bbf7d0;
+    }
+    .badge-danger {
+      background: rgba(239,68,68,0.2);
+      color: #fecaca;
+    }
+    .badge-info {
+      background: rgba(59,130,246,0.2);
+      color: #bfdbfe;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: rgba(255,255,255,0.03);
+      padding: 20px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.08);
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #4AA8FF;
+      margin-bottom: 8px;
+    }
+    .stat-label {
+      font-size: 0.9rem;
+      color: rgba(229,231,235,0.6);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="{{ url_for('master.cafe_users', slug=cafe.slug) }}" class="back-link">← بازگشت به لیست کاربران</a>
+    
+    <div class="card">
+      <div class="card-header">
+        <h2>گزارش کاربر: {{ user.username }}</h2>
+      </div>
+
+      <!-- اطلاعات کاربر -->
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="info-label">نام کاربری</div>
+          <div class="info-value">{{ user.username }}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">نام</div>
+          <div class="info-value">{{ user.name or '-' }}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">نقش</div>
+          <div class="info-value">
+            {% if user.role == 'admin' %}مدیر سیستم
+            {% elif user.role == 'cashier' %}صندوقدار
+            {% elif user.role == 'waiter' %}گارسون
+            {% elif user.role == 'inventory' %}انباردار
+            {% else %}{{ user.role }}{% endif %}
+          </div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">شماره تماس</div>
+          <div class="info-value">{{ user.phone or '-' }}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">وضعیت</div>
+          <div class="info-value">
+            {% if user.is_active %}
+              <span class="badge badge-success">فعال</span>
+            {% else %}
+              <span class="badge badge-danger">غیرفعال</span>
+            {% endif %}
+          </div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">تاریخ ایجاد</div>
+          <div class="info-value">{{ user.created_at.strftime('%Y/%m/%d %H:%M') if user.created_at else '-' }}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">آخرین ورود</div>
+          <div class="info-value">{{ user.last_login.strftime('%Y/%m/%d %H:%M') if user.last_login else '-' }}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">تعداد ورود‌ها</div>
+          <div class="info-value">{{ login_times|length }}</div>
+        </div>
+      </div>
+
+      <!-- آمار کلی -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value">{{ total_orders }}</div>
+          <div class="stat-label">تعداد سفارش‌ها</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">{{ total_actions }}</div>
+          <div class="stat-label">تعداد عملیات</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">{{ login_times|length }}</div>
+          <div class="stat-label">تعداد ورود‌ها</div>
+        </div>
+      </div>
+
+      <!-- زمان‌های ورود -->
+      {% if login_times %}
+      <div style="margin-bottom: 24px;">
+        <h3 style="margin-bottom: 12px; font-size: 1.1rem;">زمان‌های ورود به کافه</h3>
+        <div style="background: rgba(255,255,255,0.03); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);">
+          {% for login_time in login_times[:20] %}
+            <div style="padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+              {{ login_time.strftime('%Y/%m/%d %H:%M:%S') if login_time else '-' }}
+            </div>
+          {% endfor %}
+          {% if login_times|length > 20 %}
+            <div style="padding: 8px 0; color: rgba(229,231,235,0.6); font-size: 0.85rem;">
+              و {{ login_times|length - 20 }} ورود دیگر...
+            </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- لاگ فعالیت‌ها -->
+      {% if action_logs %}
+      <div style="margin-bottom: 24px;">
+        <h3 style="margin-bottom: 12px; font-size: 1.1rem;">لاگ فعالیت‌ها (آخرین 100 مورد)</h3>
+        <div style="overflow-x: auto;">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>زمان</th>
+                <th>عملیات</th>
+                <th>نوع</th>
+                <th>شناسه</th>
+                <th>جزئیات</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for log in action_logs %}
+              <tr>
+                <td>{{ log.timestamp.strftime('%Y/%m/%d %H:%M:%S') if log.timestamp else '-' }}</td>
+                <td>{{ log.action }}</td>
+                <td>{{ log.target_type or '-' }}</td>
+                <td>{{ log.target_id or '-' }}</td>
+                <td>{{ log.details or '-' }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% else %}
+      <div style="text-align: center; padding: 32px; color: rgba(229,231,235,0.6);">
+        هیچ لاگ فعالیتی ثبت نشده است.
+      </div>
+      {% endif %}
+
+      <!-- سفارش‌های ایجاد شده -->
+      {% if orders %}
+      <div>
+        <h3 style="margin-bottom: 12px; font-size: 1.1rem;">سفارش‌های ایجاد شده (آخرین 50 مورد)</h3>
+        <div style="overflow-x: auto;">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>شماره فاکتور</th>
+                <th>مبلغ نهایی</th>
+                <th>وضعیت</th>
+                <th>تاریخ</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for order in orders %}
+              <tr>
+                <td>{{ order.invoice_number }}</td>
+                <td>{{ "{:,}".format(order.final_amount) }} تومان</td>
+                <td>
+                  {% if order.status == 'پرداخت شده' %}
+                    <span class="badge badge-success">{{ order.status }}</span>
+                  {% else %}
+                    <span class="badge badge-danger">{{ order.status }}</span>
+                  {% endif %}
+                </td>
+                <td>{{ order.created_at.strftime('%Y/%m/%d %H:%M') if order.created_at else '-' }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% else %}
+      <div style="text-align: center; padding: 32px; color: rgba(229,231,235,0.6);">
+        هیچ سفارشی ایجاد نشده است.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</body>
+</html>

@@ -1,7 +1,13 @@
 import locale
 import jdatetime
+import os
 from datetime import datetime
-from typing import Optional
+from typing import Optional, ContextManager
+from contextlib import contextmanager
+from flask import session, current_app
+from sqlalchemy import create_engine
+from models.master_models import CafeTenant
+from models.models import db
 
 locale.setlocale(locale.LC_ALL, '')
 
@@ -175,3 +181,119 @@ def register_jinja_filters(app):
     # اضافه کردن تابع cache_bust برای جلوگیری از cache مرورگر
     import time
     app.jinja_env.globals['cache_bust'] = lambda: int(time.time())
+
+
+@contextmanager
+def tenant_db_context(slug: Optional[str] = None):
+    """
+    Context manager to switch db.session to tenant database.
+    Usage:
+        with tenant_db_context(slug):
+            orders = Order.query.all()  # Uses tenant database
+    """
+    if not slug:
+        slug = session.get('tenant_slug')
+    
+    if not slug:
+        # No tenant context, use default database
+        yield
+        return
+    
+    # Get tenant database path
+    with current_app.app_context():
+        cafe = CafeTenant.query.filter_by(slug=slug).first()
+    
+    if not cafe or not os.path.exists(cafe.db_path):
+        # Tenant not found or database doesn't exist, use default
+        yield
+        return
+    
+    # Create engine for tenant database
+    tenant_engine = create_engine(f"sqlite:///{cafe.db_path}")
+    
+    # Store original bind
+    original_bind = db.session.bind
+    
+    try:
+        # Switch to tenant database
+        db.session.bind = tenant_engine
+        yield
+    finally:
+        # Restore original bind
+        db.session.bind = original_bind
+
+
+def get_tenant_slug() -> Optional[str]:
+    """Get current tenant slug from session."""
+    return session.get('tenant_slug')
+
+
+def use_tenant_db(view_func):
+    """
+    Decorator to automatically use tenant database for a route.
+    The route must have 'slug' parameter (from URL or session).
+    Usage:
+        @bp.route('/cafe/<slug>/orders')
+        @use_tenant_db
+        def orders(slug):
+            orders = Order.query.all()  # Uses tenant database
+    """
+    from functools import wraps
+    
+    @wraps(view_func)
+    def wrapper(*args, **kwargs):
+        # Try to get slug from kwargs (route parameter) or session
+        slug = kwargs.get('slug') or session.get('tenant_slug')
+        
+        if slug:
+            with tenant_db_context(slug):
+                return view_func(*args, **kwargs)
+        else:
+            # No tenant context, use default database
+            return view_func(*args, **kwargs)
+    
+    return wrapper
+
+
+def restrict_cashier_access(view_func):
+    """
+    Decorator to restrict cashier role access to specific routes only.
+    Cashier can only access:
+    - dashboard.dashboard
+    - admin.financial_report (only with period=day)
+    
+    Usage:
+        @bp.route('/some-route')
+        @restrict_cashier_access
+        @login_required
+        def some_route():
+            ...
+    """
+    from functools import wraps
+    from flask import request, redirect, url_for, flash
+    from flask_login import current_user
+    
+    allowed_routes = ['dashboard.dashboard', 'admin.financial_report']
+    
+    @wraps(view_func)
+    def wrapper(*args, **kwargs):
+        # Check if user is cashier
+        if current_user.is_authenticated and current_user.role == 'cashier':
+            # Get current route name
+            route_name = request.endpoint
+            
+            # Check if route is allowed for cashier
+            if route_name not in allowed_routes:
+                flash('شما دسترسی به این صفحه را ندارید. صندوق‌دار فقط به داشبورد و گزارش‌های امروز دسترسی دارد.', 'danger')
+                return redirect(url_for('dashboard.dashboard'))
+            
+            # For financial_report, only allow period=day
+            if route_name == 'admin.financial_report':
+                period = request.args.get('period', 'day')
+                if period != 'day':
+                    flash('صندوق‌دار فقط می‌تواند گزارش امروز را مشاهده کند.', 'warning')
+                    return redirect(url_for('admin.financial_report', period='day'))
+        
+        return view_func(*args, **kwargs)
+    
+    return wrapper

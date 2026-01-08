@@ -6,9 +6,10 @@ if sys.platform == 'win32':
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 
-from flask import Flask, render_template, redirect, url_for
-from flask_login import LoginManager
+from flask import Flask, render_template, redirect, url_for, session, g, flash, request
+from flask_login import LoginManager, current_user
 from sqlalchemy import inspect, text
+import os
 from config import Config
 from models.models import db, User, Settings, backfill_invoice_identifiers, assign_random_birth_dates_to_old_customers
 from models.master_models import MasterUser, CafeTenant  # noqa: F401 (register master tables)
@@ -30,13 +31,41 @@ from routes.takeaway import takeaway_bp
 
 # Initialize extensions
 login_manager = LoginManager()
-login_manager.login_view = 'auth.login'
+login_manager.login_view = 'master.login'
 login_manager.login_message = 'لطفاً برای دسترسی به این صفحه وارد شوید.'
 login_manager.login_message_category = 'info'
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    """Load user from database. If tenant session exists, load from tenant DB."""
+    try:
+        from flask import session, has_request_context
+        from sqlalchemy import create_engine
+        
+        # Only check tenant session if we're in a request context
+        if has_request_context():
+            tenant_slug = session.get('tenant_slug')
+            if tenant_slug:
+                # Load user from tenant database
+                from models.master_models import CafeTenant
+                cafe = CafeTenant.query.filter_by(slug=tenant_slug).first()
+                if cafe and os.path.exists(cafe.db_path):
+                    tenant_engine = create_engine(f"sqlite:///{cafe.db_path}")
+                    from sqlalchemy.orm import sessionmaker
+                    Session = sessionmaker(bind=tenant_engine)
+                    with Session() as s:
+                        user = s.query(User).get(int(user_id))
+                        if user:
+                            return user
+    except Exception:
+        # If anything goes wrong, fall back to default database
+        pass
+    
+    # Fallback to default database
+    try:
+        return User.query.get(int(user_id))
+    except Exception:
+        return None
 
 def create_app(config_class=Config):
     """Create and configure Flask application"""
@@ -209,6 +238,151 @@ def create_app(config_class=Config):
     app.register_blueprint(pos_bp)
     app.register_blueprint(table_bp)
     app.register_blueprint(takeaway_bp)
+    
+    # Setup tenant database context for routes
+    # This automatically switches db.session to tenant database when user is in tenant context
+    from flask import session, request, g
+    import os
+    from models.master_models import CafeTenant
+    from sqlalchemy import create_engine
+    
+    @app.before_request
+    def setup_tenant_db():
+        """Switch to tenant database if user is in tenant context."""
+        tenant_slug = session.get('tenant_slug')
+        if tenant_slug:
+            # Get tenant database path
+            with app.app_context():
+                cafe = CafeTenant.query.filter_by(slug=tenant_slug).first()
+            
+            # Check if cafe exists and is active
+            if not cafe:
+                # Cafe doesn't exist, clear session
+                session.pop('tenant_slug', None)
+                session.pop('tenant_db_path', None)
+                session.pop('tenant_user_id', None)
+                session.pop('tenant_username', None)
+            elif not cafe.is_active:
+                # Cafe is inactive, clear session
+                # The route handlers will check and show error page
+                session.pop('tenant_slug', None)
+                session.pop('tenant_db_path', None)
+                session.pop('tenant_user_id', None)
+                session.pop('tenant_username', None)
+                g.original_db_bind = None
+            elif cafe and os.path.exists(cafe.db_path):
+                # Create engine for tenant database
+                tenant_engine = create_engine(f"sqlite:///{cafe.db_path}")
+                # Store original bind and switch to tenant
+                g.original_db_bind = db.session.bind
+                db.session.bind = tenant_engine
+            else:
+                g.original_db_bind = None
+    
+    @app.after_request
+    def teardown_tenant_db(response):
+        """Restore default database after request."""
+        if hasattr(g, 'original_db_bind'):
+            try:
+                db.session.bind = g.original_db_bind
+            except:
+                pass
+        return response
+    
+    @app.before_request
+    def check_cashier_access():
+        """Restrict cashier access to only dashboard and financial_report (day only)."""
+        # Skip check for static files and login/logout routes
+        if request.endpoint in ['static', 'master.login', 'tenant_auth.login', 'tenant_auth.logout', 'auth.logout']:
+            return
+        
+        # Check if user is authenticated and is cashier
+        if current_user.is_authenticated and hasattr(current_user, 'role') and current_user.role == 'cashier':
+            allowed_routes = [
+                'dashboard.dashboard', 
+                'admin.financial_report',
+                'tenant.dashboard',
+                'tenant.dashboard_full'
+            ]
+            route_name = request.endpoint
+            
+            # Check if route is allowed for cashier
+            if route_name not in allowed_routes:
+                flash('شما دسترسی به این صفحه را ندارید. صندوق‌دار فقط به داشبورد و گزارش‌های امروز دسترسی دارد.', 'danger')
+                # Try to redirect to tenant dashboard if in tenant context, otherwise main dashboard
+                tenant_slug = session.get('tenant_slug')
+                if tenant_slug:
+                    return redirect(url_for('tenant.dashboard', slug=tenant_slug))
+                else:
+                    return redirect(url_for('dashboard.dashboard'))
+            
+            # For financial_report, only allow period=day
+            if route_name == 'admin.financial_report':
+                period = request.args.get('period', 'day')
+                if period != 'day':
+                    flash('صندوق‌دار فقط می‌تواند گزارش امروز را مشاهده کند.', 'warning')
+                    return redirect(url_for('admin.financial_report', period='day'))
+    
+    @app.before_request
+    def check_inventory_access():
+        """Restrict inventory manager access to only inventory and warehouse routes."""
+        # Skip check for static files and login/logout routes
+        if request.endpoint in ['static', 'master.login', 'tenant_auth.login', 'tenant_auth.logout', 'auth.logout']:
+            return
+        
+        # Check if user is authenticated and is inventory manager
+        if current_user.is_authenticated and hasattr(current_user, 'role') and current_user.role == 'inventory':
+            allowed_routes = [
+                'admin.inventory_dashboard',  # داشبورد انبار
+                'admin.warehouses_management',  # مدیریت انبارها
+                'admin.create_warehouse_transfer',  # انتقال موجودی (POST)
+                'admin.check_warehouse_stock',  # بررسی موجودی (GET)
+                'admin.create_raw_material',  # ایجاد مواد اولیه (POST)
+                'admin.update_raw_material',  # ویرایش مواد اولیه (PUT)
+                'admin.delete_raw_material',  # حذف مواد اولیه (DELETE)
+                'admin.create_material_purchase',  # ثبت خرید (POST)
+                'admin.update_material_purchase',  # ویرایش خرید (PUT)
+                'admin.delete_material_purchase',  # حذف خرید (DELETE)
+            ]
+            route_name = request.endpoint
+            
+            # Check if route is allowed for inventory manager
+            if route_name not in allowed_routes:
+                flash('شما دسترسی به این صفحه را ندارید. انباردار فقط به صفحات انبار و مدیریت انبار دسترسی دارد.', 'danger')
+                # Redirect to inventory dashboard
+                return redirect(url_for('admin.inventory_dashboard'))
+    
+    @app.before_request
+    def check_waiter_access():
+        """Restrict waiter access to only waiter dashboard (tables and orders only)."""
+        # Skip check for static files and login/logout routes
+        if request.endpoint in ['static', 'master.login', 'tenant_auth.login', 'tenant_auth.logout', 'auth.logout']:
+            return
+        
+        # Check if user is authenticated and is waiter
+        if current_user.is_authenticated and hasattr(current_user, 'role') and current_user.role == 'waiter':
+            allowed_routes = [
+                'dashboard.waiter_dashboard',  # Special dashboard for waiters
+                'table.get_table',  # Allow getting table info
+                'table.submit_table_order',  # Allow submitting table orders
+                'table.add_item_to_table',  # Allow adding items to table
+                'table.remove_item_from_table',  # Allow removing items from table
+                'table.update_item_quantity',  # Allow updating item quantity
+                'table.update_table_customer',  # Allow updating table customer
+                'takeaway.create_takeaway',  # Allow creating takeaway orders
+                'takeaway.get_takeaway',  # Allow getting takeaway order
+                'takeaway.add_item_to_takeaway',  # Allow adding items to takeaway
+                'takeaway.remove_item_from_takeaway',  # Allow removing items from takeaway
+                'takeaway.update_takeaway',  # Allow updating takeaway
+                'takeaway.submit_takeaway',  # Allow submitting takeaway
+            ]
+            route_name = request.endpoint
+            
+            # Check if route is allowed for waiter
+            if route_name not in allowed_routes:
+                flash('شما دسترسی به این صفحه را ندارید. گارسون فقط می‌تواند میزها را ببیند و سفارش ثبت کند.', 'danger')
+                # Redirect to waiter dashboard
+                return redirect(url_for('dashboard.waiter_dashboard'))
 
     # Convenient alias to master login (main entrypoint for multi-cafe)
     @app.route('/login')

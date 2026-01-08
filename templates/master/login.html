@@ -97,6 +97,7 @@
       color: #e5e7eb;
       outline: none;
       font-size: 0.95rem;
+      box-sizing: border-box;
     }
     .field input:focus {
       border-color: rgba(74,168,255,0.65);
@@ -140,17 +141,59 @@
         <h2>ورود مدیر اصلی</h2>
       </div>
 
-      <form method="POST" autocomplete="on">
+      <form method="POST" autocomplete="on" id="loginForm">
         <div class="field">
-          <label for="username">نام کاربری</label>
-          <input id="username" name="username" type="text" required autocomplete="username">
+          <label for="phone_number">شماره موبایل</label>
+          <input 
+            id="phone_number" 
+            name="phone_number" 
+            type="tel" 
+            required 
+            autocomplete="tel"
+            placeholder="09121148277"
+            value="{{ phone_number or '' }}"
+          >
         </div>
+        
         <div class="field">
           <label for="password">رمز عبور</label>
-          <input id="password" name="password" type="password" required autocomplete="current-password">
+          <input 
+            id="password" 
+            name="password" 
+            type="text" 
+            required 
+            placeholder="123"
+            autocomplete="off"
+            style="text-align: center; font-size: 1.1rem;"
+          >
         </div>
-        <button class="btn" type="submit">ورود</button>
+        
+        <button class="btn" type="submit">
+          ورود
+        </button>
       </form>
+      
+      <script>
+        const phoneInput = document.getElementById('phone_number');
+        const passwordInput = document.getElementById('password');
+        
+        // Format phone number
+        phoneInput.addEventListener('input', function(e) {
+          let value = this.value.replace(/\D/g, '');
+          if (value.startsWith('98')) {
+            value = '0' + value.substring(2);
+          }
+          this.value = value;
+        });
+        
+        // Focus on password after phone number is entered
+        phoneInput.addEventListener('keypress', function(e) {
+          if (e.key === 'Enter' && this.value.length >= 10) {
+            e.preventDefault();
+            passwordInput.focus();
+          }
+        });
+      </script>
 
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}

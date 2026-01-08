@@ -37,8 +37,7 @@ def login(slug):
     cafe = CafeTenant.query.filter_by(slug=slug).first_or_404()
     
     if not cafe.is_active:
-        flash('این کافه غیرفعال است.', 'warning')
-        return redirect(url_for('master.dashboard'))
+        return render_template('tenant/inactive.html', cafe=cafe), 403
     
     if not os.path.exists(cafe.db_path):
         flash('دیتابیس کافه یافت نشد.', 'danger')
@@ -74,6 +73,11 @@ def login(slug):
                 user.last_login = datetime.now(iran_tz)
                 s.commit()
                 
+                # Also login with Flask-Login so @login_required decorators work
+                # We need to reload user from tenant DB after commit
+                from flask_login import login_user
+                login_user(user, remember=True)
+                
                 # Redirect to tenant dashboard (or main dashboard for now)
                 return redirect(url_for('tenant.dashboard', slug=slug))
             else:
@@ -85,9 +89,11 @@ def login(slug):
 @tenant_auth_bp.route('/logout')
 def logout(slug):
     """خروج از کافه"""
+    from flask_login import logout_user
+    logout_user()  # Logout from Flask-Login
     session.pop('tenant_slug', None)
     session.pop('tenant_db_path', None)
     session.pop('tenant_user_id', None)
     session.pop('tenant_username', None)
     flash('با موفقیت از کافه خارج شدید.', 'info')
-    return redirect(url_for('master.dashboard'))
+    return redirect(url_for('tenant_auth.login', slug=slug))

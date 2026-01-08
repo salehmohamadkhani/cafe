@@ -17,6 +17,10 @@
       background: #0b1220;
       color: #e5e7eb;
       min-height: 100vh;
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      overflow-x: hidden;
     }
     .topbar {
       position: sticky;
@@ -27,7 +31,7 @@
       backdrop-filter: blur(10px);
     }
     .topbar-inner {
-      max-width: 1200px;
+      max-width: 1400px;
       margin: 0 auto;
       padding: 14px 18px;
       display: flex;
@@ -35,19 +39,44 @@
       align-items: center;
       justify-content: space-between;
     }
+    @media (max-width: 1200px) {
+      .topbar-inner {
+        max-width: 100%;
+        padding: 12px 16px;
+      }
+    }
+    @media (max-width: 640px) {
+      .topbar-inner {
+        padding: 12px 14px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
+    }
     .brand {
       display: flex;
       align-items: center;
       gap: 10px;
       font-weight: 900;
       letter-spacing: -0.02em;
+      font-size: 0.95rem;
     }
-    .brand img { width: 34px; height: 34px; object-fit: contain; }
+    @media (max-width: 640px) {
+      .brand {
+        font-size: 0.85rem;
+      }
+    }
     .actions {
       display: flex;
       align-items: center;
       gap: 10px;
       flex-wrap: wrap;
+    }
+    @media (max-width: 640px) {
+      .actions {
+        width: 100%;
+        justify-content: space-between;
+      }
     }
     .pill {
       padding: 7px 10px;
@@ -67,35 +96,73 @@
       border: 1px solid rgba(255,255,255,0.10);
     }
     .container {
-      max-width: 1200px;
+      max-width: 1400px;
       margin: 0 auto;
       padding: 18px;
-      display: grid;
-      grid-template-columns: 0.95fr 1.05fr;
-      gap: 16px;
-      align-items: start;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    @media (max-width: 1200px) {
+      .container {
+        max-width: 100%;
+        padding: 16px;
+      }
     }
     @media (max-width: 980px) {
-      .container { grid-template-columns: 1fr; }
+      .container {
+        padding: 14px;
+      }
+    }
+    @media (max-width: 640px) {
+      .container {
+        padding: 10px;
+      }
     }
     .card {
       background: rgba(255,255,255,0.06);
       border: 1px solid rgba(255,255,255,0.12);
       border-radius: 18px;
-      padding: 16px;
+      padding: 20px;
       box-shadow: 0 18px 50px rgba(0,0,0,0.25);
+      width: 100%;
+      box-sizing: border-box;
+    }
+    @media (max-width: 1200px) {
+      .card {
+        padding: 18px;
+      }
+    }
+    @media (max-width: 768px) {
+      .card {
+        padding: 16px;
+      }
+    }
+    @media (max-width: 640px) {
+      .card {
+        padding: 14px;
+        border-radius: 14px;
+      }
     }
     .card h3 {
       margin: 0 0 10px;
       font-size: 1.05rem;
     }
+    @media (max-width: 640px) {
+      .card h3 {
+        font-size: 0.95rem;
+        margin-bottom: 8px;
+      }
+    }
     .grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 10px;
+      gap: 12px;
     }
-    @media (max-width: 560px) {
-      .grid { grid-template-columns: 1fr; }
+    @media (max-width: 640px) {
+      .grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
     }
     .field label {
       display: block;
@@ -104,7 +171,10 @@
       margin-bottom: 6px;
       font-weight: 700;
     }
-    .field input {
+    .field label:hover {
+      color: rgba(229,231,235,1);
+    }
+    .field input[type="text"] {
       width: 100%;
       border-radius: 12px;
       border: 1px solid rgba(255,255,255,0.14);
@@ -112,13 +182,166 @@
       background: rgba(15,23,42,0.55);
       color: #e5e7eb;
       outline: none;
+      box-sizing: border-box;
+      font-size: 0.9rem;
     }
-    .field input:focus {
+    .field input[type="text"]:focus {
       border-color: rgba(74,168,255,0.65);
       box-shadow: 0 0 0 3px rgba(74,168,255,0.18);
     }
+    .field input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      margin: 0;
+      flex-shrink: 0;
+      border-radius: 6px;
+      border: 2px solid rgba(255,255,255,0.3);
+      background: rgba(15,23,42,0.6);
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      position: relative;
+      transition: all 0.2s ease;
+      vertical-align: middle;
+      display: inline-block;
+    }
+    .field input[type="checkbox"]:hover {
+      border-color: rgba(74,168,255,0.6);
+      background: rgba(15,23,42,0.8);
+    }
+    .field input[type="checkbox"]:checked {
+      background: linear-gradient(135deg, #4AA8FF, #1F3A5F);
+      border-color: rgba(74,168,255,0.8);
+    }
+    .field input[type="checkbox"]:checked::after {
+      content: '✓';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 900;
+      line-height: 1;
+    }
+    .field input[type="checkbox"]:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(74,168,255,0.2);
+    }
+    .module-checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      transition: all 0.2s ease;
+    }
+    @media (max-width: 640px) {
+      .module-checkbox-label {
+        padding: 6px 8px;
+        gap: 6px;
+      }
+    }
+    .module-checkbox-label input[type="checkbox"] {
+      margin: 0;
+      flex-shrink: 0;
+      align-self: center;
+    }
+    .module-checkbox-label span {
+      display: inline-flex;
+      align-items: center;
+      line-height: 1.4;
+      margin: 0;
+      font-size: 0.85rem;
+      color: rgba(229,231,235,0.9);
+      user-select: none;
+      vertical-align: middle;
+    }
+    @media (max-width: 640px) {
+      .module-checkbox-label span {
+        font-size: 0.8rem;
+      }
+    }
+    .module-checkbox-label:hover {
+      background: rgba(255,255,255,0.06);
+      border-color: rgba(255,255,255,0.12);
+    }
+    .module-checkbox-label:has(input:checked) {
+      background: rgba(74,168,255,0.12);
+      border-color: rgba(74,168,255,0.3);
+    }
+    .module-checkbox-label:has(input:checked) span {
+      color: rgba(229,231,235,1);
+      font-weight: 600;
+    }
+    .modules-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 8px;
+      margin-top: 8px;
+    }
+    @media (max-width: 1200px) {
+      .modules-grid {
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      }
+    }
+    @media (max-width: 768px) {
+      .modules-grid {
+        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+        gap: 6px;
+      }
+    }
+    @media (max-width: 640px) {
+      .modules-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+      }
+    }
+    @media (max-width: 480px) {
+      .modules-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    @media (max-width: 768px) {
+      .muted {
+        font-size: 0.8rem;
+      }
+      .field label {
+        font-size: 0.8rem;
+      }
+      .field input[type="text"] {
+        font-size: 0.85rem;
+        padding: 8px 10px;
+      }
+    }
+    @media (max-width: 640px) {
+      .table-wrapper {
+        margin: 0 -10px;
+        padding: 0 10px;
+      }
+      .table {
+        min-width: 500px;
+      }
+      .table th, .table td {
+        padding: 8px 4px;
+        font-size: 0.8rem;
+      }
+      .table td:nth-child(1) .muted {
+        display: none; /* Hide ID/Created on mobile */
+      }
+      .table td:nth-child(2) {
+        max-width: 70px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
     .btn {
-      margin-top: 12px;
+      margin-top: 16px;
       width: 100%;
       border: none;
       border-radius: 12px;
@@ -127,21 +350,86 @@
       color: #052e16;
       font-weight: 900;
       cursor: pointer;
+      box-sizing: border-box;
+      transition: all 0.2s ease;
+    }
+    .btn:hover {
+      background: #16a34a;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(34,197,94,0.3);
+    }
+    .table-wrapper {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      margin-top: 10px;
+      width: 100%;
     }
     .table {
       width: 100%;
+      min-width: 700px;
       border-collapse: collapse;
-      overflow: hidden;
       border-radius: 14px;
     }
     .table th, .table td {
-      padding: 10px 10px;
+      padding: 12px 10px;
       border-bottom: 1px solid rgba(255,255,255,0.08);
-      font-size: 0.92rem;
+      font-size: 0.9rem;
       text-align: right;
-      vertical-align: top;
+      vertical-align: middle;
     }
-    .table th { color: rgba(229,231,235,0.8); font-weight: 900; }
+    .table th {
+      color: rgba(229,231,235,0.8);
+      font-weight: 900;
+      white-space: nowrap;
+    }
+    .table td {
+      white-space: normal;
+      word-wrap: break-word;
+      max-width: 0;
+    }
+    .table td:nth-child(1) {
+      max-width: 180px;
+    }
+    .table td:nth-child(3) {
+      max-width: 250px;
+    }
+    .table td:nth-child(5) {
+      max-width: 220px;
+    }
+    @media (max-width: 1200px) {
+      .table {
+        min-width: 600px;
+      }
+      .table th, .table td {
+        padding: 10px 8px;
+        font-size: 0.88rem;
+      }
+      .table td:nth-child(3) {
+        max-width: 200px;
+        font-size: 0.8rem;
+      }
+    }
+    @media (max-width: 980px) {
+      .table td:nth-child(3),
+      .table th:nth-child(3) {
+        display: none; /* Hide db_path on tablets */
+      }
+      .table {
+        min-width: 550px;
+      }
+    }
+    @media (max-width: 768px) {
+      .table th, .table td {
+        padding: 8px 6px;
+        font-size: 0.85rem;
+      }
+      .table td:nth-child(2) {
+        max-width: 100px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
     .muted { color: rgba(229,231,235,0.7); font-size: 0.85rem; }
     .alerts { margin-top: 10px; }
     .alert {
@@ -155,13 +443,300 @@
     }
     .alert.success { background: rgba(34,197,94,0.12); color: #bbf7d0; }
     .alert.warning { background: rgba(245,158,11,0.14); color: #fde68a; }
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      border-bottom: 2px solid rgba(255,255,255,0.1);
+      padding-bottom: 0;
+    }
+    .tab {
+      padding: 12px 24px;
+      background: transparent;
+      border: none;
+      border-bottom: 3px solid transparent;
+      color: rgba(229,231,235,0.7);
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+      bottom: -2px;
+    }
+    .tab:hover {
+      color: rgba(229,231,235,0.9);
+    }
+    .tab.active {
+      color: #fff;
+      border-bottom-color: #4AA8FF;
+    }
+    @media (max-width: 640px) {
+      .tab {
+        padding: 10px 16px;
+        font-size: 0.85rem;
+      }
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    .action-buttons {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-start;
+    }
+    @media (max-width: 980px) {
+      .action-buttons {
+        flex-direction: column;
+        gap: 4px;
+        width: 100%;
+      }
+      .action-buttons form,
+      .action-buttons a {
+        width: 100%;
+      }
+    }
+    @media (max-width: 640px) {
+      .action-buttons {
+        gap: 3px;
+      }
+    }
+    .action-btn {
+      display: inline-block;
+      padding: 6px 10px;
+      border: none;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 0.8rem;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+    @media (max-width: 980px) {
+      .action-btn {
+        width: 100%;
+        text-align: center;
+        padding: 8px;
+        font-size: 0.85rem;
+      }
+    }
+    @media (max-width: 640px) {
+      .action-btn {
+        padding: 7px;
+        font-size: 0.8rem;
+      }
+    }
+    .action-btn-primary {
+      background: #4AA8FF;
+      color: #fff;
+    }
+    .action-btn-primary:hover {
+      background: #3a8fef;
+    }
+    .action-btn-success {
+      background: #22c55e;
+      color: #fff;
+    }
+    .action-btn-success:hover {
+      background: #16a34a;
+    }
+    .action-btn-warning {
+      background: #f59e0b;
+      color: #fff;
+    }
+    .action-btn-warning:hover {
+      background: #d97706;
+    }
+    .action-btn-info {
+      background: #3b82f6;
+      color: #fff;
+    }
+    .action-btn-info:hover {
+      background: #2563eb;
+    }
+    .action-btn-danger {
+      background: #ef4444;
+      color: #fff;
+    }
+    .action-btn-danger:hover {
+      background: #dc2626;
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+    @media (max-width: 640px) {
+      .summary-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+      }
+    }
+    .summary-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+    }
+    .summary-label {
+      font-size: 0.85rem;
+      color: rgba(229,231,235,0.7);
+      margin-bottom: 8px;
+    }
+    .summary-value {
+      font-size: 1.8rem;
+      font-weight: 900;
+      color: #fff;
+    }
+    .cafe-info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 16px;
+    }
+    @media (max-width: 768px) {
+      .cafe-info-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .cafe-info-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 16px;
+      transition: all 0.2s ease;
+    }
+    .cafe-info-card:hover {
+      background: rgba(255,255,255,0.06);
+      border-color: rgba(255,255,255,0.12);
+    }
+    .cafe-info-card.inactive {
+      opacity: 0.7;
+    }
+    .cafe-info-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .status-badge {
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+    .status-badge.active {
+      background: rgba(34,197,94,0.2);
+      color: #bbf7d0;
+    }
+    .status-badge.inactive {
+      background: rgba(239,68,68,0.2);
+      color: #fecaca;
+    }
+    .cafe-info-body {
+      margin-bottom: 12px;
+    }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      font-size: 0.9rem;
+    }
+    .info-label {
+      color: rgba(229,231,235,0.7);
+    }
+    .info-value {
+      color: rgba(229,231,235,0.9);
+      font-weight: 600;
+    }
+    .info-value code {
+      background: rgba(255,255,255,0.1);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+    .info-stats {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+    }
+    .info-stat-item {
+      text-align: center;
+      padding: 8px;
+      background: rgba(255,255,255,0.03);
+      border-radius: 8px;
+    }
+    .info-stat-label {
+      font-size: 0.75rem;
+      color: rgba(229,231,235,0.6);
+      margin-bottom: 4px;
+    }
+    .info-stat-value {
+      font-size: 1.1rem;
+      font-weight: 900;
+      color: #fff;
+    }
+    .info-error {
+      padding: 8px;
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.2);
+      border-radius: 6px;
+      color: #fecaca;
+      font-size: 0.85rem;
+      margin-top: 12px;
+    }
+    .info-empty {
+      padding: 12px;
+      text-align: center;
+      color: rgba(229,231,235,0.5);
+      font-size: 0.85rem;
+      margin-top: 12px;
+    }
+    .cafe-info-footer {
+      padding-top: 12px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+    }
+    .info-link {
+      display: block;
+      width: 100%;
+      padding: 10px 16px;
+      background: linear-gradient(135deg, #4AA8FF, #1F3A5F);
+      color: #fff;
+      text-align: center;
+      text-decoration: none;
+      border-radius: 10px;
+      font-weight: 800;
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+      border: 1px solid rgba(255,255,255,0.1);
+      box-sizing: border-box;
+    }
+    .info-link:hover {
+      background: linear-gradient(135deg, #3a8fef, #1a2f4f);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(74,168,255,0.3);
+    }
+    .info-link:active {
+      transform: translateY(0);
+    }
   </style>
 </head>
 <body>
   <div class="topbar">
     <div class="topbar-inner">
       <div class="brand">
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
         <div>پنل مدیریت مرکزی</div>
       </div>
       <div class="actions">
@@ -173,73 +748,328 @@
 
   <div class="container">
     <div class="card">
-      <h3>افزودن کافه جدید</h3>
-      <div class="muted">با ساخت کافه، فولدر و دیتابیس جداگانه ساخته می‌شود.</div>
-      <form method="POST" action="{{ url_for('master.create_cafe') }}">
-        <div class="grid" style="margin-top: 12px;">
-          <div class="field">
-            <label for="name">نام کافه</label>
-            <input id="name" name="name" type="text" placeholder="مثلاً Madeline" required>
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('create')" id="tab-create">افزودن کافه جدید</button>
+        <button class="tab" onclick="switchTab('list')" id="tab-list">لیست کافه‌ها ({{ cafes|length }})</button>
+        <button class="tab" onclick="switchTab('summary')" id="tab-summary">گزارش و اطلاعات</button>
+        <button class="tab" onclick="switchTab('requests')" id="tab-requests">درخواست‌ها ({{ user_requests|length }})</button>
+      </div>
+
+      <div id="content-create" class="tab-content active">
+        <h3 style="margin-top: 0;">افزودن کافه جدید</h3>
+        <div class="muted" style="margin-bottom: 16px;">با ساخت کافه، فولدر و دیتابیس جداگانه ساخته می‌شود.</div>
+        <form method="POST" action="{{ url_for('master.create_cafe') }}">
+          <div class="grid" style="margin-top: 12px;">
+            <div class="field">
+              <label for="name">نام کافه</label>
+              <input id="name" name="name" type="text" placeholder="مثلاً Madeline" required>
+            </div>
+            <div class="field">
+              <label for="slug">کد (slug)</label>
+              <input id="slug" name="slug" type="text" placeholder="مثلاً madeline (اختیاری)">
+            </div>
           </div>
-          <div class="field">
-            <label for="slug">کد (slug)</label>
-            <input id="slug" name="slug" type="text" placeholder="مثلاً madeline (اختیاری)">
+          <div class="field" style="margin-top: 16px;">
+            <label style="margin-bottom: 10px;">ماژول‌های فعال</label>
+            <div class="modules-grid">
+              {% for code, title in modules %}
+                <label class="module-checkbox-label">
+                  <input type="checkbox" name="modules" value="{{ code }}" {% if code in ['orders', 'inventory', 'users', 'reports'] %}checked{% endif %}>
+                  <span>{{ title }}</span>
+                </label>
+              {% endfor %}
+            </div>
+          </div>
+          <button class="btn" type="submit">ساخت کافه</button>
+        </form>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class="alerts">
+              {% for category, msg in messages %}
+                <div class="alert {{ category }}">{{ msg }}</div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+      </div>
+
+      <div id="content-list" class="tab-content">
+        <h3 style="margin-top: 0;">لیست کافه‌ها</h3>
+        <div class="muted" style="margin-bottom: 12px;">{{ cafes|length }} کافه ثبت شده</div>
+        <div class="table-wrapper">
+          <table class="table">
+            <thead>
+              <tr>
+                <th style="min-width: 120px;">نام</th>
+                <th style="min-width: 80px;">کد</th>
+                <th style="min-width: 200px;">مسیر دیتابیس</th>
+                <th style="min-width: 80px;">وضعیت</th>
+                <th style="min-width: 200px;">عملیات</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% if cafes %}
+                {% for c in cafes %}
+                  <tr>
+                    <td>
+                      <div style="font-weight:900; margin-bottom: 4px;">{{ c.name }}</div>
+                      <div class="muted" style="font-size: 0.75rem;">ID: {{ c.id }} • {{ c.created_at.strftime('%Y-%m-%d') if c.created_at else '' }}</div>
+                    </td>
+                    <td>
+                      <code style="background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px; font-size: 0.85rem;">{{ c.slug }}</code>
+                    </td>
+                    <td>
+                      <div class="muted" style="font-size: 0.8rem; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ c.db_path }}</div>
+                    </td>
+                    <td>
+                      <span style="padding: 4px 8px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; {% if c.is_active %}background: rgba(34,197,94,0.2); color: #bbf7d0;{% else %}background: rgba(239,68,68,0.2); color: #fecaca;{% endif %}">
+                        {{ 'فعال' if c.is_active else 'غیرفعال' }}
+                      </span>
+                    </td>
+                    <td>
+                      <div class="action-buttons">
+                        {% if c.is_active %}
+                          <a href="{{ url_for('master.enter_cafe', slug=c.slug) }}" class="action-btn action-btn-primary">ورود</a>
+                          <a href="{{ url_for('master.cafe_users', slug=c.slug) }}" class="action-btn action-btn-info">کاربران</a>
+                        {% endif %}
+                        <form method="POST" action="{{ url_for('master.toggle_cafe_active', slug=c.slug) }}" style="display:inline;">
+                          <button type="submit" class="action-btn action-btn-{% if c.is_active %}warning{% else %}success{% endif %}">
+                            {{ 'غیرفعال' if c.is_active else 'فعال' }}
+                          </button>
+                        </form>
+                        <form method="POST" action="{{ url_for('master.delete_cafe', slug=c.slug) }}" style="display:inline;" onsubmit="return confirm('آیا مطمئن هستید که می‌خواهید کافه «{{ c.name }}» و تمام داده‌هایش را حذف کنید؟ این عمل غیرقابل بازگشت است!');">
+                          <button type="submit" class="action-btn action-btn-danger">حذف</button>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
+                {% endfor %}
+              {% else %}
+                <tr>
+                  <td colspan="5" class="muted" style="padding: 18px;">هنوز هیچ کافه‌ای ثبت نشده.</td>
+                </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="content-summary" class="tab-content">
+        <h3 style="margin-top: 0;">گزارش و اطلاعات کلی</h3>
+        
+        <!-- Summary Cards -->
+        <div class="summary-grid">
+          <div class="summary-card">
+            <div class="summary-label">کل کافه‌ها</div>
+            <div class="summary-value">{{ summary.total_cafes }}</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-label">کافه‌های فعال</div>
+            <div class="summary-value" style="color: #bbf7d0;">{{ summary.active_cafes }}</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-label">کافه‌های غیرفعال</div>
+            <div class="summary-value" style="color: #fecaca;">{{ summary.inactive_cafes }}</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-label">کل سفارش‌ها</div>
+            <div class="summary-value">{{ "{:,}".format(summary.total_orders) }}</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-label">کل درآمد</div>
+            <div class="summary-value">{{ "{:,}".format(summary.total_revenue) }} <span style="font-size: 0.7em;">تومان</span></div>
           </div>
         </div>
-        <button class="btn" type="submit">ساخت کافه</button>
-      </form>
 
-      {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-          <div class="alerts">
-            {% for category, msg in messages %}
-              <div class="alert {{ category }}">{{ msg }}</div>
+        <!-- Detailed Cafe Information -->
+        <div style="margin-top: 24px;">
+          <h4 style="margin-bottom: 16px; font-size: 1rem;">اطلاعات تفصیلی کافه‌ها</h4>
+          <div class="cafe-info-grid">
+            {% for stat in cafe_stats %}
+              <div class="cafe-info-card {% if not stat.cafe.is_active %}inactive{% endif %}">
+                <div class="cafe-info-header">
+                  <div style="font-weight: 900; font-size: 1.1rem;">{{ stat.cafe.name }}</div>
+                  <span class="status-badge {% if stat.cafe.is_active %}active{% else %}inactive{% endif %}">
+                    {{ 'فعال' if stat.cafe.is_active else 'غیرفعال' }}
+                  </span>
+                </div>
+                <div class="cafe-info-body">
+                  <div class="info-row">
+                    <span class="info-label">کد:</span>
+                    <code class="info-value">{{ stat.cafe.slug }}</code>
+                  </div>
+                  <div class="info-row">
+                    <span class="info-label">تاریخ ایجاد:</span>
+                    <span class="info-value">{{ stat.cafe.created_at.strftime('%Y-%m-%d') if stat.cafe.created_at else '-' }}</span>
+                  </div>
+                  {% if stat.has_data %}
+                    <div class="info-stats">
+                      <div class="info-stat-item">
+                        <div class="info-stat-label">سفارش‌ها</div>
+                        <div class="info-stat-value">{{ "{:,}".format(stat.orders_count) }}</div>
+                      </div>
+                      <div class="info-stat-item">
+                        <div class="info-stat-label">درآمد</div>
+                        <div class="info-stat-value">{{ "{:,}".format(stat.revenue) }}</div>
+                      </div>
+                      <div class="info-stat-item">
+                        <div class="info-stat-label">کاربران</div>
+                        <div class="info-stat-value">{{ stat.users_count }}</div>
+                      </div>
+                      <div class="info-stat-item">
+                        <div class="info-stat-label">آیتم‌های منو</div>
+                        <div class="info-stat-value">{{ stat.menu_items_count }}</div>
+                      </div>
+                      <div class="info-stat-item">
+                        <div class="info-stat-label">مشتریان</div>
+                        <div class="info-stat-value">{{ stat.customers_count }}</div>
+                      </div>
+                    </div>
+                  {% elif stat.error %}
+                    <div class="info-error">خطا در خواندن داده‌ها: {{ stat.error }}</div>
+                  {% else %}
+                    <div class="info-empty">داده‌ای موجود نیست</div>
+                  {% endif %}
+                </div>
+                <div class="cafe-info-footer">
+                  <a href="{{ url_for('master.cafe_report', slug=stat.cafe.slug) }}" class="info-link">مشاهده گزارش</a>
+                </div>
+              </div>
             {% endfor %}
           </div>
-        {% endif %}
-      {% endwith %}
-    </div>
+        </div>
+      </div>
 
-    <div class="card">
-      <h3>لیست کافه‌ها</h3>
-      <div class="muted">فعلاً فقط لیست/ساخت فعال است (مرحله بعدی: اتصال هر کافه به دامنه/سرویس خودش + مدیریت کاربران هر کافه از همینجا).</div>
-      <div style="margin-top: 10px; overflow:auto;">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>نام</th>
-              <th>کد</th>
-              <th>مسیر دیتابیس</th>
-              <th>وضعیت</th>
-              <th>عملیات</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% if cafes %}
-              {% for c in cafes %}
+      <div id="content-requests" class="tab-content">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <div>
+            <h3 style="margin-top: 0; margin-bottom: 8px;">درخواست‌های ایجاد کاربر</h3>
+            <div class="muted">درخواست‌های ایجاد کاربر از کافه‌ها در این بخش نمایش داده می‌شود.</div>
+          </div>
+          {% if user_requests %}
+          <form method="POST" action="{{ url_for('master.delete_all_requests') }}" style="display: inline;">
+            <button type="submit" class="action-btn action-btn-danger" onclick="return confirm('⚠️ هشدار: آیا مطمئن هستید که می‌خواهید تمام درخواست‌ها را از دیتابیس حذف کنید؟ این عملیات غیرقابل بازگشت است!')" style="padding: 10px 16px; font-size: 0.9rem;">
+              حذف تمام درخواست‌ها
+            </button>
+          </form>
+          {% endif %}
+        </div>
+        
+        {% if user_requests %}
+          <div class="table-wrapper">
+            <table class="table">
+              <thead>
                 <tr>
+                  <th>کافه</th>
+                  <th>نام کاربری درخواستی</th>
+                  <th>نام</th>
+                  <th>نقش</th>
+                  <th>وضعیت</th>
+                  <th>تاریخ</th>
+                  <th>عملیات</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for req in user_requests %}
+                <tr>
+                  <td>{{ req.cafe.name if req.cafe else 'نامشخص' }}</td>
+                  <td>{{ req.username }}</td>
+                  <td>{{ req.name or '-' }}</td>
+                  <td>{{ req.role }}</td>
                   <td>
-                    <div style="font-weight:900;">{{ c.name }}</div>
-                    <div class="muted">ID: {{ c.id }} • Created: {{ c.created_at }}</div>
+                    {% if req.status == 'pending' %}
+                      <span style="color: #fbbf24;">در انتظار</span>
+                    {% elif req.status == 'approved' %}
+                      <span style="color: #22c55e;">تایید شده</span>
+                    {% elif req.status == 'deleted' %}
+                      <span style="color: #6b7280;">حذف شده</span>
+                    {% else %}
+                      <span style="color: #ef4444;">رد شده</span>
+                    {% endif %}
                   </td>
-                  <td>{{ c.slug }}</td>
-                  <td><div class="muted">{{ c.db_path }}</div></td>
-                  <td>{{ 'فعال' if c.is_active else 'غیرفعال' }}</td>
+                  <td style="font-size: 0.85rem; color: rgba(229,231,235,0.6);">
+                    {{ req.created_at.strftime('%Y/%m/%d %H:%M') if req.created_at else '-' }}
+                  </td>
                   <td>
-                    <a href="{{ url_for('master.enter_cafe', slug=c.slug) }}" style="display:inline-block; padding:6px 12px; background:#4AA8FF; color:#fff; border-radius:8px; text-decoration:none; font-weight:700; font-size:0.85rem;">ورود به کافه</a>
+                    {% if req.status == 'pending' %}
+                      <div class="action-buttons">
+                        <form method="POST" action="{{ url_for('master.approve_user_request', request_id=req.id) }}" style="display: inline;">
+                          <button type="submit" class="action-btn action-btn-success" onclick="return confirm('آیا از تایید این درخواست اطمینان دارید؟')">تایید</button>
+                        </form>
+                        <form method="POST" action="{{ url_for('master.reject_user_request', request_id=req.id) }}" style="display: inline;">
+                          <button type="submit" class="action-btn action-btn-danger" onclick="return confirm('آیا از رد این درخواست اطمینان دارید؟')">رد</button>
+                        </form>
+                      </div>
+                    {% elif req.status == 'approved' %}
+                      <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <div style="background: {% if req.generated_password %}rgba(34,197,94,0.2){% else %}rgba(239,68,68,0.2){% endif %}; padding: 8px 12px; border-radius: 6px; font-size: 0.9rem; border: 1px solid {% if req.generated_password %}rgba(34,197,94,0.3){% else %}rgba(239,68,68,0.3){% endif %};">
+                          <strong>نام کاربری:</strong> {{ req.generated_username }}<br>
+                          {% if req.generated_password %}
+                            <strong>رمز عبور:</strong> {{ req.generated_password }}
+                          {% else %}
+                            <strong style="color: #ef4444;">وضعیت:</strong> <span style="color: #ef4444;">غیرفعال (رمز عبور حذف شده)</span>
+                          {% endif %}
+                        </div>
+                        <div class="action-buttons" style="display: flex; gap: 6px; flex-wrap: wrap;">
+                          {% if req.generated_password %}
+                            <form method="POST" action="{{ url_for('master.deactivate_user', request_id=req.id) }}" style="display: inline;">
+                              <button type="submit" class="action-btn action-btn-warning" onclick="return confirm('آیا از غیرفعال کردن این کاربر اطمینان دارید؟ رمز عبور کاربر حذف خواهد شد.')">غیرفعال کردن</button>
+                            </form>
+                          {% else %}
+                            <form method="POST" action="{{ url_for('master.reactivate_user', request_id=req.id) }}" style="display: inline;">
+                              <button type="submit" class="action-btn action-btn-success" onclick="return confirm('آیا می‌خواهید این کاربر را دوباره فعال کنید؟ رمز عبور جدید برایش ایجاد خواهد شد.')">فعال کردن مجدد</button>
+                            </form>
+                          {% endif %}
+                          <form method="POST" action="{{ url_for('master.delete_user', request_id=req.id) }}" style="display: inline;">
+                            <button type="submit" class="action-btn action-btn-danger" onclick="return confirm('آیا از حذف این کاربر از دیتابیس اطمینان دارید؟ این عملیات غیرقابل بازگشت است.')">حذف از دیتابیس</button>
+                          </form>
+                        </div>
+                      </div>
+                    {% elif req.status == 'deleted' %}
+                      <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <div style="background: rgba(107,114,128,0.2); padding: 8px 12px; border-radius: 6px; font-size: 0.9rem; border: 1px solid rgba(107,114,128,0.3);">
+                          <strong style="color: #6b7280;">کاربر از دیتابیس حذف شده است</strong>
+                        </div>
+                        <div class="action-buttons">
+                          <form method="POST" action="{{ url_for('master.delete_request', request_id=req.id) }}" style="display: inline;">
+                            <button type="submit" class="action-btn action-btn-danger" onclick="return confirm('آیا می‌خواهید این درخواست را از لیست حذف کنید؟')">حذف از داده‌ها</button>
+                          </form>
+                        </div>
+                      </div>
+                    {% else %}
+                      <span class="muted">-</span>
+                    {% endif %}
                   </td>
                 </tr>
-              {% endfor %}
-            {% else %}
-              <tr>
-                <td colspan="5" class="muted" style="padding: 18px;">هنوز هیچ کافه‌ای ثبت نشده.</td>
-              </tr>
-            {% endif %}
-          </tbody>
-        </table>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <p style="text-align: center; color: rgba(229,231,235,0.6); padding: 2rem;">هیچ درخواستی وجود ندارد.</p>
+        {% endif %}
       </div>
     </div>
   </div>
+
+  <script>
+    function switchTab(tabName) {
+      // Hide all tab contents
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+      });
+      
+      // Remove active class from all tabs
+      document.querySelectorAll('.tab').forEach(tab => {
+        tab.classList.remove('active');
+      });
+      
+      // Show selected tab content
+      document.getElementById('content-' + tabName).classList.add('active');
+      document.getElementById('tab-' + tabName).classList.add('active');
+    }
+  </script>
 </body>
 </html>
 

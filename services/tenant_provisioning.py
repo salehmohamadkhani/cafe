@@ -105,16 +105,17 @@ def provision_tenant(tenants_dir: str, name: str, slug: str, source_project_dir:
         
         copy_tree(source_project_dir, root_dir)
         
-        # Clean up instance directory (we'll create fresh DB)
+        # Clean up instance directory completely (we'll create fresh DB)
         instance_dir = os.path.join(root_dir, 'instance')
         if os.path.exists(instance_dir):
-            for item in os.listdir(instance_dir):
-                item_path = os.path.join(instance_dir, item)
-                if item.endswith('.db') or item == 'secret_key':
-                    try:
-                        os.remove(item_path)
-                    except:
-                        pass
+            import shutil
+            try:
+                # Remove entire instance directory to ensure no old DB files are copied
+                shutil.rmtree(instance_dir, ignore_errors=True)
+            except:
+                pass
+            # Recreate empty instance directory
+            os.makedirs(instance_dir, exist_ok=True)
     else:
         # Fallback: just create basic structure
         instance_dir = os.path.join(root_dir, 'instance')
@@ -129,6 +130,78 @@ def provision_tenant(tenants_dir: str, name: str, slug: str, source_project_dir:
     # Create schema for tenant database using existing tenant models metadata
     engine = create_engine(db_uri, future=True)
     db.metadata.create_all(bind=engine)
+    
+    # Clear ALL data from ALL tables to ensure completely fresh start
+    # We'll create Settings and User after clearing
+    from sqlalchemy import inspect, text
+    inspector = inspect(engine)
+    table_names = inspector.get_table_names()
+    
+    Session = sessionmaker(bind=engine, future=True)
+    with Session() as s:
+        # Disable foreign key constraints temporarily
+        s.execute(text("PRAGMA foreign_keys=OFF"))
+        
+        # Delete all data from ALL tables (comprehensive list)
+        # Order matters: delete child tables first, then parent tables
+        all_tables_to_clear = [
+            # Child tables with foreign keys (delete first)
+            'order_item',
+            'table_item', 
+            'menu_item_material',
+            'raw_material_usage',
+            'material_purchase',
+            'warehouse_transfer',
+            'warehouse_material_min_stock',
+            'pre_production_item_material',
+            'pre_production_stock',
+            'pre_production_production',
+            'pre_production_transfer',
+            'snap_settlement',
+            'action_log',
+            # Parent tables
+            'order',
+            'menu_item',
+            'category',
+            'customer',
+            'pre_production_item',
+            'warehouse',
+            'raw_material',
+            'cost_formula_settings',
+            'table_area',
+            'table',  # SQL keyword, needs special handling
+        ]
+        
+        # Delete from all known tables
+        for table_name in all_tables_to_clear:
+            if table_name in table_names:
+                try:
+                    # Use quotes for SQL keywords like 'table'
+                    if table_name == 'table':
+                        s.execute(text('DELETE FROM "table"'))
+                    else:
+                        s.execute(text(f'DELETE FROM "{table_name}"'))
+                except Exception as e:
+                    print(f"Warning: Could not delete from {table_name}: {e}")
+                    pass
+        
+        # Delete from ANY other tables that might exist (except settings and user)
+        # This catches any tables we might have missed
+        protected_tables = {'settings', 'user'}
+        for table_name in table_names:
+            if table_name not in all_tables_to_clear and table_name not in protected_tables:
+                try:
+                    s.execute(text(f'DELETE FROM "{table_name}"'))
+                    print(f"Cleared additional table: {table_name}")
+                except Exception as e:
+                    print(f"Warning: Could not delete from {table_name}: {e}")
+                    pass
+        
+        # Re-enable foreign key constraints
+        s.execute(text("PRAGMA foreign_keys=ON"))
+        s.commit()
+    
+    print(f"✅ Cleared all data from all tables in tenant database")
 
     # Update config.py in tenant to point to its own database
     config_py_path = os.path.join(root_dir, 'config.py')
@@ -138,10 +211,16 @@ def provision_tenant(tenants_dir: str, name: str, slug: str, source_project_dir:
         
         # Replace SQLALCHEMY_DATABASE_URI to point to tenant's DB
         import re
-        # Pattern to match SQLALCHEMY_DATABASE_URI assignment
+        # Pattern to match SQLALCHEMY_DATABASE_URI assignment (including multi-line with parentheses)
+        # Match either: SQLALCHEMY_DATABASE_URI = (...) or SQLALCHEMY_DATABASE_URI = single_line_value
         pattern = r"SQLALCHEMY_DATABASE_URI\s*=\s*\([^)]*\)|SQLALCHEMY_DATABASE_URI\s*=\s*[^\n]+"
-        replacement = f"SQLALCHEMY_DATABASE_URI = f\"sqlite:///{db_path}\""
-        config_content = re.sub(pattern, replacement, config_content)
+        # Normalize path to POSIX style to avoid Windows backslash issues in regex replacement
+        db_path_posix = db_path.replace("\\", "/")
+        replacement = f"SQLALCHEMY_DATABASE_URI = f\"sqlite:///{db_path_posix}\""
+        # Use lambda to avoid backslash interpretation issues
+        config_content = re.sub(pattern, lambda m: replacement, config_content, flags=re.MULTILINE)
+        # Clean up any orphaned lines that might remain (like "or f\"sqlite:///...\"")
+        config_content = re.sub(r'\s+or\s+f["\'].*?["\']\s*\)\s*', '', config_content)
         
         # Remove master DB bind (tenants don't need it)
         config_content = re.sub(r"SQLALCHEMY_BINDS\s*=\s*\{[^}]*'master'[^}]*\}", "", config_content)

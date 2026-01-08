@@ -755,8 +755,10 @@
 {% block content %}
 {% set occupied_count = tables | selectattr('status', 'equalto', 'اشغال شده') | list | length %}
 {% set takeaway_count = takeaway_orders | length %}
-{% set unpaid_count = financial.unpaid_count %}
+{% set unpaid_count = financial.unpaid_count if financial else 0 %}
+{% set is_waiter = is_waiter|default(false) %}
 <div class="dashboard-shell">
+    {% if not is_waiter %}
     <section class="ds-section">
         <div class="dashboard-section-header">
             <div>
@@ -792,6 +794,17 @@
             </article>
         </div>
     </section>
+    {% else %}
+    <section class="ds-section">
+        <div class="dashboard-section-header">
+            <div>
+                <h2 style="margin:0;">داشبورد گارسون</h2>
+                <p class="ds-subtitle">مدیریت میزها و ثبت سفارش</p>
+            </div>
+            <span class="ds-pill">کل میزها: {{ tables|length }}</span>
+        </div>
+    </section>
+    {% endif %}
 
     <div class="dashboard-grid">
         <div class="dashboard-left">
@@ -928,6 +941,7 @@
             </section>
         </div>
 
+        {% if not is_waiter %}
         <div class="dashboard-right" id="financial-section">
             <section class="ds-section">
                 <div class="dashboard-section-header">
@@ -1049,6 +1063,7 @@
                 </div>
             </section>
         </div>
+        {% endif %}
     </div>
 </div>
 <!-- پاپ‌آپ میز -->

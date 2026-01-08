@@ -1,11 +1,11 @@
 {% extends 'base.html' %}
 
-{% block title %}صفحه اصلی - Madeline cafe{% endblock %}
+{% block title %}صفحه یافت نشد - 404{% endblock %}
 
 {% block content %}
 <style>
-    .index-page {
-        min-height: calc(100vh - 200px);
+    .error-page {
+        min-height: 100vh;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -13,8 +13,15 @@
         padding: 3rem 1rem;
         background: linear-gradient(135deg, var(--color-bg, #F7F8FA) 0%, #ffffff 100%);
     }
+    
+    /* حذف padding/margin اضافی container در صفحه اصلی */
+    body:has(.error-page) .container {
+        padding: 0;
+        margin: 0;
+        max-width: 100%;
+    }
 
-    .welcome-card {
+    .error-card {
         background: var(--color-surface, #ffffff);
         border-radius: var(--radius-lg, 16px);
         box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
@@ -24,111 +31,75 @@
         text-align: center;
     }
 
-    .welcome-card .logo {
-        height: 80px;
-        width: auto;
-        margin-bottom: 1.5rem;
+    .error-code {
+        font-size: 6rem;
+        font-weight: 700;
+        color: var(--color-primary, #1F3A5F);
+        margin-bottom: 1rem;
+        line-height: 1;
     }
 
-    .welcome-card h1 {
+    .error-card h1 {
         font-size: 2rem;
         font-weight: 700;
         color: var(--text-body, #2A2E34);
-        margin-bottom: 0.5rem;
+        margin-bottom: 1rem;
     }
 
-    .welcome-card p {
-        font-size: 1rem;
+    .error-card p {
+        font-size: 1.1rem;
         color: var(--text-secondary, #6B7380);
-        margin-bottom: 2rem;
+        margin-bottom: 0.5rem;
+        line-height: 1.6;
     }
 
-    .welcome-actions {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-        margin-top: 2rem;
-    }
-
-    .welcome-actions .btn {
-        width: 100%;
-        padding: 0.85rem 1.5rem;
-        font-size: 1rem;
-        font-weight: 600;
+    .error-card .info-box {
+        background: rgba(74, 168, 255, 0.1);
+        border: 1px solid rgba(74, 168, 255, 0.2);
         border-radius: var(--radius-md, 12px);
-        text-decoration: none;
-        display: inline-block;
-        transition: all 0.2s ease;
-        text-align: center;
+        padding: 1.5rem;
+        margin-top: 2rem;
+        text-align: right;
     }
 
-    .welcome-actions .btn-primary {
-        background: var(--color-primary, #1F3A5F);
-        color: #ffffff;
-    }
-
-    .welcome-actions .btn-primary:hover {
-        background: #2d4f82;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(31, 58, 95, 0.25);
-    }
-
-    .welcome-actions .btn-secondary {
-        background: var(--color-bg, #F7F8FA);
+    .error-card .info-box p {
+        font-size: 0.95rem;
         color: var(--text-body, #2A2E34);
-        border: 1.5px solid var(--color-border, #e2e8f0);
+        margin: 0.5rem 0;
     }
 
-    .welcome-actions .btn-secondary:hover {
-        background: #ffffff;
-        border-color: var(--color-primary, #1F3A5F);
+    .error-card .info-box strong {
         color: var(--color-primary, #1F3A5F);
     }
 
-    .welcome-actions .btn-danger {
-        background: var(--color-danger, #E44848);
-        color: #ffffff;
-    }
-
-    .welcome-actions .btn-danger:hover {
-        background: #c93a3a;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(228, 72, 72, 0.25);
-    }
-
-    @media (min-width: 768px) {
-        .welcome-actions {
-            flex-direction: row;
+    @media (max-width: 768px) {
+        .error-code {
+            font-size: 4rem;
         }
         
-        .welcome-actions .btn {
-            flex: 1;
+        .error-card h1 {
+            font-size: 1.5rem;
+        }
+        
+        .error-card p {
+            font-size: 1rem;
         }
     }
 </style>
 
-<div class="index-page">
-    <div class="welcome-card">
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="Cafe Logo" class="logo">
-        {% if current_user.is_authenticated %}
-            <h1>خوش آمدید، {{ current_user.name or current_user.username }}!</h1>
-            <p>به سیستم مدیریت کافه مادلین خوش آمدید</p>
-            <div class="welcome-actions">
-                <a href="{{ url_for('dashboard.dashboard') }}" class="btn btn-primary">داشبورد</a>
-                <a href="{{ url_for('menu.show_menu') }}" class="btn btn-secondary">مشاهده منو</a>
-                <a href="{{ url_for('auth.logout') }}" class="btn btn-danger">خروج</a>
-            </div>
-        {% else %}
-            <h1>خوش آمدید</h1>
-            <p>به سیستم مدیریت کافه مادلین خوش آمدید</p>
-            <p style="font-size: 0.9rem; color: var(--text-secondary, #6B7380); margin-top: 1rem;">
-                برای استفاده از سیستم، لطفاً وارد حساب کاربری خود شوید
+<div class="error-page">
+    <div class="error-card">
+        <div class="error-code">404</div>
+        <h1>صفحه یافت نشد</h1>
+        <p>متأسفانه صفحه‌ای که به دنبال آن هستید وجود ندارد.</p>
+        
+        <div class="info-box">
+            <p><strong>برای دسترسی به سیستم:</strong></p>
+            <p>لطفاً لینک صحیح کافه خود را که از مدیر سیستم دریافت کرده‌اید وارد کنید.</p>
+            <p style="font-size: 0.85rem; color: var(--text-secondary, #6B7380); margin-top: 1rem;">
+                فرمت لینک صحیح: <code style="background: rgba(0,0,0,0.05); padding: 2px 6px; border-radius: 4px;">/cafe/[نام-کافه]/login</code>
             </p>
-            <div class="welcome-actions">
-                <a href="{{ url_for('auth.login') }}" class="btn btn-primary">ورود به سیستم</a>
-                <a href="{{ url_for('auth.register') }}" class="btn btn-secondary">ثبت نام</a>
-            </div>
-        {% endif %}
+        </div>
     </div>
 </div>
 {% endblock %}

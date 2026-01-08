@@ -6,11 +6,85 @@ from datetime import datetime, timedelta
 from collections import defaultdict
 import pytz
 import jdatetime
-from utils.helpers import categorize_payment_method, PAYMENT_BUCKET_LABELS
+from utils.helpers import categorize_payment_method, PAYMENT_BUCKET_LABELS, restrict_cashier_access
 
 dashboard_bp = Blueprint('dashboard', __name__, url_prefix='/dashboard')
 
+@dashboard_bp.route('/waiter')
+@login_required
+def waiter_dashboard():
+    """داشبورد مخصوص گارسون - فقط میزها و ثبت سفارش"""
+    from flask_login import current_user
+    
+    # Check if user is waiter
+    if not (current_user.is_authenticated and hasattr(current_user, 'role') and current_user.role == 'waiter'):
+        flash('شما دسترسی به این صفحه را ندارید.', 'danger')
+        return redirect(url_for('dashboard.dashboard'))
+    
+    # Get all menu items
+    menu_items = MenuItem.query.filter_by(is_active=True).order_by(MenuItem.name).all()
+    
+    # Get all categories for menu grouping
+    categories = Category.query.filter_by(is_active=True).order_by(Category.order, Category.name).all()
+    
+    # Get all customers for the datalist
+    customers = Customer.query.all()
+    
+    # Get all tables, if no tables exist, create 4 default tables
+    tables = Table.query.order_by(Table.number).all()
+    if not tables:
+        for i in range(1, 5):
+            table = Table(number=i, status='خالی')
+            db.session.add(table)
+        db.session.commit()
+        tables = Table.query.order_by(Table.number).all()
+
+    table_groups_map = defaultdict(list)
+    for table in tables:
+        label = table.area.name if table.area else 'بدون دسته‌بندی'
+        table_groups_map[label].append(table)
+
+    table_groups = []
+    for label in sorted(table_groups_map.keys()):
+        ordered_tables = sorted(table_groups_map[label], key=lambda t: t.number)
+        table_groups.append({'label': label, 'tables': ordered_tables})
+    
+    # No financial data for waiters - pass empty dict
+    financial_data = {
+        'today_revenue': 0,
+        'today_orders_count': 0,
+        'today_paid_count': 0,
+        'month_revenue': 0,
+        'month_paid_revenue': 0,
+        'month_orders_count': 0,
+        'month_paid_count': 0,
+        'unpaid_orders': [],
+        'unpaid_total': 0,
+        'unpaid_count': 0,
+        'recent_orders': [],
+        'payment_stats': {},
+        'order_type_stats': {},
+        'month_tax': 0,
+        'month_discount': 0,
+        'periods': [],
+        'active_period': 'today'
+    }
+    
+    # Empty takeaway orders list for waiters (they can only create, not see existing)
+    takeaway_orders = []
+    
+    return render_template('dashboard.html', 
+                          menu_items=menu_items,
+                          categories=categories,
+                          customers=customers,
+                          tables=tables,
+                          table_groups=table_groups,
+                          financial=financial_data,
+                          takeaway_orders=takeaway_orders,
+                          is_waiter=True)  # Flag to hide financial sections
+
 @dashboard_bp.route('/')
+@restrict_cashier_access
 @login_required
 def dashboard():
     # Get all menu items

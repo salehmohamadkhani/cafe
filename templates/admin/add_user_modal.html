@@ -1,0 +1,132 @@
+<div class="ds-modal" id="add-user-modal" style="display: none;">
+  <div class="ds-modal__panel" style="width: min(600px, 95vw);">
+    <div class="ds-modal__header">
+      <div>
+        <div class="modal-eyebrow">افزودن کاربر</div>
+        <h3>افزودن کاربر جدید</h3>
+      </div>
+      <button class="ds-modal__close" onclick="closeAddUserModal()" aria-label="بستن">×</button>
+    </div>
+
+    <div class="ds-modal__body">
+      <form method="POST" action="{{ url_for('admin.request_user_creation') }}" id="add-user-form">
+        <input type="hidden" name="modal" value="1">
+        
+        <div class="form-field" style="display: flex; flex-direction: column; gap: 0.5rem;">
+          <label for="username" style="font-size: 0.9rem; font-weight: 600; color: var(--text-heading);">نام کاربری پیشنهادی *</label>
+          <input 
+            type="text" 
+            id="username" 
+            name="username" 
+            required 
+            placeholder="مثلاً cashier1"
+            style="
+              padding: 0.65rem 0.85rem;
+              border: 1.5px solid var(--color-border);
+              border-radius: var(--radius-md);
+              font-size: 0.95rem;
+              background: var(--color-surface);
+              color: var(--text-body);
+              transition: border-color 0.2s;
+            "
+            onfocus="this.style.borderColor='var(--color-secondary)'"
+            onblur="this.style.borderColor='var(--color-border)'"
+          >
+          <small style="font-size: 0.8rem; color: var(--text-secondary);">نام کاربری و رمز عبور پس از تایید توسط پنل مرکزی برای شما ارسال می‌شود</small>
+        </div>
+
+        <div class="form-field" style="display: flex; flex-direction: column; gap: 0.5rem;">
+          <label for="name" style="font-size: 0.9rem; font-weight: 600; color: var(--text-heading);">نام و نام خانوادگی</label>
+          <input 
+            type="text" 
+            id="name" 
+            name="name" 
+            placeholder="مثلاً سارا احمدی"
+            style="
+              padding: 0.65rem 0.85rem;
+              border: 1.5px solid var(--color-border);
+              border-radius: var(--radius-md);
+              font-size: 0.95rem;
+              background: var(--color-surface);
+              color: var(--text-body);
+              transition: border-color 0.2s;
+            "
+            onfocus="this.style.borderColor='var(--color-secondary)'"
+            onblur="this.style.borderColor='var(--color-border)'"
+          >
+        </div>
+
+        <div class="form-field" style="display: flex; flex-direction: column; gap: 0.5rem;">
+          <label for="phone" style="font-size: 0.9rem; font-weight: 600; color: var(--text-heading);">شماره تماس</label>
+          <input 
+            type="text" 
+            id="phone" 
+            name="phone" 
+            placeholder="09xx..."
+            style="
+              padding: 0.65rem 0.85rem;
+              border: 1.5px solid var(--color-border);
+              border-radius: var(--radius-md);
+              font-size: 0.95rem;
+              background: var(--color-surface);
+              color: var(--text-body);
+              transition: border-color 0.2s;
+            "
+            onfocus="this.style.borderColor='var(--color-secondary)'"
+            onblur="this.style.borderColor='var(--color-border)'"
+          >
+        </div>
+
+        <div class="form-field" style="display: flex; flex-direction: column; gap: 0.5rem;">
+          <label for="role" style="font-size: 0.9rem; font-weight: 600; color: var(--text-heading);">نقش کاربری</label>
+          <select 
+            id="role" 
+            name="role"
+            style="
+              padding: 0.65rem 0.85rem;
+              border: 1.5px solid var(--color-border);
+              border-radius: var(--radius-md);
+              font-size: 0.95rem;
+              background: var(--color-surface);
+              color: var(--text-body);
+              cursor: pointer;
+              transition: border-color 0.2s;
+            "
+            onfocus="this.style.borderColor='var(--color-secondary)'"
+            onblur="this.style.borderColor='var(--color-border)'"
+          >
+            {% if 'cashier' in roles %}
+            <option value="cashier">{{ roles['cashier'].label }}</option>
+            {% endif %}
+            {% if 'waiter' in roles %}
+            <option value="waiter">{{ roles['waiter'].label }}</option>
+            {% endif %}
+            {% if 'inventory' in roles %}
+            <option value="inventory" selected>{{ roles['inventory'].label }}</option>
+            {% endif %}
+          </select>
+        </div>
+
+        <div style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; flex-wrap: wrap;">
+          <button 
+            type="button" 
+            onclick="closeAddUserModal()"
+            class="btn btn-secondary"
+            style="padding: 0.65rem 1.25rem; font-size: 0.9rem;"
+          >
+            انصراف
+          </button>
+          <button 
+            type="submit" 
+            class="btn btn-primary"
+            style="padding: 0.65rem 1.25rem; font-size: 0.9rem;"
+          >
+            ثبت کاربر
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+

@@ -11,26 +11,8 @@ auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
-    if request.method == 'POST':
-        username = request.form.get('username', '').strip()
-        password = request.form.get('password', '')
-        
-        if not username or not password:
-            flash('لطفاً نام کاربری و رمز عبور را وارد کنید.')
-            return render_template('auth/login.html')
-        
-        user = User.query.filter_by(username=username).first()
-        if user and check_password_hash(user.password_hash, password):
-            if not user.is_active:
-                flash('حساب کاربری شما غیرفعال است. لطفاً با مدیر سیستم تماس بگیرید.')
-                return render_template('auth/login.html')
-            login_user(user)
-            user.last_login = datetime.now(iran_tz)
-            db.session.commit()
-            next_page = request.args.get('next')
-            return redirect(next_page or url_for('dashboard.dashboard'))
-        flash('نام کاربری یا رمز عبور اشتباه است.')
-    return render_template('auth/login.html')
+    """Redirect old auth/login to master login"""
+    return redirect(url_for('master.login'))
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
 def register():
@@ -93,7 +75,28 @@ def register():
     return render_template('auth/register.html')
 
 @auth_bp.route('/logout')
-@login_required
 def logout():
+    """Logout user - handles both tenant and master users"""
+    from flask import session
+    from flask_login import logout_user
+    
+    # Get tenant_slug before clearing session
+    tenant_slug = session.get('tenant_slug')
+    
+    # Logout from Flask-Login
     logout_user()
-    return redirect(url_for('auth.login'))
+    
+    # Clear all session variables
+    session.pop('tenant_slug', None)
+    session.pop('tenant_db_path', None)
+    session.pop('tenant_user_id', None)
+    session.pop('tenant_username', None)
+    session.pop('master_user_id', None)
+    
+    # Redirect based on context
+    if tenant_slug:
+        flash('با موفقیت از کافه خارج شدید.', 'info')
+        return redirect(url_for('tenant_auth.login', slug=tenant_slug))
+    else:
+        flash('با موفقیت خارج شدید.', 'info')
+        return redirect(url_for('master.login'))

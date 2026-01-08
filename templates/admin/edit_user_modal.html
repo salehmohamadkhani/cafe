@@ -1,0 +1,152 @@
+<div class="ds-modal" id="edit-user-modal" style="display: none;">
+  <div class="ds-modal__panel" style="width: min(600px, 95vw);">
+    <div class="ds-modal__header">
+      <div>
+        <div class="modal-eyebrow">ویرایش اطلاعات</div>
+        <h3>ویرایش کاربر</h3>
+      </div>
+      <button class="ds-modal__close" onclick="closeEditUserModal()" aria-label="بستن">×</button>
+    </div>
+
+    <div class="ds-modal__body">
+      <form method="POST" action="{{ url_for('admin.edit_user', user_id=user.id) }}" id="edit-user-form">
+        <input type="hidden" name="modal" value="1">
+        
+        <div class="form-field" style="display: flex; flex-direction: column; gap: 0.5rem;">
+          <label style="font-size: 0.9rem; font-weight: 600; color: var(--text-heading);">نام کاربری</label>
+          <input 
+            type="text" 
+            value="{{ user.username }}" 
+            disabled
+            style="
+              padding: 0.65rem 0.85rem;
+              border: 1.5px solid var(--color-border);
+              border-radius: var(--radius-md);
+              font-size: 0.95rem;
+              background: var(--color-bg);
+              color: var(--text-secondary);
+              cursor: not-allowed;
+            "
+          >
+        </div>
+
+        <div class="form-field" style="display: flex; flex-direction: column; gap: 0.5rem;">
+          <label for="name" style="font-size: 0.9rem; font-weight: 600; color: var(--text-heading);">نام و نام خانوادگی</label>
+          <input 
+            type="text" 
+            id="name" 
+            name="name" 
+            value="{{ user.name or '' }}"
+            style="
+              padding: 0.65rem 0.85rem;
+              border: 1.5px solid var(--color-border);
+              border-radius: var(--radius-md);
+              font-size: 0.95rem;
+              background: var(--color-surface);
+              color: var(--text-body);
+              transition: border-color 0.2s;
+            "
+            onfocus="this.style.borderColor='var(--color-secondary)'"
+            onblur="this.style.borderColor='var(--color-border)'"
+          >
+        </div>
+
+        <div class="form-field" style="display: flex; flex-direction: column; gap: 0.5rem;">
+          <label for="phone" style="font-size: 0.9rem; font-weight: 600; color: var(--text-heading);">شماره تماس</label>
+          <input 
+            type="text" 
+            id="phone" 
+            name="phone" 
+            value="{{ user.phone or '' }}"
+            style="
+              padding: 0.65rem 0.85rem;
+              border: 1.5px solid var(--color-border);
+              border-radius: var(--radius-md);
+              font-size: 0.95rem;
+              background: var(--color-surface);
+              color: var(--text-body);
+              transition: border-color 0.2s;
+            "
+            onfocus="this.style.borderColor='var(--color-secondary)'"
+            onblur="this.style.borderColor='var(--color-border)'"
+          >
+        </div>
+
+        <div class="form-field" style="display: flex; flex-direction: column; gap: 0.5rem;">
+          <label for="role" style="font-size: 0.9rem; font-weight: 600; color: var(--text-heading);">نقش کاربری</label>
+          <select 
+            id="role" 
+            name="role"
+            style="
+              padding: 0.65rem 0.85rem;
+              border: 1.5px solid var(--color-border);
+              border-radius: var(--radius-md);
+              font-size: 0.95rem;
+              background: var(--color-surface);
+              color: var(--text-body);
+              cursor: pointer;
+              transition: border-color 0.2s;
+            "
+            onfocus="this.style.borderColor='var(--color-secondary)'"
+            onblur="this.style.borderColor='var(--color-border)'"
+          >
+            {% for key, role in roles.items() %}
+            <option value="{{ key }}" {% if user.role == key %}selected{% endif %}>{{ role.label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-field" style="display: flex; flex-direction: column; gap: 0.5rem;">
+          <label for="password" style="font-size: 0.9rem; font-weight: 600; color: var(--text-heading);">رمز عبور جدید (اختیاری)</label>
+          <input 
+            type="password" 
+            id="password" 
+            name="password" 
+            placeholder="فقط در صورت تغییر رمز عبور پر کنید"
+            minlength="6"
+            style="
+              padding: 0.65rem 0.85rem;
+              border: 1.5px solid var(--color-border);
+              border-radius: var(--radius-md);
+              font-size: 0.95rem;
+              background: var(--color-surface);
+              color: var(--text-body);
+              transition: border-color 0.2s;
+            "
+            onfocus="this.style.borderColor='var(--color-secondary)'"
+            onblur="this.style.borderColor='var(--color-border)'"
+          >
+          <small style="font-size: 0.8rem; color: var(--text-secondary);">اگر می‌خواهید رمز عبور را تغییر دهید، این فیلد را پر کنید (حداقل ۶ کاراکتر)</small>
+        </div>
+
+        <div style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; flex-wrap: wrap;">
+          <button 
+            type="button" 
+            onclick="closeEditUserModal()"
+            class="btn btn-secondary"
+            style="padding: 0.65rem 1.25rem; font-size: 0.9rem;"
+          >
+            انصراف
+          </button>
+          <button 
+            type="submit" 
+            class="btn btn-primary"
+            style="padding: 0.65rem 1.25rem; font-size: 0.9rem;"
+          >
+            ذخیره تغییرات
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function closeEditUserModal() {
+  const modal = document.getElementById('edit-user-modal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
+</script>
+

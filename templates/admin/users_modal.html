@@ -1,0 +1,301 @@
+<div class="ds-modal" id="users-modal" style="display: none;">
+  <div class="ds-modal__panel" style="width: min(900px, 95vw); max-height: 90vh;">
+    <div class="ds-modal__header">
+      <div>
+        <div class="modal-eyebrow">مدیریت سیستم</div>
+        <h3>مدیریت کاربران</h3>
+      </div>
+      <button class="ds-modal__close" onclick="closeUsersModal()" aria-label="بستن">×</button>
+    </div>
+
+    <div class="ds-modal__body">
+      <!-- Toolbar -->
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem;">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <strong style="color: var(--text-heading);">تعداد کاربران:</strong>
+          <span style="color: var(--text-secondary);">{{ users|length }}</span>
+        </div>
+        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+          <input 
+            type="text" 
+            id="user-search-input" 
+            placeholder="جستجو بر اساس نام یا نقش..."
+            style="
+              padding: 0.5rem 0.75rem;
+              border: 1.5px solid var(--color-border);
+              border-radius: var(--radius-md);
+              font-size: 0.9rem;
+              width: 220px;
+              background: var(--color-surface);
+              color: var(--text-body);
+            "
+          >
+          <button 
+            class="btn btn-primary" 
+            onclick="openAddUserModal()"
+            style="padding: 0.5rem 1rem; font-size: 0.9rem;"
+          >
+            + افزودن کاربر
+          </button>
+        </div>
+      </div>
+
+      <!-- Users Table -->
+      <div style="overflow-x: auto; border: 1px solid var(--color-border); border-radius: var(--radius-md);">
+        <table style="width: 100%; border-collapse: collapse; min-width: 700px;">
+          <thead style="background: var(--color-bg);">
+            <tr>
+              <th style="padding: 0.75rem; text-align: center; font-weight: 700; color: var(--text-heading); border-bottom: 2px solid var(--color-border);">#</th>
+              <th style="padding: 0.75rem; text-align: center; font-weight: 700; color: var(--text-heading); border-bottom: 2px solid var(--color-border);">نام</th>
+              <th style="padding: 0.75rem; text-align: center; font-weight: 700; color: var(--text-heading); border-bottom: 2px solid var(--color-border);">نام کاربری</th>
+              <th style="padding: 0.75rem; text-align: center; font-weight: 700; color: var(--text-heading); border-bottom: 2px solid var(--color-border);">نقش</th>
+              <th style="padding: 0.75rem; text-align: center; font-weight: 700; color: var(--text-heading); border-bottom: 2px solid var(--color-border);">شماره تماس</th>
+              <th style="padding: 0.75rem; text-align: center; font-weight: 700; color: var(--text-heading); border-bottom: 2px solid var(--color-border);">وضعیت</th>
+              <th style="padding: 0.75rem; text-align: center; font-weight: 700; color: var(--text-heading); border-bottom: 2px solid var(--color-border);">عملیات</th>
+            </tr>
+          </thead>
+          <tbody id="users-table-body">
+            {% if users %}
+              {% for user in users %}
+              <tr data-user-id="{{ user.id }}" style="border-bottom: 1px solid var(--color-border); transition: background 0.15s;">
+                <td style="padding: 0.75rem; text-align: center; color: var(--text-body);">{{ loop.index }}</td>
+                <td style="padding: 0.75rem; text-align: center; color: var(--text-body);">{{ user.name or '-' }}</td>
+                <td style="padding: 0.75rem; text-align: center; color: var(--text-body);">{{ user.username }}</td>
+                <td style="padding: 0.75rem; text-align: center;">
+                  {% set role_key = user.role or 'waiter' %}
+                  {% set role_meta = role_definitions.get(role_key) %}
+                  <span 
+                    class="role-pill role-{{ role_key|default('unknown') }}"
+                    style="
+                      display: inline-flex;
+                      align-items: center;
+                      padding: 0.3rem 0.8rem;
+                      border-radius: 999px;
+                      font-size: 0.78rem;
+                      font-weight: 700;
+                      {% if role_key == 'admin' %}background: #fee2e2; color: #b91c1c;
+                      {% elif role_key == 'cashier' %}background: #dbeafe; color: #1d4ed8;
+                      {% elif role_key == 'inventory' %}background: #ede9fe; color: #6b21a8;
+                      {% elif role_key == 'procurement' %}background: #fef3c7; color: #92400e;
+                      {% elif role_key == 'accountant' %}background: #cffafe; color: #0e7490;
+                      {% elif role_key == 'waiter' %}background: #dcfce7; color: #166534;
+                      {% else %}background: #e5e7eb; color: #374151;{% endif %}
+                    "
+                    title="{{ role_meta.description if role_meta else 'نقش سفارشی' }}"
+                  >
+                    {{ role_meta.label if role_meta else role_key }}
+                  </span>
+                </td>
+                <td style="padding: 0.75rem; text-align: center; color: var(--text-body);">{{ user.phone or '-' }}</td>
+                <td style="padding: 0.75rem; text-align: center;">
+                  <span 
+                    style="
+                      display: inline-flex;
+                      align-items: center;
+                      padding: 0.3rem 0.75rem;
+                      border-radius: 999px;
+                      font-size: 0.78rem;
+                      font-weight: 700;
+                      background: #e0f2fe;
+                      color: #0c4a6e;
+                    "
+                  >
+                    فعال
+                  </span>
+                </td>
+                <td style="padding: 0.75rem; text-align: center;">
+                  <div style="display: inline-flex; gap: 0.4rem;">
+                    <button 
+                      onclick="openEditUserModal({{ user.id }})"
+                      style="
+                        border: none;
+                        border-radius: 8px;
+                        padding: 0.4rem 0.8rem;
+                        font-size: 0.8rem;
+                        font-weight: 600;
+                        cursor: pointer;
+                        background: #eef2ff;
+                        color: #4338ca;
+                        transition: transform 0.15s;
+                      "
+                      onmouseover="this.style.transform='translateY(-1px)'"
+                      onmouseout="this.style.transform='none'"
+                    >
+                      ویرایش
+                    </button>
+                    <button 
+                      onclick="deleteUser({{ user.id }})"
+                      style="
+                        border: none;
+                        border-radius: 8px;
+                        padding: 0.4rem 0.8rem;
+                        font-size: 0.8rem;
+                        font-weight: 600;
+                        cursor: pointer;
+                        background: #fee2e2;
+                        color: #b91c1c;
+                        transition: transform 0.15s;
+                      "
+                      onmouseover="this.style.transform='translateY(-1px)'"
+                      onmouseout="this.style.transform='none'"
+                    >
+                      حذف
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                  هیچ کاربری ثبت نشده است.
+                </td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function closeUsersModal() {
+  document.getElementById('users-modal').style.display = 'none';
+  // Redirect to dashboard when closing
+  window.location.href = '/admin/dashboard';
+}
+
+// Close modal when clicking backdrop
+document.addEventListener('DOMContentLoaded', function() {
+  const modal = document.getElementById('users-modal');
+  if (modal) {
+    modal.addEventListener('click', function(e) {
+      if (e.target === modal) {
+        closeUsersModal();
+      }
+    });
+  }
+});
+
+function openEditUserModal(userId) {
+  fetch(`/admin/users/${userId}/edit?modal=1`)
+    .then(response => response.text())
+    .then(html => {
+      const modalContainer = document.getElementById('edit-user-modal-container');
+      if (!modalContainer) {
+        const container = document.createElement('div');
+        container.id = 'edit-user-modal-container';
+        document.body.appendChild(container);
+        container.innerHTML = html;
+      } else {
+        modalContainer.innerHTML = html;
+      }
+      const editModal = document.getElementById('edit-user-modal');
+      if (editModal) {
+        editModal.style.display = 'flex';
+        // Close on backdrop click
+        editModal.addEventListener('click', function(e) {
+          if (e.target === editModal) {
+            closeEditUserModal();
+          }
+        });
+      }
+    })
+    .catch(error => {
+      console.error('Error loading edit user modal:', error);
+      alert('خطا در بارگذاری فرم ویرایش');
+    });
+}
+
+function closeEditUserModal() {
+  const modal = document.getElementById('edit-user-modal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
+
+function openAddUserModal() {
+  fetch('/admin/users/add?modal=1')
+    .then(response => response.text())
+    .then(html => {
+      const modalContainer = document.getElementById('add-user-modal-container');
+      if (!modalContainer) {
+        const container = document.createElement('div');
+        container.id = 'add-user-modal-container';
+        document.body.appendChild(container);
+        container.innerHTML = html;
+      } else {
+        modalContainer.innerHTML = html;
+      }
+      const addModal = document.getElementById('add-user-modal');
+      if (addModal) {
+        addModal.style.display = 'flex';
+        // Close on backdrop click
+        addModal.addEventListener('click', function(e) {
+          if (e.target === addModal) {
+            closeAddUserModal();
+          }
+        });
+      }
+    })
+    .catch(error => {
+      console.error('Error loading add user modal:', error);
+      alert('خطا در بارگذاری فرم افزودن کاربر');
+    });
+}
+
+function closeAddUserModal() {
+  const modal = document.getElementById('add-user-modal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
+
+function deleteUser(userId) {
+  if (!confirm('آیا از حذف این کاربر اطمینان دارید؟')) {
+    return;
+  }
+  
+  const formData = new FormData();
+  formData.append('modal', '1');
+  
+  fetch(`/admin/users/${userId}/delete`, {
+    method: 'POST',
+    body: formData
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      // Reload users modal
+      reloadUsersModal();
+    } else {
+      alert('خطا در حذف کاربر');
+    }
+  })
+  .catch(error => {
+    console.error('Error deleting user:', error);
+    alert('خطا در حذف کاربر');
+  });
+}
+
+// Search functionality
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('user-search-input');
+  if (searchInput) {
+    searchInput.addEventListener('input', function() {
+      const query = this.value.trim().toLowerCase();
+      const rows = document.querySelectorAll('#users-table-body tr');
+      rows.forEach(row => {
+        const text = row.textContent.trim().toLowerCase();
+        if (!query || text.includes(query)) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    });
+  }
+});
+</script>
+

@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>لیست کاربران - {{ cafe.name }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}">
+  <style>
+    @font-face {
+      font-family: Vazirmatn;
+      src: url('{{ url_for("static", filename="fonts/Vazirmatn-Regular.woff2") }}') format('woff2');
+      font-weight: normal;
+      font-style: normal;
+    }
+    html, body {
+      font-family: Vazirmatn, Tahoma, Arial, sans-serif;
+      background: radial-gradient(1200px 600px at 50% 0%, rgba(74,168,255,0.20), transparent 55%),
+                  radial-gradient(900px 450px at 0% 20%, rgba(241,231,208,0.25), transparent 60%),
+                  #0f172a;
+      color: #e5e7eb;
+      min-height: 100vh;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px 20px;
+    }
+    .card {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 18px;
+      box-shadow: 0 18px 60px rgba(0,0,0,0.35);
+      padding: 24px;
+      backdrop-filter: blur(10px);
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .card-header h2 {
+      margin: 0;
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 16px;
+    }
+    .table thead {
+      background: rgba(255,255,255,0.05);
+    }
+    .table th {
+      padding: 12px;
+      text-align: right;
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: rgba(229,231,235,0.9);
+      border-bottom: 2px solid rgba(255,255,255,0.12);
+    }
+    .table td {
+      padding: 12px;
+      text-align: right;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      color: rgba(229,231,235,0.8);
+    }
+    .table tbody tr:hover {
+      background: rgba(255,255,255,0.03);
+    }
+    .action-buttons {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .action-btn {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .action-btn-danger {
+      background: rgba(239,68,68,0.2);
+      color: #fecaca;
+      border: 1px solid rgba(239,68,68,0.3);
+    }
+    .action-btn-danger:hover {
+      background: rgba(239,68,68,0.3);
+    }
+    .action-btn-info {
+      background: rgba(59,130,246,0.2);
+      color: #bfdbfe;
+      border: 1px solid rgba(59,130,246,0.3);
+    }
+    .action-btn-info:hover {
+      background: rgba(59,130,246,0.3);
+    }
+    .action-btn-warning {
+      background: rgba(245,158,11,0.2);
+      color: #fde68a;
+      border: 1px solid rgba(245,158,11,0.3);
+    }
+    .action-btn-warning:hover {
+      background: rgba(245,158,11,0.3);
+    }
+    .back-link {
+      display: inline-block;
+      margin-bottom: 16px;
+      color: rgba(229,231,235,0.8);
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+    .back-link:hover {
+      color: #e5e7eb;
+    }
+    .role-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .role-admin {
+      background: rgba(239,68,68,0.2);
+      color: #fecaca;
+    }
+    .role-cashier {
+      background: rgba(59,130,246,0.2);
+      color: #bfdbfe;
+    }
+    .role-waiter {
+      background: rgba(34,197,94,0.2);
+      color: #bbf7d0;
+    }
+    .status-active {
+      color: #22c55e;
+    }
+    .status-inactive {
+      color: #ef4444;
+    }
+    .delete-all-btn {
+      margin-bottom: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="{{ url_for('master.dashboard') }}" class="back-link">← بازگشت به داشبورد</a>
+    
+    <div class="card">
+      <div class="card-header">
+        <h2>لیست کاربران - {{ cafe.name }}</h2>
+        {% if users|length > 1 %}
+        <form method="POST" action="{{ url_for('master.delete_all_users_except_admin', slug=cafe.slug) }}" style="display: inline;" onsubmit="return confirm('⚠️ هشدار: آیا مطمئن هستید که می‌خواهید تمام کاربران به جز admin را حذف کنید؟ این عملیات غیرقابل بازگشت است!');">
+          <button type="submit" class="action-btn action-btn-warning delete-all-btn">حذف همه کاربران (به جز admin)</button>
+        </form>
+        {% endif %}
+      </div>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div style="margin-bottom: 16px;">
+            {% for category, msg in messages %}
+              <div style="padding: 12px; border-radius: 8px; margin-bottom: 8px; 
+                  {% if category == 'success' %}background: rgba(34,197,94,0.2); color: #bbf7d0; border: 1px solid rgba(34,197,94,0.3);
+                  {% elif category == 'danger' %}background: rgba(239,68,68,0.2); color: #fecaca; border: 1px solid rgba(239,68,68,0.3);
+                  {% else %}background: rgba(59,130,246,0.2); color: #bfdbfe; border: 1px solid rgba(59,130,246,0.3);{% endif %}">
+                {{ msg }}
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      <table class="table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>نام</th>
+            <th>نام کاربری</th>
+            <th>نقش</th>
+            <th>وضعیت</th>
+            <th>عملیات</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if users %}
+            {% for user in users %}
+            <tr>
+              <td>{{ loop.index }}</td>
+              <td>{{ user.name or '-' }}</td>
+              <td>{{ user.username }}</td>
+              <td>
+                <span class="role-badge role-{{ user.role or 'waiter' }}">
+                  {% if user.role == 'admin' %}مدیر سیستم
+                  {% elif user.role == 'cashier' %}صندوقدار
+                  {% elif user.role == 'waiter' %}گارسون
+                  {% elif user.role == 'inventory' %}انباردار
+                  {% else %}{{ user.role }}{% endif %}
+                </span>
+              </td>
+              <td>
+                {% if user.is_active %}
+                  <span class="status-active">فعال</span>
+                {% else %}
+                  <span class="status-inactive">غیرفعال</span>
+                {% endif %}
+              </td>
+              <td>
+                <div class="action-buttons">
+                  <a href="{{ url_for('master.user_report', slug=cafe.slug, user_id=user.id) }}" class="action-btn action-btn-info">گزارش</a>
+                  {% if user.role != 'admin' %}
+                  <form method="POST" action="{{ url_for('master.delete_cafe_user', slug=cafe.slug, user_id=user.id) }}" style="display: inline;" onsubmit="return confirm('آیا از حذف کاربر «{{ user.username }}» اطمینان دارید؟');">
+                    <button type="submit" class="action-btn action-btn-danger">حذف</button>
+                  </form>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="6" style="text-align: center; padding: 32px; color: rgba(229,231,235,0.6);">
+                هیچ کاربری ثبت نشده است.
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</body>
+</html>

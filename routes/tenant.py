@@ -6,6 +6,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from models.master_models import CafeTenant
+from flask import session
 from models.models import Order, Customer
 
 tenant_bp = Blueprint('tenant', __name__, url_prefix='/cafe/<slug>')
@@ -14,6 +15,22 @@ tenant_bp = Blueprint('tenant', __name__, url_prefix='/cafe/<slug>')
 def require_tenant_session(view_func):
     """Decorator to ensure user is logged into a tenant"""
     def wrapper(slug, *args, **kwargs):
+        # Check if tenant exists and is active
+        cafe = CafeTenant.query.filter_by(slug=slug).first()
+        if not cafe:
+            flash('کافه یافت نشد.', 'danger')
+            session.pop('tenant_slug', None)
+            return redirect(url_for('master.dashboard'))
+        
+        if not cafe.is_active:
+            # Clear tenant session
+            session.pop('tenant_slug', None)
+            session.pop('tenant_db_path', None)
+            session.pop('tenant_user_id', None)
+            session.pop('tenant_username', None)
+            from flask import render_template
+            return render_template('tenant/inactive.html', cafe=cafe), 403
+        
         if session.get('tenant_slug') != slug:
             flash('لطفاً ابتدا وارد کافه شوید.', 'warning')
             return redirect(url_for('tenant_auth.login', slug=slug))

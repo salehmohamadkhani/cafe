@@ -15,7 +15,8 @@ def redirect_to_tenant_dashboard(slug):
     cafe = CafeTenant.query.filter_by(slug=slug).first_or_404()
     
     if not cafe.is_active:
-        return redirect(url_for('master.dashboard'))
+        from flask import render_template
+        return render_template('tenant/inactive.html', cafe=cafe), 403
     
     if not os.path.exists(cafe.root_dir):
         return redirect(url_for('master.dashboard'))

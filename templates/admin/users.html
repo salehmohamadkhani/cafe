@@ -2,6 +2,9 @@
 {% block title %}مدیریت کاربران{% endblock %}
 
 {% block head %}
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <style>
     .users-page {
         padding: 1.5rem 0 2.5rem;
@@ -162,7 +165,7 @@
     }
 
     .action-buttons a,
-    .action-buttons form button {
+    .action-buttons button {
         border: none;
         border-radius: 8px;
         padding: 0.4rem 0.8rem;
@@ -209,7 +212,7 @@
             <p>کاربران جدید اضافه کنید، نقش‌ها را مدیریت کنید و وضعیت دسترسی را کنترل کنید.</p>
         </div>
         <div class="users-actions">
-            <a href="{{ url_for('admin.add_user') }}">افزودن کاربر جدید</a>
+            <a href="#" onclick="openAddUserModal(); return false;">افزودن کاربر جدید</a>
             <a href="{{ url_for('admin.dashboard') }}">بازگشت به داشبورد</a>
         </div>
     </section>
@@ -254,14 +257,22 @@
                         </td>
                         <td>{{ user.phone or '-' }}</td>
                         <td>
+                            {% if user.is_active %}
                             <span class="status-pill">فعال</span>
+                            {% else %}
+                            <span class="status-pill" style="background: #fef3c7; color: #92400e;">در انتظار تایید</span>
+                            {% endif %}
                         </td>
                         <td>
                             <div class="action-buttons">
-                                <a href="{{ url_for('admin.edit_user', user_id=user.id) }}">ویرایش</a>
-                                <form method="post" action="{{ url_for('admin.delete_user', user_id=user.id) }}">
-                                    <button type="submit">حذف</button>
+                                <a href="#" onclick="openEditUserModal({{ user.id }}); return false;">ویرایش</a>
+                                {% if current_user.id != user.id %}
+                                <form method="post" action="{{ url_for('admin.delete_user', user_id=user.id) }}" style="display: inline;">
+                                    <button type="submit" onclick="return confirm('آیا از حذف این کاربر اطمینان دارید؟')">حذف</button>
                                 </form>
+                                {% else %}
+                                <button type="button" disabled style="opacity: 0.5; cursor: not-allowed;" title="شما نمی‌توانید خودتان را حذف کنید">حذف</button>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>
@@ -275,10 +286,13 @@
         </table>
     </section>
 </div>
-{% endblock %}
 
-{% block scripts %}
+<!-- Container for modals -->
+<div id="edit-user-modal-container"></div>
+<div id="add-user-modal-container"></div>
+
 <script>
+// Search functionality
 (function () {
     const searchInput = document.getElementById('user-search');
     const rows = Array.from(document.querySelectorAll('#users-table tbody tr'));
@@ -296,5 +310,136 @@
         });
     });
 })();
+
+// Open edit user modal
+function openEditUserModal(userId) {
+  fetch(`/admin/users/${userId}/edit?modal=1`)
+    .then(response => response.text())
+    .then(html => {
+      const container = document.getElementById('edit-user-modal-container');
+      container.innerHTML = html;
+      const modal = document.getElementById('edit-user-modal');
+      if (modal) {
+        modal.style.display = 'flex';
+        // Close on backdrop click
+        modal.addEventListener('click', function(e) {
+          if (e.target === modal) {
+            closeEditUserModal();
+          }
+        });
+        
+        // Setup form submission handler
+        const form = document.getElementById('edit-user-form');
+        if (form) {
+          // Remove any existing event listeners by cloning the form
+          const newForm = form.cloneNode(true);
+          form.parentNode.replaceChild(newForm, form);
+          
+          // Add new event listener
+          newForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(newForm);
+            
+            fetch(newForm.action, {
+              method: 'POST',
+              body: formData
+            })
+            .then(response => {
+              if (response.ok) {
+                return response.json();
+              } else {
+                return response.json().then(data => {
+                  throw new Error(data.error || 'خطا در ذخیره تغییرات');
+                });
+              }
+            })
+            .then(data => {
+              if (data.success) {
+                closeEditUserModal();
+                // Reload page to show updated data
+                location.reload();
+              } else {
+                alert(data.error || 'خطا در ذخیره تغییرات');
+              }
+            })
+            .catch(error => {
+              console.error('Error:', error);
+              alert(error.message || 'خطا در ذخیره تغییرات');
+            });
+          });
+        }
+      }
+    })
+    .catch(error => {
+      console.error('Error loading edit user modal:', error);
+      alert('خطا در بارگذاری فرم ویرایش');
+    });
+}
+
+function closeEditUserModal() {
+  const modal = document.getElementById('edit-user-modal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
+
+// Open add user modal
+function openAddUserModal() {
+  fetch('/admin/users/add?modal=1')
+    .then(response => response.text())
+    .then(html => {
+      const container = document.getElementById('add-user-modal-container');
+      container.innerHTML = html;
+      const modal = document.getElementById('add-user-modal');
+      if (modal) {
+        modal.style.display = 'flex';
+        // Close on backdrop click
+        modal.addEventListener('click', function(e) {
+          if (e.target === modal) {
+            closeAddUserModal();
+          }
+        });
+        // Setup form submission handler
+        const form = document.getElementById('add-user-form');
+        if (form) {
+          form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(form);
+            
+            fetch(form.action, {
+              method: 'POST',
+              body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+              if (data.success) {
+                closeAddUserModal();
+                // Reload the page to show new user
+                location.reload();
+              } else {
+                alert(data.error || 'خطا در ثبت کاربر');
+              }
+            })
+            .catch(error => {
+              console.error('Error:', error);
+              alert('خطا در ثبت کاربر');
+            });
+          });
+        }
+      }
+    })
+    .catch(error => {
+      console.error('Error loading add user modal:', error);
+      alert('خطا در بارگذاری فرم افزودن کاربر');
+    });
+}
+
+function closeAddUserModal() {
+  const modal = document.getElementById('add-user-modal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
 </script>
 {% endblock %}

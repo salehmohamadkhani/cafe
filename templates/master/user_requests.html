@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% block title %}درخواست‌های ایجاد کاربر{% endblock %}
+
+{% block content %}
+<div style="padding: 2rem; max-width: 1400px; margin: 0 auto;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <h1 style="margin: 0; color: #e5e7eb;">درخواست‌های ایجاد کاربر</h1>
+    <a href="{{ url_for('master.dashboard') }}" style="color: #4AA8FF; text-decoration: none;">← بازگشت به داشبورد</a>
+  </div>
+
+  <div style="background: rgba(15,23,42,0.6); border-radius: 16px; padding: 1.5rem; border: 1px solid rgba(255,255,255,0.1);">
+    {% if requests %}
+      <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+            <th style="padding: 12px; text-align: right; color: rgba(229,231,235,0.8);">کافه</th>
+            <th style="padding: 12px; text-align: right; color: rgba(229,231,235,0.8);">نام کاربری درخواستی</th>
+            <th style="padding: 12px; text-align: right; color: rgba(229,231,235,0.8);">نام</th>
+            <th style="padding: 12px; text-align: right; color: rgba(229,231,235,0.8);">نقش</th>
+            <th style="padding: 12px; text-align: right; color: rgba(229,231,235,0.8);">وضعیت</th>
+            <th style="padding: 12px; text-align: right; color: rgba(229,231,235,0.8);">تاریخ</th>
+            <th style="padding: 12px; text-align: right; color: rgba(229,231,235,0.8);">عملیات</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for req in requests %}
+          <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+            <td style="padding: 12px;">{{ req.cafe.name if req.cafe else 'نامشخص' }}</td>
+            <td style="padding: 12px;">{{ req.username }}</td>
+            <td style="padding: 12px;">{{ req.name or '-' }}</td>
+            <td style="padding: 12px;">{{ req.role }}</td>
+            <td style="padding: 12px;">
+              {% if req.status == 'pending' %}
+                <span style="color: #fbbf24;">در انتظار</span>
+              {% elif req.status == 'approved' %}
+                <span style="color: #22c55e;">تایید شده</span>
+              {% else %}
+                <span style="color: #ef4444;">رد شده</span>
+              {% endif %}
+            </td>
+            <td style="padding: 12px; font-size: 0.85rem; color: rgba(229,231,235,0.6);">
+              {{ req.created_at.strftime('%Y/%m/%d %H:%M') if req.created_at else '-' }}
+            </td>
+            <td style="padding: 12px;">
+              {% if req.status == 'pending' %}
+                <form method="POST" action="{{ url_for('master.approve_user_request', request_id=req.id) }}" style="display: inline;">
+                  <button type="submit" style="background: #22c55e; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; margin-left: 4px;">تایید</button>
+                </form>
+                <form method="POST" action="{{ url_for('master.reject_user_request', request_id=req.id) }}" style="display: inline;">
+                  <button type="submit" style="background: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer;">رد</button>
+                </form>
+              {% elif req.status == 'approved' %}
+                <div style="background: rgba(34,197,94,0.2); padding: 8px 12px; border-radius: 6px; font-size: 0.9rem;">
+                  <strong>نام کاربری:</strong> {{ req.generated_username }}<br>
+                  <strong>رمز عبور:</strong> {{ req.generated_password }}
+                </div>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p style="text-align: center; color: rgba(229,231,235,0.6); padding: 2rem;">هیچ درخواستی وجود ندارد.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
