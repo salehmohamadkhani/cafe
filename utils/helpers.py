@@ -277,6 +277,9 @@ def restrict_cashier_access(view_func):
     
     @wraps(view_func)
     def wrapper(*args, **kwargs):
+        from services.access_control import is_master_sso
+        if is_master_sso():
+            return view_func(*args, **kwargs)
         # Check if user is cashier
         if current_user.is_authenticated and current_user.role == 'cashier':
             # Get current route name

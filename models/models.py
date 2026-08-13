@@ -1,4 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
+from flask_sqlalchemy.session import Session as FlaskSQLAlchemySession
 from datetime import datetime, timedelta
 from typing import Optional
 import pytz
@@ -68,7 +69,38 @@ def convert_unit(quantity: Optional[float], from_unit: Optional[str], to_unit: O
 
     return float(quantity)
 
-db = SQLAlchemy()
+class TenantRoutingSession(FlaskSQLAlchemySession):
+    """Route unbound operational models to the request's tenant engine.
+
+    Master models carry the ``master`` bind key and continue to use the mother
+    database. Using request-local ``g`` avoids mutating Flask-SQLAlchemy's global
+    engine map, which would leak tenants across concurrent requests.
+    """
+
+    def get_bind(self, mapper=None, clause=None, bind=None, **kwargs):
+        from flask import g, has_request_context
+        from sqlalchemy import inspect as sa_inspect
+
+        if bind is None and has_request_context():
+            tenant_engine = getattr(g, 'tenant_engine', None)
+            if tenant_engine is not None:
+                table = None
+                if mapper is not None:
+                    try:
+                        table = sa_inspect(mapper).local_table
+                    except Exception:
+                        table = None
+                elif clause is not None:
+                    table = getattr(clause, 'table', clause)
+
+                bind_key = table.metadata.info.get('bind_key') if table is not None and hasattr(table, 'metadata') else None
+                if bind_key is None:
+                    return tenant_engine
+
+        return super().get_bind(mapper=mapper, clause=clause, bind=bind, **kwargs)
+
+
+db = SQLAlchemy(session_options={'class_': TenantRoutingSession})
 
 # --- مدل دسته‌بندی منو ---
 class Category(db.Model):
@@ -386,7 +418,7 @@ class MenuItemMaterial(db.Model):
                     continue
                 
                 # قیمت واحد ماده اولیه (در واحد default ماده اولیه)
-                unit_price = raw_material.latest_unit_price
+                unit_price = raw_material.weighted_average_unit_price
                 if unit_price is None:
                     continue
                 
@@ -414,6 +446,10 @@ class MenuItemMaterial(db.Model):
         unit_price = self.latest_unit_price
         if qty is None or unit_price is None:
             return None
+        if self.raw_material:
+            qty = convert_unit(qty, self.unit, self.raw_material.default_unit)
+        elif self.pre_production_item:
+            qty = convert_unit(qty, self.unit, self.pre_production_item.unit)
         return qty * unit_price
 
     def __repr__(self):
@@ -443,8 +479,21 @@ class RawMaterial(db.Model):
     def latest_unit_price(self):
         purchase = self.latest_purchase
         if purchase:
-            return purchase.unit_price
+            return purchase.base_unit_price
         return None
+
+    @property
+    def weighted_average_unit_price(self):
+        """Moving weighted purchase cost in the material's base unit."""
+        total_quantity = 0.0
+        total_value = 0.0
+        for purchase in self.purchases:
+            quantity = convert_unit(purchase.quantity, purchase.unit, self.default_unit)
+            if quantity <= 0:
+                continue
+            total_quantity += quantity
+            total_value += float(purchase.total_price or 0)
+        return (total_value / total_quantity) if total_quantity > 0 else None
 
     @property
     def total_purchase_value(self):
@@ -479,13 +528,26 @@ class MaterialPurchase(db.Model):
     vendor_name = db.Column(db.String(128), nullable=True)
     vendor_phone = db.Column(db.String(32), nullable=True)
     note = db.Column(db.String(256), nullable=True)
+    warehouse_id = db.Column(db.Integer, db.ForeignKey('warehouse.id'), nullable=True, index=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(iran_tz))
+
+    warehouse = db.relationship('Warehouse', backref=db.backref('material_purchases', lazy=True))
 
     @property
     def unit_price(self):
         if not self.quantity:
             return 0
         return int(self.total_price / self.quantity)
+
+    @property
+    def base_quantity(self):
+        if not self.raw_material:
+            return float(self.quantity or 0)
+        return convert_unit(self.quantity, self.unit, self.raw_material.default_unit)
+
+    @property
+    def base_unit_price(self):
+        return (float(self.total_price or 0) / self.base_quantity) if self.base_quantity > 0 else 0
 
     def __repr__(self):
         return f"<MaterialPurchase {self.raw_material_id} {self.purchase_date}>"
@@ -520,6 +582,18 @@ class Warehouse(db.Model):
 
     def __repr__(self):
         return f"<Warehouse {self.code} {self.name}>"
+
+
+class InventoryConfiguration(db.Model):
+    """Tenant-local inventory contract, provisioned by the mother database."""
+    id = db.Column(db.Integer, primary_key=True)
+    is_enabled = db.Column(db.Boolean, nullable=False, default=False)
+    warehouse_mode = db.Column(db.String(24), nullable=False, default='none')
+    managed_by_master = db.Column(db.Boolean, nullable=False, default=True)
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(iran_tz), onupdate=lambda: datetime.now(iran_tz))
+
+    def __repr__(self):
+        return f"<InventoryConfiguration enabled={self.is_enabled} mode={self.warehouse_mode}>"
 
 
 class WarehouseTransfer(db.Model):
@@ -751,27 +825,42 @@ def sync_order_item_material_usage(order_item):
 
     RawMaterialUsage.query.filter_by(order_item_id=order_item.id).delete()
 
+    if getattr(order_item, 'is_deleted', False):
+        return
+
     menu_item = order_item.menu_item or MenuItem.query.get(order_item.menu_item_id)
     if not menu_item:
         return
 
     for material in menu_item.materials:
-        raw_material = material.raw_material
         qty_per_unit = material.quantity_value
-        if not raw_material or qty_per_unit is None:
+        if qty_per_unit is None:
             continue
 
-        total_qty = qty_per_unit * order_item.quantity
-        usage_unit = material.unit or raw_material.default_unit
-        usage = RawMaterialUsage(
-            raw_material_id=raw_material.id,
-            order_id=order_item.order_id,
-            order_item_id=order_item.id,
-            menu_item_id=menu_item.id,
-            quantity=total_qty,
-            unit=usage_unit
-        )
-        db.session.add(usage)
+        components = []
+        if material.raw_material:
+            components.append((material.raw_material, qty_per_unit, material.unit))
+        elif material.pre_production_item:
+            pre_item = material.pre_production_item
+            pre_multiplier = convert_unit(qty_per_unit, material.unit, pre_item.unit)
+            for component in pre_item.materials:
+                if component.raw_material:
+                    components.append((
+                        component.raw_material,
+                        float(component.quantity or 0) * pre_multiplier,
+                        component.unit,
+                    ))
+
+        for raw_material, component_quantity, component_unit in components:
+            db.session.add(RawMaterialUsage(
+                raw_material_id=raw_material.id,
+                order_id=order_item.order_id,
+                order_item_id=order_item.id,
+                menu_item_id=menu_item.id,
+                quantity=component_quantity * order_item.quantity,
+                unit=component_unit or raw_material.default_unit,
+                note='مصرف مستقیم BOM' if material.raw_material else f'مصرف از پیش‌تولید: {material.name}',
+            ))
 
 
 def record_order_material_usage(order, replace_existing=False):

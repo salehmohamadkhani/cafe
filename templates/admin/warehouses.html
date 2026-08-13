@@ -891,7 +891,7 @@
   <section class="ds-section warehouses-hero">
     <p class="panel-eyebrow">انبارداری چند انباره</p>
     <h1>مدیریت انبارها</h1>
-    <p>از انبار مرکزی دریافت می‌کنید و با انتقال، موجودی را بین انبارهای آشپزخانه و قلیان توزیع می‌کنید.</p>
+    <p>موجودی هر بخش را جدا ببینید و در ساختار چندانباره، انتقال بین انبار اصلی و بخش‌های عملیاتی را ثبت کنید.</p>
     <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
       <a class="ds-button ghost" href="{{ url_for('admin.inventory_dashboard') }}">بازگشت به انبارداری</a>
     </div>
@@ -916,11 +916,21 @@
         {% endfor %}
       </div>
 
-      <div class="ds-card" style="margin-top: 1rem; padding: 1rem;">
+      <form action="{{ url_for('admin.create_warehouse') }}" method="post" class="ds-card" style="margin-top:1rem; padding:1rem;">
+        <h4 style="margin:0 0 .35rem;">ساخت انبار جدید</h4>
+        <p class="ds-subtitle" style="margin:0 0 .8rem;">نام دلخواه مثل «انبار ضایعات» یا «بار قلیان» را وارد کنید.</p>
+        <label class="ds-label" for="new-warehouse-name">نام انبار</label>
+        <input class="ds-input" id="new-warehouse-name" name="name" required minlength="2" placeholder="مثلاً انبار بار سرد">
+        <label class="ds-label" for="new-warehouse-code" style="margin-top:.65rem;">کد انگلیسی (اختیاری)</label>
+        <input class="ds-input" id="new-warehouse-code" name="code" dir="ltr" placeholder="cold-bar">
+        <button class="ds-button primary" type="submit" style="width:100%; margin-top:.8rem;">+ ساخت انبار</button>
+      </form>
+
+      <div class="ds-card" style="margin-top: 1rem; padding: 1rem;" {% if warehouses|length <= 1 %}hidden{% endif %}>
         <header class="ds-card-header" style="margin-bottom: 0.75rem;">
           <div>
             <h3 style="margin:0;">ثبت انتقال</h3>
-            <p class="ds-subtitle">ورودی خریدها همیشه به انبار مرکزی اضافه می‌شود؛ انتقال فقط از انبار مرکزی انجام می‌شود.</p>
+            <p class="ds-subtitle">خرید می‌تواند مستقیم وارد هر انبار شود؛ برای جابه‌جایی بعدی از این فرم استفاده کنید.</p>
           </div>
         </header>
         <form class="transfer-form" method="post" action="{{ url_for('admin.create_warehouse_transfer') }}" id="transfer-form">
@@ -1030,7 +1040,7 @@
 
             <div class="ds-input-group" style="grid-column: 1 / -1;">
               <label class="ds-label" for="note">توضیحات (اختیاری)</label>
-              <input id="note" name="note" type="text" class="ds-input" placeholder="مثلاً ارسال به آشپزخانه ایرانی">
+              <input id="note" name="note" type="text" class="ds-input" placeholder="مثلاً ارسال به بخش بار">
             </div>
           </div>
 
@@ -1039,6 +1049,13 @@
           </div>
         </form>
       </div>
+      {% if warehouses|length <= 1 %}
+      <div class="ds-card" style="margin-top:1rem; padding:1rem; background:var(--ds-brand-50) !important;">
+        <span class="ds-badge success">ساختار تک‌انباره</span>
+        <h3 style="margin:.75rem 0 .35rem;">انتقال بین انبارها لازم نیست</h3>
+        <p class="ds-subtitle" style="margin:0;">خرید، مصرف و موجودی این کافه همگی در همین انبار مرکزی ثبت می‌شوند.</p>
+      </div>
+      {% endif %}
     </section>
 
     <section class="ds-section">

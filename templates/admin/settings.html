@@ -262,7 +262,7 @@
         </div>
         <div class="settings-actions">
             <button type="button">بازگردانی پیش‌فرض‌ها</button>
-            <a href="{{ url_for('admin.dashboard') }}">بازگشت به داشبورد</a>
+            <a href="{{ url_for('dashboard.dashboard') }}">بازگشت به داشبورد</a>
         </div>
     </section>
 
@@ -295,10 +295,10 @@
                 <input id="business-name" name="business_name" type="text" value="{{ settings.cafe_name if settings else '' }}">
 
                 <label for="business-phone">شماره تماس</label>
-                <input id="business-phone" name="phone" type="text" value="{{ settings.phone if settings else '' }}">
+                <input id="business-phone" name="phone" type="text" value="{{ settings.phone or '' if settings else '' }}">
 
                 <label for="business-address">آدرس</label>
-                <textarea id="business-address" name="address" rows="2">{{ settings.address if settings else '' }}</textarea>
+                <textarea id="business-address" name="address" rows="2">{{ settings.address or '' if settings else '' }}</textarea>
 
                 <button type="submit" class="settings-save-btn">ذخیره تنظیمات</button>
             </form>
@@ -330,13 +330,13 @@
             <form class="settings-form" method="post" action="{{ url_for('admin.settings') }}">
                 <input type="hidden" name="form_type" value="social">
                 <label for="instagram">اینستاگرام</label>
-                <input id="instagram" name="instagram" type="url" value="{{ settings.instagram if settings else '' }}">
+                <input id="instagram" name="instagram" type="url" value="{{ settings.instagram or '' if settings else '' }}">
 
                 <label for="telegram">تلگرام</label>
-                <input id="telegram" name="telegram" type="url" value="{{ settings.telegram if settings else '' }}">
+                <input id="telegram" name="telegram" type="url" value="{{ settings.telegram or '' if settings else '' }}">
 
                 <label for="website">وب‌سایت</label>
-                <input id="website" name="website" type="url" value="{{ settings.website if settings else '' }}">
+                <input id="website" name="website" type="url" value="{{ settings.website or '' if settings else '' }}">
 
                 <button type="submit" class="settings-save-btn">ذخیره لینک‌ها</button>
             </form>

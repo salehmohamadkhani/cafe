@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>تنظیمات {{ cafe.name }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}?v={{ cache_bust() }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system-v2.css') }}?v={{ cache_bust() }}">
+  <style>
+    @font-face { font-family:Vazirmatn; src:url('{{ url_for("static", filename="fonts/Vazirmatn-Regular.woff2") }}') format('woff2'); }
+    body { font-family:Vazirmatn,Tahoma,sans-serif; }
+    .access-shell { width:min(1040px,100%); margin:auto; padding:28px 20px 48px; }
+    .access-top { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:20px; }
+    .access-top h1 { margin:4px 0; }
+    .access-top p { color:var(--ds-text-muted); margin:0; }
+    .access-layout { display:grid; grid-template-columns:minmax(0,1fr) 320px; gap:16px; align-items:start; }
+    .access-card { padding:24px; background:#fff; border:1px solid var(--ds-border); border-radius:18px; box-shadow:var(--ds-shadow-sm); }
+    .access-meta { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-bottom:22px; }
+    .access-meta div { padding:12px; background:var(--ds-neutral-50); border-radius:11px; overflow:hidden; }
+    .access-meta small { display:block; color:var(--ds-text-muted); margin-bottom:4px; }
+    .access-meta code { color:var(--ds-neutral-800); overflow-wrap:anywhere; }
+    .access-section { padding-top:20px; margin-top:20px; border-top:1px solid var(--ds-border); }
+    .access-section h3 { margin:0 0 4px; }
+    .access-section > p { color:var(--ds-text-muted); font-size:.84rem; }
+    .status-option { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:14px; border:1px solid var(--ds-border); border-radius:12px; }
+    .status-option input { width:20px; height:20px; }
+    .modules { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; }
+    .module { min-height:48px; display:flex; align-items:center; gap:9px; padding:10px 12px; border:1px solid var(--ds-border); border-radius:12px; cursor:pointer; }
+    .module:has(input:checked) { background:var(--ds-brand-50); border-color:var(--ds-brand-600); color:var(--ds-brand-900); }
+    .module input { width:18px; height:18px; }
+    .save-row { display:flex; justify-content:flex-end; margin-top:20px; }
+    .topology-card { position:sticky; top:20px; padding:22px; background:linear-gradient(145deg,var(--ds-brand-950),var(--ds-brand-800)); border-radius:18px; color:#fff; box-shadow:var(--ds-shadow-md); }
+    .topology-card h3 { color:#fff; margin:0 0 7px; }
+    .topology-card p { color:rgba(255,255,255,.67); font-size:.82rem; }
+    .topology-list { display:flex; flex-direction:column; gap:7px; margin:16px 0; }
+    .topology-item { display:flex; align-items:center; gap:8px; padding:10px; border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.07); border-radius:10px; font-size:.8rem; }
+    .topology-index { width:23px; height:23px; display:grid; place-items:center; border-radius:7px; background:#fff; color:var(--ds-brand-900); font-weight:900; font-size:.7rem; }
+    .topology-note { padding-top:14px; border-top:1px solid rgba(255,255,255,.12); color:rgba(255,255,255,.58); font-size:.7rem; }
+    @media(max-width:800px){.access-layout{grid-template-columns:1fr}.topology-card{position:static;grid-row:1}.access-top{flex-direction:column}.access-meta,.modules{grid-template-columns:1fr}.access-shell{padding:16px 12px}.save-row .ds-button{width:100%}}
+  </style>
+</head>
+<body>
+  <main class="access-shell">
+    <header class="access-top"><div><div class="ds-page-header__eyebrow">تنظیمات کافه</div><h1>{{ cafe.name }}</h1><p>وضعیت سرویس و دامنه دسترسی ماژول‌های این کافه</p></div><a class="ds-button ghost" href="{{ url_for('master.dashboard') }}#list">بازگشت به مرکز فرمان</a></header>
+    {% with messages=get_flashed_messages(with_categories=true) %}{% for category,message in messages %}<div class="alert {{ category }}" style="margin-bottom:14px">{{ message }}</div>{% endfor %}{% endwith %}
+    <div class="access-layout">
+      <section class="access-card">
+        <div class="access-meta"><div><small>شناسه کافه</small><code>{{ cafe.slug }}</code></div><div><small>دیتابیس مستقل</small><code>{{ cafe.db_path }}</code></div></div>
+        <form method="post">
+          <div class="field"><label for="name">نام نمایشی کافه</label><input id="name" name="name" type="text" value="{{ cafe.name }}" required></div>
+          <section class="access-section"><h3>وضعیت سرویس</h3><p>در حالت توقف، ورود کاربران کافه تا فعال‌سازی دوباره مسدود می‌شود.</p><label class="status-option"><span><strong>کافه فعال باشد</strong><br><small class="muted">دسترسی کاربران و صفحات عملیاتی برقرار است.</small></span><input type="checkbox" name="is_active" {% if cafe.is_active %}checked{% endif %}></label></section>
+          <section class="access-section"><h3>ماژول‌های مجاز</h3><p>فقط بخش‌های انتخاب‌شده در منو و routeهای عملیاتی قابل استفاده‌اند.</p><div class="modules">{% for code,title in modules %}<label class="module"><input type="checkbox" name="modules" value="{{ code }}" {% if code in enabled_modules %}checked{% endif %}><span>{{ title }}</span></label>{% endfor %}</div></section>
+          <div class="save-row"><button class="ds-button primary large" type="submit">ذخیره وضعیت و دسترسی‌ها</button></div>
+        </form>
+      </section>
+      <aside class="topology-card"><div class="ds-page-header__eyebrow" style="color:#b8dfc8">WAREHOUSE TOPOLOGY</div><h3>{% if warehouse_profile.mode == 'multi' %}ساختار چندانباره{% elif warehouse_profile.mode == 'central' %}انبار مرکزی{% else %}بدون انبارداری{% endif %}</h3><p>{% if warehouse_profile.mode == 'none' %}برای این کافه زیرسیستم موجودی تعریف نشده است.{% else %}تعریف ثبت‌شده در دیتابیس مادر و دیتابیس عملیاتی کافه.{% endif %}</p>
+        {% if warehouse_profile.warehouses %}<div class="topology-list">{% for warehouse in warehouse_profile.warehouses %}<div class="topology-item"><span class="topology-index">{{ loop.index }}</span><span>{{ warehouse.name }}</span></div>{% endfor %}</div>{% endif %}
+        <div class="topology-note">تغییر توپولوژی کافه فعال باید با مهاجرت امن موجودی انجام شود؛ از حذف مستقیم انبار دارای تراکنش جلوگیری می‌شود.</div>
+      </aside>
+    </div>
+  </main>
+</body>
+</html>

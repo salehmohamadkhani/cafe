@@ -360,7 +360,7 @@
                                 {% endif %}
                             </td>
                             <td>{{ order.customer.name if order.customer else '---' }}</td>
-                            <td>{{ order.customer.phone if order.customer else '---' }}</td>
+                            <td>{{ order.customer.phone if order.customer and order.customer.phone else '---' }}</td>
                             <td>{{ "{:,}".format(order.final_amount) }}</td>
                             <td>
                                 {% if order.status == 'پرداخت شده' %}
@@ -389,7 +389,7 @@
                             </td>
                             <td>
                                 <div class="orders-actions-col">
-                                    <a href="{{ url_for('order.order_detail', order_id=order.id) }}" class="btn-view">مشاهده</a>
+                                <a href="{{ url_for('order.order_detail', order_id=order.id) }}" class="btn-view">مشاهده و عملیات</a>
                                 </div>
                             </td>
                         </tr>

@@ -5,6 +5,8 @@ class Config:
     BASEDIR = os.path.abspath(os.path.dirname(__file__))
     INSTANCE_DIR = os.path.join(BASEDIR, 'instance')
     TENANTS_DIR = os.environ.get('CAFE_TENANTS_DIR') or os.path.join(BASEDIR, 'tenants')
+    MASTER_BOOTSTRAP_USERNAME = os.environ.get('MASTER_USERNAME', 'admin')
+    MASTER_BOOTSTRAP_PASSWORD = os.environ.get('MASTER_PASSWORD', 'admin')
 
     # SECRET_KEY:
     # - Prefer environment variable (recommended for production)

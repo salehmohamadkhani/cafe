@@ -683,19 +683,27 @@
         }
     </style>
     {% block head %}{% endblock %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system-v2.css') }}?v={{ cache_bust() }}">
 </head>
 
 <body {% if request.endpoint == 'dashboard.dashboard' %}class="dashboard-page"{% endif %}>
+    {% set nav_role = effective_tenant_role(current_user) if current_user.is_authenticated else none %}
+    {% set nav_is_manager = nav_role in ['admin', 'superadmin'] %}
+    {% set nav_can_menu = nav_is_manager %}
+    {% set nav_can_orders = nav_is_manager %}
+    {% set nav_can_financial = nav_role in ['admin', 'superadmin', 'cashier', 'accountant'] %}
+    {% set nav_can_inventory = nav_role in ['admin', 'superadmin', 'inventory', 'procurement'] %}
     {# نمایش هدر فقط اگر مسیر فعلی صفحه لاگین یا صفحه اصلی نباشد #}
     {% if request.endpoint != 'auth.login' and request.path != '/' %}
     <nav class="navbar">
             <div class="navbar-container">
             <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="منو">☰</button>
-            <a class="navbar-brand" href="{{ url_for('menu.show_menu') }}">
+            <a class="navbar-brand" href="{{ url_for('menu.show_menu') if nav_can_menu else url_for('dashboard.dashboard') }}">
                 {{ cafe_name }}
             </a>
             <ul class="navbar-nav">
                 <li><a href="{{ url_for('dashboard.dashboard') }}" {% if request.endpoint == 'dashboard.dashboard' %}class="active" {% endif %}>داشبورد</a></li>
+                {% if nav_can_menu and tenant_module_enabled('menu') %}
                 <li class="nav-dropdown">
                     <a href="#" class="dropdown-toggle">منو</a>
                     <ul class="dropdown-menu">
@@ -703,30 +711,35 @@
                         <li><a href="{{ url_for('menu.menu_price_management') }}" {% if request.endpoint == 'menu.menu_price_management' %}class="active" {% endif %}>مدیریت قیمت منو</a></li>
                     </ul>
                 </li>
+                {% endif %}
+                {% if nav_can_orders and (tenant_module_enabled('orders') or tenant_module_enabled('customers')) %}
                 <li class="nav-dropdown">
                     <a href="#" class="dropdown-toggle">سفارشات</a>
                     <ul class="dropdown-menu">
-                        <li><a href="{{ url_for('order.orders_list') }}" {% if request.endpoint == 'order.orders_list' %}class="active" {% endif %}>مشاهده سفارشات</a></li>
-                        <li><a href="{{ url_for('admin.customers_leaderboard') }}" {% if request.endpoint == 'admin.customers_leaderboard' %}class="active" {% endif %}>باشگاه مشتریان</a></li>
+                        {% if tenant_module_enabled('orders') %}<li><a href="{{ url_for('order.orders_list') }}" {% if request.endpoint == 'order.orders_list' %}class="active" {% endif %}>مشاهده سفارشات</a></li>{% endif %}
+                        {% if tenant_module_enabled('customers') %}<li><a href="{{ url_for('admin.customers_leaderboard') }}" {% if request.endpoint == 'admin.customers_leaderboard' %}class="active" {% endif %}>باشگاه مشتریان</a></li>{% endif %}
                     </ul>
                 </li>
+                {% endif %}
+                {% if (nav_can_financial and (tenant_module_enabled('reports') or tenant_module_enabled('accounting'))) or (nav_can_inventory and tenant_module_enabled('inventory')) %}
                 <li class="nav-dropdown">
                     <a href="#" class="dropdown-toggle">گزارش‌ها</a>
                     <ul class="dropdown-menu">
-                        <li><a href="{{ url_for('admin.financial_report') }}" {% if request.endpoint == 'admin.financial_report' %}class="active" {% endif %}>گزارش مالی</a></li>
-                        <li><a href="{{ url_for('admin.inventory_dashboard') }}" {% if request.endpoint == 'admin.inventory_dashboard' %}class="active" {% endif %}>انبارداری</a></li>
-                        <li><a href="{{ url_for('admin.warehouses_management') }}" {% if request.endpoint == 'admin.warehouses_management' %}class="active" {% endif %}>مدیریت انبارها</a></li>
+                        {% if nav_can_financial and (tenant_module_enabled('accounting') or tenant_module_enabled('reports')) %}<li><a href="{{ url_for('admin.financial_report') }}" {% if request.endpoint == 'admin.financial_report' %}class="active" {% endif %}>گزارش مالی</a></li>{% endif %}
+                        {% if nav_can_inventory and tenant_module_enabled('inventory') %}<li><a href="{{ url_for('admin.inventory_dashboard') }}" {% if request.endpoint == 'admin.inventory_dashboard' %}class="active" {% endif %}>انبارداری</a></li>
+                        <li><a href="{{ url_for('admin.warehouses_management') }}" {% if request.endpoint == 'admin.warehouses_management' %}class="active" {% endif %}>مدیریت انبارها</a></li>{% endif %}
                     </ul>
                 </li>
-                <li class="nav-dropdown">
+                {% endif %}
+                {% if nav_is_manager %}<li class="nav-dropdown">
                     <a href="#" class="dropdown-toggle">مدیریت</a>
                     <ul class="dropdown-menu">
                         <li><a href="{{ url_for('admin.settings') }}" {% if request.endpoint == 'admin.settings' %}class="active" {% endif %}>تنظیمات</a></li>
-                        {% if current_user.is_authenticated and current_user.role == 'admin' %}
+                        {% if current_user.is_authenticated and effective_tenant_role(current_user) in ['admin', 'superadmin'] and tenant_module_enabled('users') %}
                         <li><a href="{{ url_for('admin.users_list') }}" {% if request.endpoint == 'admin.users_list' %}class="active" {% endif %}>مدیریت کاربران</a></li>
                         {% endif %}
                     </ul>
-                </li>
+                </li>{% endif %}
             </ul>
             <div class="navbar-actions">
                 <button id="global-theme-toggle" class="theme-toggle-btn" type="button" aria-label="تغییر تم">
@@ -734,7 +747,11 @@
                 </button>
                 {% if current_user.is_authenticated %}
                 <span class="user-info">{{ current_user.username }}</span>
+                {% if session.get('tenant_auth_source') == 'master_sso' and session.get('master_user_id') %}
+                <a href="{{ url_for('master.return_from_cafe') }}" class="btn btn-primary">بازگشت به مرکز فرمان</a>
+                {% else %}
                 <a href="{{ url_for('auth.logout') }}" class="btn btn-danger">خروج</a>
+                {% endif %}
                 {% else %}
                 <a href="{{ url_for('master.login') }}" class="btn btn-primary">ورود</a>
                 {% endif %}
@@ -742,12 +759,20 @@
         </div>
     </nav>
 
+    {% if master_sso_active %}
+    <div class="master-sso-bar" role="status">
+        <div><strong>حالت نظارت مرکزی فعال است</strong><span>دسترسی کامل مدیریتی بدون تغییر نقش کاربران {{ cafe_name }}</span></div>
+        <a href="{{ url_for('master.return_from_cafe') }}">بازگشت به مرکز فرمان</a>
+    </div>
+    {% endif %}
+
     <!-- منوی موبایل (همبرگری) -->
     <div class="mobile-menu-overlay" id="mobile-menu-overlay"></div>
     <div class="mobile-menu-sidebar" id="mobile-menu-sidebar">
         <button class="mobile-menu-close" id="mobile-menu-close" aria-label="بستن منو">×</button>
         <ul class="navbar-nav">
             <li><a href="{{ url_for('dashboard.dashboard') }}" {% if request.endpoint == 'dashboard.dashboard' %}class="active" {% endif %}>داشبورد</a></li>
+            {% if nav_can_menu and tenant_module_enabled('menu') %}
             <li class="nav-dropdown">
                 <a href="#" class="dropdown-toggle">منو</a>
                 <ul class="dropdown-menu">
@@ -755,30 +780,35 @@
                     <li><a href="{{ url_for('menu.menu_price_management') }}" {% if request.endpoint == 'menu.menu_price_management' %}class="active" {% endif %}>مدیریت قیمت منو</a></li>
                 </ul>
             </li>
+            {% endif %}
+            {% if nav_can_orders and (tenant_module_enabled('orders') or tenant_module_enabled('customers')) %}
             <li class="nav-dropdown">
                 <a href="#" class="dropdown-toggle">سفارشات</a>
                 <ul class="dropdown-menu">
-                    <li><a href="{{ url_for('order.orders_list') }}" {% if request.endpoint == 'order.orders_list' %}class="active" {% endif %}>مشاهده سفارشات</a></li>
-                    <li><a href="{{ url_for('admin.customers_leaderboard') }}" {% if request.endpoint == 'admin.customers_leaderboard' %}class="active" {% endif %}>باشگاه مشتریان</a></li>
+                    {% if tenant_module_enabled('orders') %}<li><a href="{{ url_for('order.orders_list') }}" {% if request.endpoint == 'order.orders_list' %}class="active" {% endif %}>مشاهده سفارشات</a></li>{% endif %}
+                    {% if tenant_module_enabled('customers') %}<li><a href="{{ url_for('admin.customers_leaderboard') }}" {% if request.endpoint == 'admin.customers_leaderboard' %}class="active" {% endif %}>باشگاه مشتریان</a></li>{% endif %}
                 </ul>
             </li>
+            {% endif %}
+            {% if (nav_can_financial and (tenant_module_enabled('reports') or tenant_module_enabled('accounting'))) or (nav_can_inventory and tenant_module_enabled('inventory')) %}
             <li class="nav-dropdown">
                 <a href="#" class="dropdown-toggle">گزارش‌ها</a>
                 <ul class="dropdown-menu">
-                    <li><a href="{{ url_for('admin.financial_report') }}" {% if request.endpoint == 'admin.financial_report' %}class="active" {% endif %}>گزارش مالی</a></li>
-                    <li><a href="{{ url_for('admin.inventory_dashboard') }}" {% if request.endpoint == 'admin.inventory_dashboard' %}class="active" {% endif %}>انبارداری</a></li>
-                    <li><a href="{{ url_for('admin.warehouses_management') }}" {% if request.endpoint == 'admin.warehouses_management' %}class="active" {% endif %}>مدیریت انبارها</a></li>
+                    {% if nav_can_financial and (tenant_module_enabled('accounting') or tenant_module_enabled('reports')) %}<li><a href="{{ url_for('admin.financial_report') }}" {% if request.endpoint == 'admin.financial_report' %}class="active" {% endif %}>گزارش مالی</a></li>{% endif %}
+                    {% if nav_can_inventory and tenant_module_enabled('inventory') %}<li><a href="{{ url_for('admin.inventory_dashboard') }}" {% if request.endpoint == 'admin.inventory_dashboard' %}class="active" {% endif %}>انبارداری</a></li>
+                    <li><a href="{{ url_for('admin.warehouses_management') }}" {% if request.endpoint == 'admin.warehouses_management' %}class="active" {% endif %}>مدیریت انبارها</a></li>{% endif %}
                 </ul>
             </li>
-            <li class="nav-dropdown">
+            {% endif %}
+            {% if nav_is_manager %}<li class="nav-dropdown">
                 <a href="#" class="dropdown-toggle">مدیریت</a>
                 <ul class="dropdown-menu">
                     <li><a href="{{ url_for('admin.settings') }}" {% if request.endpoint == 'admin.settings' %}class="active" {% endif %}>تنظیمات</a></li>
-                    {% if current_user.is_authenticated and current_user.role == 'admin' %}
+                    {% if current_user.is_authenticated and effective_tenant_role(current_user) in ['admin', 'superadmin'] and tenant_module_enabled('users') %}
                     <li><a href="{{ url_for('admin.users_list') }}" {% if request.endpoint == 'admin.users_list' %}class="active" {% endif %}>مدیریت کاربران</a></li>
                     {% endif %}
                 </ul>
-            </li>
+            </li>{% endif %}
         </ul>
     </div>
     {% endif %} {# پایان شرط نمایش هدر #}

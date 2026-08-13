@@ -109,6 +109,8 @@
         background: #d97706;
     }
 
+    .btn-cancel-order { background:#b91c1c; color:#fff; }
+
     .main-card {
         background: #fff;
         border-radius: 16px;
@@ -405,8 +407,13 @@
         </div>
         <div class="order-actions">
             <a href="{{ url_for('order.orders_list') }}" class="btn-back">بازگشت</a>
-            <a href="{{ url_for('order.print_invoice', order_id=order.id) }}" class="btn-invoice" target="_blank">فاکتور</a>
-            <button id="toggle-edit-mode" class="btn-edit">ویرایش</button>
+            <a href="{{ url_for('order.print_invoice', order_id=order.id) }}" class="btn-invoice" target="_blank">چاپ مجدد فاکتور</a>
+            {% if order.status != 'لغو شده' %}
+            <button id="toggle-edit-mode" class="btn-edit">ویرایش سفارش</button>
+            <form method="post" action="{{ url_for('order.delete_order', order_id=order.id) }}" style="display:inline;" onsubmit="return confirm('سفارش لغو و موجودی مواد آزاد شود؟ سابقه برای حسابرسی باقی می‌ماند.');">
+                <button type="submit" class="btn-cancel-order">لغو سفارش</button>
+            </form>
+            {% endif %}
         </div>
     </div>
 

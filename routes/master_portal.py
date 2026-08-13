@@ -10,23 +10,25 @@ from werkzeug.security import check_password_hash
 from models.models import db
 from models.master_models import CafeModule, CafeTenant, MasterUser, UserCreationRequest
 import shutil
-from services.tenant_provisioning import provision_tenant
+from services.master_service import (
+    MODULE_CATALOG,
+    create_managed_cafe,
+    ensure_cafe_warehouse_profile,
+    enabled_module_codes,
+    log_cafe_event,
+    set_cafe_modules,
+    warehouse_profile_for_cafe,
+)
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import NullPool
 from models.models import User as TenantUser
+from services.tenant_session import clear_tenant_session, establish_tenant_session
 
 master_bp = Blueprint('master', __name__, url_prefix='/master')
 
 # Registry of available modules
-MODULES = [
-    ("orders", "Orders/POS"),
-    ("inventory", "Inventory"),
-    ("accounting", "Accounting"),
-    ("customers", "Customers/CRM"),
-    ("reports", "Reports"),
-    ("menu", "Menu"),
-    ("users", "Users & Roles"),
-]
+MODULES = list(MODULE_CATALOG)
 
 
 def _master_user() -> MasterUser | None:
@@ -54,53 +56,35 @@ def master_login_required(view_func):
 @master_bp.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        phone_number = (request.form.get('phone_number') or '').strip()
-        password = (request.form.get('password') or '').strip()
+        username = (request.form.get('username') or '').strip()
+        password = request.form.get('password') or ''
         
-        if not phone_number:
-            flash('شماره موبایل الزامی است.', 'danger')
-            return render_template('master/login.html', phone_number=phone_number)
+        if not username:
+            flash('نام کاربری الزامی است.', 'danger')
+            return render_template('master/login.html', username=username)
         
         if not password:
             flash('رمز عبور الزامی است.', 'danger')
-            return render_template('master/login.html', phone_number=phone_number)
-        
-        # بررسی رمز عبور (123)
-        if password != '123':
-            flash('رمز عبور اشتباه است.', 'danger')
-            return render_template('master/login.html', phone_number=phone_number)
-        
-        # نرمال‌سازی شماره موبایل
-        phone_normalized = phone_number.replace(' ', '').replace('-', '').replace('+', '')
-        if phone_normalized.startswith('0'):
-            phone_normalized = '98' + phone_normalized[1:]
-        elif not phone_normalized.startswith('98'):
-            phone_normalized = '98' + phone_normalized
-        
-        # پیدا کردن یا ایجاد کاربر
-        user = MasterUser.query.filter_by(phone_number=phone_normalized).first()
-        if not user:
-            # ایجاد کاربر جدید
-            user = MasterUser(
-                phone_number=phone_normalized,
-                username=phone_normalized,  # استفاده از شماره به عنوان username
-                role='superadmin',
-                is_active=True
-            )
-            db.session.add(user)
-            db.session.flush()
+            return render_template('master/login.html', username=username)
+
+        user = MasterUser.query.filter_by(username=username).first()
+        if not user or not user.password_hash or not check_password_hash(user.password_hash, password):
+            flash('نام کاربری یا رمز عبور اشتباه است.', 'danger')
+            return render_template('master/login.html', username=username)
         
         if not user.is_active:
             flash('این حساب غیرفعال است.', 'danger')
-            return render_template('master/login.html', phone_number=phone_number)
+            return render_template('master/login.html', username=username)
         
         # ورود کاربر
+        session.clear()
         session['master_user_id'] = int(user.id)
         user.last_login = datetime.utcnow()
         db.session.commit()
         
         next_url = request.args.get('next')
-        return redirect(next_url or url_for('master.dashboard'))
+        safe_next = next_url if next_url and next_url.startswith('/') and not next_url.startswith('//') else None
+        return redirect(safe_next or url_for('master.dashboard'))
     
     return render_template('master/login.html')
 
@@ -124,14 +108,17 @@ def dashboard():
     active_cafes = 0
     
     for cafe in cafes:
+        warehouse_profile = ensure_cafe_warehouse_profile(cafe)
         stats = {
             'cafe': cafe,
+            'enabled_modules': enabled_module_codes(cafe.id),
             'orders_count': 0,
             'revenue': 0,
             'users_count': 0,
             'menu_items_count': 0,
             'customers_count': 0,
-            'has_data': False
+            'has_data': False,
+            'warehouse_profile': warehouse_profile,
         }
         
         if cafe.is_active and os.path.exists(cafe.db_path):
@@ -173,7 +160,19 @@ def dashboard():
     for req in user_requests:
         req.cafe = CafeTenant.query.get(req.cafe_id)
     
-    return render_template('master/dashboard.html', master_user=user, cafes=cafes, modules=MODULES, cafe_stats=cafe_stats, summary=summary, user_requests=user_requests)
+    module_access_by_cafe = {stat['cafe'].id: stat['enabled_modules'] for stat in cafe_stats}
+    warehouse_profiles = {stat['cafe'].id: stat['warehouse_profile'] for stat in cafe_stats}
+    return render_template(
+        'master/dashboard.html',
+        master_user=user,
+        cafes=cafes,
+        modules=MODULES,
+        cafe_stats=cafe_stats,
+        summary=summary,
+        user_requests=user_requests,
+        module_access_by_cafe=module_access_by_cafe,
+        warehouse_profiles=warehouse_profiles,
+    )
 
 
 @master_bp.route('/cafes/create', methods=['POST'])
@@ -181,65 +180,72 @@ def dashboard():
 def create_cafe():
     name = (request.form.get('name') or '').strip()
     slug = (request.form.get('slug') or '').strip()
+    admin_username = (request.form.get('admin_username') or '').strip()
+    admin_password = request.form.get('admin_password') or ''
+    admin_name = (request.form.get('admin_name') or '').strip()
+    admin_role = (request.form.get('admin_role') or 'admin').strip()
 
     tenants_dir = current_app.config.get('TENANTS_DIR')
-    if not tenants_dir:
-        tenants_dir = current_app.config.get('CAFE_TENANTS_DIR')  # fallback
-
-    # Source project directory (current project root)
-    source_dir = current_app.config.get('BASEDIR') or os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    selected_modules = request.form.getlist('modules')
+    warehouse_mode = (request.form.get('warehouse_mode') or 'none').strip()
+    warehouse_names = request.form.getlist('warehouse_names')
 
     try:
-        provisioned = provision_tenant(
+        cafe = create_managed_cafe(
             tenants_dir=tenants_dir,
             name=name,
             slug=slug,
-            source_project_dir=source_dir
+            modules=selected_modules,
+            username=admin_username,
+            password=admin_password,
+            role=admin_role,
+            user_name=admin_name,
+            warehouse_mode=warehouse_mode,
+            warehouse_names=warehouse_names,
         )
     except Exception as exc:
         flash(f'خطا در ساخت کافه: {exc}', 'danger')
         return redirect(url_for('master.dashboard'))
 
-    # Register in master DB
-    existing = CafeTenant.query.filter_by(slug=provisioned.slug).first()
-    if existing:
-        flash('این کد/slug قبلاً ثبت شده است.', 'warning')
-        return redirect(url_for('master.dashboard'))
-
-    cafe = CafeTenant(
-        name=provisioned.name,
-        slug=provisioned.slug,
-        root_dir=provisioned.root_dir,
-        db_path=provisioned.db_path,
-        is_active=True,
-    )
-    db.session.add(cafe)
-    db.session.flush()  # Get cafe.id before commit
-
-    # Process selected modules
-    selected_modules = request.form.getlist("modules")
-    selected_set = set(selected_modules)
-
-    # Create CafeModule rows for ALL modules in registry
-    for module_code, _ in MODULES:
-        is_enabled = module_code in selected_set
-        module = CafeModule(
-            cafe_id=cafe.id,
-            module_code=module_code,
-            is_enabled=is_enabled
-        )
-        db.session.add(module)
-
-    db.session.commit()
-
-    flash(f'کافه «{cafe.name}» ساخته شد.', 'success')
+    flash(f'کافه «{cafe.name}» با دسترسی کاربر «{admin_username}» ساخته شد.', 'success')
     return redirect(url_for('master.dashboard'))
+
+
+@master_bp.route('/cafes/<slug>/access', methods=['GET', 'POST'])
+@master_login_required
+def cafe_access(slug):
+    cafe = CafeTenant.query.filter_by(slug=slug).first_or_404()
+    if request.method == 'POST':
+        name = (request.form.get('name') or '').strip()
+        if not name:
+            flash('نام کافه الزامی است.', 'danger')
+            return redirect(url_for('master.cafe_access', slug=slug))
+
+        cafe.name = name
+        cafe.is_active = request.form.get('is_active') == 'on'
+        selected = set_cafe_modules(cafe, request.form.getlist('modules'))
+        log_cafe_event(
+            cafe,
+            'cafe.access.updated',
+            {'is_active': cafe.is_active, 'modules': sorted(selected)},
+        )
+        db.session.commit()
+        flash('دسترسی‌ها و وضعیت کافه ذخیره شد.', 'success')
+        return redirect(url_for('master.cafe_access', slug=slug))
+
+    return render_template(
+        'master/cafe_access.html',
+        cafe=cafe,
+        modules=MODULES,
+        enabled_modules=enabled_module_codes(cafe.id),
+        warehouse_profile=ensure_cafe_warehouse_profile(cafe),
+    )
 
 
 @master_bp.route('/cafes/<slug>/enter')
 @master_login_required
 def enter_cafe(slug):
-    """نمایش اطلاعات لاگین کافه و لینک ورود"""
+    """Create an audited master SSO session and enter the cafe directly."""
     cafe = CafeTenant.query.filter_by(slug=slug).first_or_404()
     
     if not cafe.is_active:
@@ -250,8 +256,53 @@ def enter_cafe(slug):
         flash('دیتابیس کافه یافت نشد.', 'danger')
         return redirect(url_for('master.dashboard'))
     
-    # Redirect to tenant login page
-    return redirect(url_for('tenant_auth.login', slug=slug))
+    master_user = _master_user()
+    engine = create_engine(f"sqlite:///{cafe.db_path}", poolclass=NullPool)
+    Session = sessionmaker(bind=engine)
+    try:
+        with Session.begin() as tenant_session:
+            tenant_user = (
+                tenant_session.query(TenantUser)
+                .filter(TenantUser.is_active.is_(True))
+                .order_by((TenantUser.role != 'admin').asc(), TenantUser.id.asc())
+                .first()
+            )
+            if tenant_user is None:
+                flash('این کافه کاربر فعال برای ورود مدیریتی ندارد.', 'danger')
+                return redirect(url_for('master.dashboard'))
+
+            tenant_user.last_login = datetime.now(pytz.timezone('Asia/Tehran'))
+            establish_tenant_session(
+                cafe=cafe,
+                user=tenant_user,
+                remember=False,
+                master_user_id=master_user.id,
+            )
+            tenant_user_id = int(tenant_user.id)
+            tenant_username = tenant_user.username
+    finally:
+        engine.dispose()
+
+    log_cafe_event(
+        cafe,
+        'cafe.master_sso.entered',
+        {
+            'master_user_id': master_user.id,
+            'tenant_user_id': tenant_user_id,
+            'tenant_username': tenant_username,
+        },
+    )
+    db.session.commit()
+    return redirect(url_for('tenant.dashboard', slug=slug))
+
+
+@master_bp.route('/return-from-cafe')
+@master_login_required
+def return_from_cafe():
+    """Leave tenant impersonation while keeping the authenticated master session."""
+    clear_tenant_session(keep_master=True)
+    flash('به مرکز فرمان کافه‌ها برگشتید.', 'success')
+    return redirect(url_for('master.dashboard'))
 
 
 @master_bp.route('/cafes/<slug>/users')

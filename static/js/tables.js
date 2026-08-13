@@ -693,7 +693,7 @@ function updateTableTotals() {
             });
         }
         
-        const taxPercent = 9; // default tax percent
+        const taxPercent = Number(window.CAFE_TAX_PERCENT ?? 9);
         const tax = Math.floor((total - totalDiscount) * taxPercent / 100);
         const final = total - totalDiscount + tax;
         

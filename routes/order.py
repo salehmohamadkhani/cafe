@@ -13,7 +13,8 @@ from models.models import (
     generate_invoice_number,
     calculate_order_amount,
     sync_order_item_material_usage,
-    record_order_material_usage
+    record_order_material_usage,
+    RawMaterialUsage,
 )
 from sqlalchemy import func, or_
 from datetime import datetime
@@ -195,11 +196,17 @@ def pay_order(order_id):
 @login_required
 def delete_order(order_id):
     order = Order.query.get_or_404(order_id)
-    # حذف آیتم‌های وابسته به سفارش
-    OrderItem.query.filter_by(order_id=order.id).delete()
-    db.session.delete(order)
+    RawMaterialUsage.query.filter_by(order_id=order.id).delete(synchronize_session=False)
+    for item in order.order_items:
+        item.is_deleted = True
+        item.removal_reason = item.removal_reason or 'لغو کامل سفارش'
+    order.status = 'لغو شده'
+    order.total_amount = 0
+    order.tax_amount = 0
+    order.final_amount = 0
     db.session.commit()
-    return redirect(url_for('order.orders_report'))
+    flash('سفارش لغو شد؛ سابقه آن برای حسابرسی نگهداری و موجودی آزاد شد.', 'success')
+    return redirect(url_for('order.orders_list'))
 
 # --- ویرایش سفارش (redirect به جزئیات) ---
 @order_bp.route('/order/<int:order_id>/edit', methods=['GET'])
@@ -463,6 +470,7 @@ def delete_order_item(item_id):
         order_item.is_deleted = True
 
     db.session.flush()
+    sync_order_item_material_usage(order_item)
 
     # فقط آیتم‌های حذف نشده را در نظر بگیر
     remaining_items = [item for item in order.order_items if not item.is_deleted]
@@ -479,9 +487,13 @@ def delete_order_item(item_id):
             associated_table.tax_amount = 0
             associated_table.final_amount = 0
             associated_table.started_at = None
-        db.session.delete(order)
+        RawMaterialUsage.query.filter_by(order_id=order.id).delete(synchronize_session=False)
+        order.status = 'لغو شده'
+        order.total_amount = 0
+        order.tax_amount = 0
+        order.final_amount = 0
         db.session.commit()
-        flash('تمام آیتم‌های سفارش حذف شد. میز آزاد گردید و سفارش بسته شد.', 'success')
+        flash('تمام آیتم‌ها لغو شد؛ میز آزاد و موجودی مواد برگردانده شد.', 'success')
         return redirect(url_for('order.orders_list'))
 
     settings = Settings.query.first()
@@ -732,9 +744,11 @@ def create_order_api():
 @order_bp.route('/api/menu_stock')
 @login_required
 def api_menu_stock():
+    from services.inventory_service import menu_stock_map
     items = MenuItem.query.filter_by(is_active=True).all()
+    stocks = menu_stock_map(items)
     return jsonify([
-        {'id': item.id, 'stock': item.stock}
+        {'id': item.id, 'stock': stocks[item.id]}
         for item in items
     ])
 

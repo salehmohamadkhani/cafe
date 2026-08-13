@@ -31,9 +31,9 @@
         gap: 1.5rem;
         padding: 2rem;
         border-radius: 24px;
-        background: radial-gradient(circle at top left, rgba(74, 168, 255, 0.45), rgba(31, 58, 95, 0.95));
+        background: radial-gradient(circle at top left, rgba(59, 143, 103, 0.52), var(--ds-brand-950));
         color: #fff;
-        box-shadow: 0 25px 55px rgba(31, 58, 95, 0.25);
+        box-shadow: var(--ds-shadow-md);
     }
 
     .financial-hero h1 {
@@ -74,8 +74,8 @@
     }
 
     .period-toggle .toggle-btn.active {
-        background: #fff;
-        color: var(--color-primary, #1F3A5F);
+        background: var(--ds-white);
+        color: var(--ds-brand-900);
         box-shadow: 0 12px 26px rgba(255, 255, 255, 0.35);
         border-color: transparent;
     }
@@ -128,7 +128,7 @@
     .range-filter .ds-input {
         background: rgba(255, 255, 255, 0.92);
         border: 1px solid rgba(255, 255, 255, 0.35);
-        color: var(--navbar-bg);
+        color: var(--ds-brand-950);
         padding: 0.55rem 0.75rem;
     }
 
@@ -178,7 +178,8 @@
     }
 
     .stat-card {
-        background: #fff;
+        background: var(--ds-surface);
+        color: var(--ds-text);
         border-radius: 20px;
         padding: 1.35rem;
         box-shadow: 0 15px 40px rgba(15, 23, 42, 0.08);
@@ -207,7 +208,7 @@
     }
 
     .stat-card.primary {
-        background: linear-gradient(135deg, #4aa8ff, #1f3a5f);
+        background: linear-gradient(135deg, var(--ds-brand-700), var(--ds-brand-950));
         color: #fff;
         border: none;
     }
@@ -298,7 +299,8 @@
     }
 
     .closing-card {
-        background-color: var(--color-muted);
+        background-color: var(--ds-neutral-50);
+        color: var(--ds-text);
         border-radius: 18px;
         padding: 1.2rem;
         border: 1px solid rgba(148, 163, 184, 0.3);
@@ -308,15 +310,16 @@
     }
 
     .closing-card.primary {
-        background: linear-gradient(135deg, #4aa8ff, #1f3a5f);
+        background: linear-gradient(135deg, var(--ds-brand-700), var(--ds-brand-950));
         color: #fff;
         border: none;
         box-shadow: 0 15px 35px rgba(31, 58, 95, 0.25);
     }
 
     .closing-card.warning {
-        background: linear-gradient(135deg, #f2b544, #f97316);
-        color: #2a1c04;
+        background: var(--ds-accent-50);
+        color: var(--ds-accent-700);
+        border-color: var(--ds-accent-100);
     }
 
     .closing-card strong {
@@ -340,7 +343,8 @@
     .closing-meta__item {
         flex: 1;
         min-width: 220px;
-        background: var(--color-border);
+        background: var(--ds-neutral-50);
+        border: 1px solid var(--ds-border);
         border-radius: 14px;
         padding: 0.85rem 1rem;
         display: flex;
@@ -350,7 +354,7 @@
 
     .closing-meta__item span {
         font-size: 0.85rem;
-        color: #6b7380;
+        color: var(--ds-text-muted);
     }
 
     .closing-meta__item strong {
@@ -393,7 +397,7 @@
     .invoice-code {
         font-family: 'SFMono-Regular', 'Vazirmatn', monospace;
         font-size: 0.82rem;
-        color: #475569;
+        color: var(--ds-text-muted);
     }
 
     .orders-card {
@@ -501,8 +505,8 @@
     }
 
     .method-pill {
-        background: var(--navbar-hover);
-        color: #0f172a;
+        background: var(--ds-brand-50);
+        color: var(--ds-brand-800);
         border-radius: 999px;
         padding: 0.3rem 0.9rem;
         font-size: 0.82rem;
@@ -732,7 +736,7 @@
                             <td>{{ order.daily_sequence or '---' }}</td>
                             <td><span class="invoice-code">{{ order.invoice_uid or ('LEGACY-' ~ order.invoice_number) }}</span></td>
                             <td>{{ order.customer.name if order.customer else '---' }}</td>
-                            <td>{{ order.customer.phone if order.customer else '---' }}</td>
+                            <td>{{ order.customer.phone if order.customer and order.customer.phone else '---' }}</td>
                             <td>{{ "{:,}".format(order.final_amount) }}</td>
                             <td>{{ "{:,}".format(order.discount) }}</td>
                             <td>{{ "{:,}".format(order.tax_amount) }}</td>

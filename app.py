@@ -1,18 +1,21 @@
 import sys
-import io
-
-# تنظیم encoding برای stdout و stderr برای پشتیبانی از فارسی و یونیکد
+# تنظیم امن encoding بدون جایگزین‌کردن streamها؛ جایگزینی TextIOWrapper
+# باعث بسته‌شدن capture در pytest و برخی process managerها می‌شد.
 if sys.platform == 'win32':
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, 'reconfigure', None)
+        if reconfigure:
+            reconfigure(encoding='utf-8', errors='replace')
 
 from flask import Flask, render_template, redirect, url_for, session, g, flash, request
 from flask_login import LoginManager, current_user
 from sqlalchemy import inspect, text
+from sqlalchemy.pool import NullPool
 import os
 from config import Config
 from models.models import db, User, Settings, backfill_invoice_identifiers, assign_random_birth_dates_to_old_customers
-from models.master_models import MasterUser, CafeTenant  # noqa: F401 (register master tables)
+from models.master_models import MasterUser, CafeModule, CafeTenant  # noqa: F401 (register master tables)
+from services.master_service import MODULE_CODES, ensure_master_admin, module_for_endpoint
 from utils.helpers import register_jinja_filters
 
 # Import blueprints
@@ -21,6 +24,7 @@ from routes.master_portal import master_bp
 from routes.tenant_auth import tenant_auth_bp
 from routes.tenant import tenant_bp
 from routes.tenant_dashboard import tenant_dashboard_bp
+from services.schema_migrations import migrate_operational_schema
 from routes.menu import menu_bp
 from routes.order import order_bp
 from routes.dashboard import dashboard_bp
@@ -50,7 +54,7 @@ def load_user(user_id):
                 from models.master_models import CafeTenant
                 cafe = CafeTenant.query.filter_by(slug=tenant_slug).first()
                 if cafe and os.path.exists(cafe.db_path):
-                    tenant_engine = create_engine(f"sqlite:///{cafe.db_path}")
+                    tenant_engine = create_engine(f"sqlite:///{cafe.db_path}", poolclass=NullPool)
                     from sqlalchemy.orm import sessionmaker
                     Session = sessionmaker(bind=tenant_engine)
                     with Session() as s:
@@ -79,6 +83,7 @@ def create_app(config_class=Config):
     # Apply lightweight schema migrations (e.g., missing columns on SQLite)
     with app.app_context():
         engine = db.get_engine()
+        migrate_operational_schema(engine)
         inspector = inspect(engine)
         existing_tables = inspector.get_table_names()
         if 'customer' in existing_tables:
@@ -225,6 +230,13 @@ def create_app(config_class=Config):
         # اختصاص تاریخ تولد تصادفی به مشتریان قدیمی
         assign_random_birth_dates_to_old_customers()
 
+        # Create the first central administrator once. Existing credentials are
+        # never overwritten on subsequent startups.
+        ensure_master_admin(
+            app.config['MASTER_BOOTSTRAP_USERNAME'],
+            app.config['MASTER_BOOTSTRAP_PASSWORD'],
+        )
+
     # Register blueprints
     app.register_blueprint(auth_bp)
     app.register_blueprint(master_bp)
@@ -245,10 +257,73 @@ def create_app(config_class=Config):
     import os
     from models.master_models import CafeTenant
     from sqlalchemy import create_engine
+    from services.access_control import effective_role, is_master_sso
+    from services.tenant_session import clear_tenant_session
+
+    @app.before_request
+    def validate_master_sso_context():
+        """Expire supervisory tenant access when its master account is no longer valid."""
+        if session.get('tenant_auth_source') != 'master_sso':
+            return None
+        if is_master_sso():
+            return None
+        clear_tenant_session(keep_master=False)
+        flash('نشست نظارت مرکزی منقضی شده است؛ دوباره وارد مرکز فرمان شوید.', 'warning')
+        return redirect(url_for('master.login', next=request.path))
     
+    @app.before_request
+    def enforce_centrally_managed_modules():
+        """Apply CafeModule access before switching to the tenant database."""
+        if (request.endpoint or '').startswith('master.'):
+            g.enabled_cafe_modules = set(MODULE_CODES)
+            return None
+        tenant_slug = session.get('tenant_slug')
+        if not tenant_slug:
+            g.enabled_cafe_modules = set(MODULE_CODES)
+            return None
+
+        cafe = CafeTenant.query.filter_by(slug=tenant_slug).first()
+        if not cafe:
+            return None
+
+        # A valid master SSO is a supervisory context. It can inspect every
+        # tenant module without changing the cafe's configured module plan.
+        if is_master_sso():
+            g.enabled_cafe_modules = set(MODULE_CODES)
+            g.tenant_access_mode = 'master_sso'
+            return None
+
+        module_rows = CafeModule.query.filter_by(cafe_id=cafe.id).all()
+        enabled = {row.module_code for row in module_rows if row.is_enabled}
+        # Cafes created by older versions had no CafeModule rows. Preserve
+        # access until the master explicitly saves their access profile.
+        if not module_rows:
+            enabled = set(MODULE_CODES)
+        g.enabled_cafe_modules = enabled
+        g.tenant_access_mode = 'tenant_user'
+
+        required_module = module_for_endpoint(request.endpoint)
+        if required_module and required_module not in enabled:
+            flash('این بخش برای کافه شما از پنل مدیریت مرکزی فعال نشده است.', 'warning')
+            return redirect(url_for('tenant.dashboard', slug=tenant_slug))
+        return None
+
+    @app.context_processor
+    def inject_tenant_module_access():
+        enabled = getattr(g, 'enabled_cafe_modules', set(MODULE_CODES))
+        return {
+            'enabled_cafe_modules': enabled,
+            'tenant_module_enabled': lambda code: code in enabled,
+            'effective_tenant_role': effective_role,
+            'master_sso_active': is_master_sso(),
+        }
+
     @app.before_request
     def setup_tenant_db():
         """Switch to tenant database if user is in tenant context."""
+        if (request.endpoint or '').startswith('master.'):
+            g.original_db_bind = None
+            return None
         tenant_slug = session.get('tenant_slug')
         if tenant_slug:
             # Get tenant database path
@@ -272,28 +347,37 @@ def create_app(config_class=Config):
                 g.original_db_bind = None
             elif cafe and os.path.exists(cafe.db_path):
                 # Create engine for tenant database
-                tenant_engine = create_engine(f"sqlite:///{cafe.db_path}")
-                # Store original bind and switch to tenant
-                g.original_db_bind = db.session.bind
-                db.session.bind = tenant_engine
+                tenant_engine = create_engine(f"sqlite:///{cafe.db_path}", poolclass=NullPool)
+                migrated_paths = app.extensions.setdefault('operational_schema_migrated', set())
+                if cafe.db_path not in migrated_paths:
+                    migrate_operational_schema(tenant_engine)
+                    migrated_paths.add(cafe.db_path)
+                # The request-local TenantRoutingSession picks this engine for
+                # operational (non-master) models without mutating global binds.
+                g.tenant_engine = tenant_engine
             else:
                 g.original_db_bind = None
     
     @app.after_request
     def teardown_tenant_db(response):
         """Restore default database after request."""
-        if hasattr(g, 'original_db_bind'):
+        tenant_engine = getattr(g, 'tenant_engine', None)
+        if tenant_engine is not None:
             try:
-                db.session.bind = g.original_db_bind
-            except:
-                pass
+                db.session.remove()
+            finally:
+                tenant_engine.dispose()
+        elif hasattr(g, 'original_db_bind'):
+            db.session.bind = g.original_db_bind
         return response
     
     @app.before_request
     def check_cashier_access():
         """Restrict cashier access to only dashboard and financial_report (day only)."""
+        if is_master_sso():
+            return None
         # Skip check for static files and login/logout routes
-        if request.endpoint in ['static', 'master.login', 'tenant_auth.login', 'tenant_auth.logout', 'auth.logout']:
+        if (request.endpoint or '').startswith('master.') or request.endpoint in ['static', 'index', 'cafe_login_portal', 'tenant_auth.login', 'tenant_auth.logout', 'auth.logout']:
             return
         
         # Check if user is authenticated and is cashier
@@ -326,8 +410,10 @@ def create_app(config_class=Config):
     @app.before_request
     def check_inventory_access():
         """Restrict inventory manager access to only inventory and warehouse routes."""
+        if is_master_sso():
+            return None
         # Skip check for static files and login/logout routes
-        if request.endpoint in ['static', 'master.login', 'tenant_auth.login', 'tenant_auth.logout', 'auth.logout']:
+        if (request.endpoint or '').startswith('master.') or request.endpoint in ['static', 'index', 'cafe_login_portal', 'tenant_auth.login', 'tenant_auth.logout', 'auth.logout']:
             return
         
         # Check if user is authenticated and is inventory manager
@@ -355,8 +441,10 @@ def create_app(config_class=Config):
     @app.before_request
     def check_waiter_access():
         """Restrict waiter access to only waiter dashboard (tables and orders only)."""
+        if is_master_sso():
+            return None
         # Skip check for static files and login/logout routes
-        if request.endpoint in ['static', 'master.login', 'tenant_auth.login', 'tenant_auth.logout', 'auth.logout']:
+        if (request.endpoint or '').startswith('master.') or request.endpoint in ['static', 'index', 'cafe_login_portal', 'tenant_auth.login', 'tenant_auth.logout', 'auth.logout']:
             return
         
         # Check if user is authenticated and is waiter
@@ -384,10 +472,16 @@ def create_app(config_class=Config):
                 # Redirect to waiter dashboard
                 return redirect(url_for('dashboard.waiter_dashboard'))
 
-    # Convenient alias to master login (main entrypoint for multi-cafe)
-    @app.route('/login')
-    def master_login_alias():
-        return redirect(url_for('master.login'))
+    @app.route('/login', methods=['GET', 'POST'])
+    def cafe_login_portal():
+        """Public employee entrypoint, deliberately separated from master access."""
+        if request.method == 'POST':
+            slug = (request.form.get('cafe_slug') or '').strip().lower()
+            cafe = CafeTenant.query.filter_by(slug=slug, is_active=True).first()
+            if cafe:
+                return redirect(url_for('tenant_auth.login', slug=cafe.slug))
+            flash('کافه فعالی با این شناسه پیدا نشد.', 'danger')
+        return render_template('public_login.html')
     
     # Register index route
     @app.route('/')

@@ -188,41 +188,21 @@ def menu_price_management():
         item_materials = MenuItemMaterial.query.filter_by(menu_item_id=item.id).all()
         
         for item_material in item_materials:
-            raw_material = item_material.raw_material
-            if not raw_material:
-                continue
-            
-            # محاسبه قیمت تمام‌شده ماده اولیه
-            # میانگین قیمت واحد از آخرین خریدها
-            purchases = MaterialPurchase.query.filter_by(
-                raw_material_id=raw_material.id
-            ).order_by(
-                MaterialPurchase.purchase_date.desc(),
-                MaterialPurchase.created_at.desc()
-            ).limit(10).all()  # آخرین 10 خرید
-            
-            if purchases:
-                # محاسبه میانگین قیمت واحد
-                total_price = sum(p.unit_price for p in purchases if p.unit_price > 0)
-                avg_unit_price = total_price / len([p for p in purchases if p.unit_price > 0]) if purchases else 0
-            else:
-                avg_unit_price = 0
-            
-            # تبدیل واحد ماده اولیه به واحد مصرفی در آیتم منو
-            # اینجا فرض می‌کنیم که واحدها یکسان هستند (نیاز به تبدیل واحد دارد)
             quantity_value = item_material.quantity_value
             if quantity_value is None:
                 quantity_value = 0
-            
-            material_cost = quantity_value * avg_unit_price
+
+            avg_unit_price = item_material.latest_unit_price or 0
+            material_cost = item_material.estimated_cost or 0
             item_total_cost += material_cost
-            
+
             materials_data.append({
-                'name': raw_material.name,
+                'name': item_material.name,
                 'quantity': quantity_value,
                 'unit': item_material.unit,
                 'avg_unit_price': avg_unit_price,
-                'total_cost': material_cost
+                'total_cost': material_cost,
+                'source_type': 'پیش‌تولید' if item_material.pre_production_item_id else 'ماده اولیه',
             })
         
         category_total_cost += item_total_cost

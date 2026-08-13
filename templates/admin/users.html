@@ -14,7 +14,7 @@
     }
 
     .users-hero {
-        background: linear-gradient(135deg, #f97316, #ef4444);
+        background: linear-gradient(135deg, var(--ds-brand-950), var(--ds-brand-700));
         color: #fff;
         border-radius: 18px;
         padding: 1.9rem 2.2rem;
@@ -22,7 +22,7 @@
         flex-wrap: wrap;
         justify-content: space-between;
         gap: 1.5rem;
-        box-shadow: 0 20px 50px rgba(249, 115, 22, 0.24);
+        box-shadow: var(--ds-shadow-md);
     }
 
     .users-hero h1 {
@@ -52,8 +52,8 @@
         font-weight: 600;
         text-decoration: none;
         cursor: pointer;
-        color: #0f172a;
-        background: #fff;
+        color: var(--ds-brand-950);
+        background: var(--ds-white);
         box-shadow: 0 12px 30px rgba(15, 23, 42, 0.14);
         transition: transform 0.18s ease, box-shadow 0.18s ease;
     }
@@ -65,7 +65,9 @@
     }
 
     .users-toolbar {
-        background: #fff;
+        background: var(--ds-surface);
+        color: var(--ds-text);
+        border: 1px solid var(--ds-border);
         border-radius: 16px;
         padding: 1.1rem 1.4rem;
         display: flex;
@@ -73,12 +75,14 @@
         gap: 0.85rem;
         align-items: center;
         justify-content: space-between;
-        box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+        box-shadow: var(--ds-shadow-sm);
     }
 
     .users-toolbar input {
         width: 220px;
-        border: 1px solid #d1d5db;
+        border: 1px solid var(--ds-neutral-300);
+        background: var(--ds-surface);
+        color: var(--ds-text);
         border-radius: 10px;
         padding: 0.55rem 0.75rem;
         font-size: 0.95rem;
@@ -86,8 +90,9 @@
 
     .users-table-wrapper {
         border-radius: 18px;
-        background: #fff;
-        box-shadow: 0 18px 38px rgba(15, 23, 42, 0.08);
+        background: var(--ds-surface);
+        border: 1px solid var(--ds-border);
+        box-shadow: var(--ds-shadow-sm);
         overflow: hidden;
     }
 
@@ -95,10 +100,11 @@
         width: 100%;
         border-collapse: separate;
         border-spacing: 0;
+        color: var(--ds-text);
     }
 
     table.users-table thead {
-        background: #f1f5f9;
+        background: var(--ds-neutral-50);
     }
 
     table.users-table th,
@@ -110,16 +116,16 @@
 
     table.users-table th {
         font-weight: 700;
-        color: #475569;
+        color: var(--ds-neutral-700);
     }
 
     table.users-table tbody tr {
-        border-bottom: 1px solid #e2e8f0;
+        border-bottom: 1px solid var(--ds-border);
         transition: background 0.15s ease;
     }
 
     table.users-table tbody tr:hover {
-        background: #f8fafc;
+        background: var(--ds-brand-50);
     }
 
     .role-pill {
@@ -143,7 +149,7 @@
     .role-desc {
         display: block;
         font-size: 0.75rem;
-        color: #94a3b8;
+        color: var(--ds-text-muted);
         margin-top: 0.25rem;
     }
 
@@ -213,7 +219,7 @@
         </div>
         <div class="users-actions">
             <a href="#" onclick="openAddUserModal(); return false;">افزودن کاربر جدید</a>
-            <a href="{{ url_for('admin.dashboard') }}">بازگشت به داشبورد</a>
+            <a href="{{ url_for('dashboard.dashboard') }}">بازگشت به داشبورد</a>
         </div>
     </section>
 

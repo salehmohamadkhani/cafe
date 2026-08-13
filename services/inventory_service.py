@@ -1,7 +1,82 @@
 from collections import defaultdict
 from datetime import date
-from models.models import db, RawMaterial, MaterialPurchase, RawMaterialUsage, convert_unit
+import math
+
+from models.models import (
+    db,
+    MenuItem,
+    MaterialPurchase,
+    RawMaterial,
+    RawMaterialUsage,
+    convert_unit,
+)
 from sqlalchemy import cast, Date
+
+
+def purchase_base_quantity(purchase: MaterialPurchase) -> float:
+    material = purchase.raw_material
+    if not material:
+        return float(purchase.quantity or 0)
+    return convert_unit(purchase.quantity, purchase.unit, material.default_unit)
+
+
+def weighted_average_unit_price(material: RawMaterial) -> float | None:
+    """Return weighted average purchase cost in the material base unit."""
+    total_quantity = 0.0
+    total_value = 0.0
+    for purchase in material.purchases:
+        quantity = purchase_base_quantity(purchase)
+        if quantity <= 0:
+            continue
+        total_quantity += quantity
+        total_value += float(purchase.total_price or 0)
+    return (total_value / total_quantity) if total_quantity > 0 else None
+
+
+def menu_item_available_quantity(item: MenuItem) -> int:
+    """Return the sellable quantity from the recipe, or the legacy item stock.
+
+    Recipe-backed products are constrained by their least-available ingredient.
+    This keeps the order screen aligned with the inventory ledger instead of the
+    old, unrelated ``menu_item.stock`` counter.
+    """
+    requirements: dict[int, tuple[RawMaterial, float]] = {}
+    for part in item.materials:
+        quantity = part.quantity_value
+        if not quantity or quantity <= 0:
+            continue
+        if part.raw_material:
+            required_base = convert_unit(quantity, part.unit, part.raw_material.default_unit)
+            previous = requirements.get(part.raw_material.id, (part.raw_material, 0.0))[1]
+            requirements[part.raw_material.id] = (part.raw_material, previous + required_base)
+        elif part.pre_production_item:
+            pre_item = part.pre_production_item
+            multiplier = convert_unit(quantity, part.unit, pre_item.unit)
+            for component in pre_item.materials:
+                if not component.raw_material:
+                    continue
+                required_base = convert_unit(
+                    float(component.quantity or 0) * multiplier,
+                    component.unit,
+                    component.raw_material.default_unit,
+                )
+                previous = requirements.get(component.raw_material.id, (component.raw_material, 0.0))[1]
+                requirements[component.raw_material.id] = (component.raw_material, previous + required_base)
+
+    capacities: list[int] = []
+    for raw_material, required_base in requirements.values():
+        if required_base <= 0:
+            continue
+        capacities.append(math.floor(float(raw_material.current_stock or 0) / required_base))
+
+    if capacities:
+        return max(0, min(capacities))
+    return max(0, int(item.stock or 0))
+
+
+def menu_stock_map(items: list[MenuItem] | None = None) -> dict[int, int]:
+    items = items if items is not None else MenuItem.query.filter_by(is_active=True).all()
+    return {item.id: menu_item_available_quantity(item) for item in items}
 
 
 def calculate_material_stock_for_period(

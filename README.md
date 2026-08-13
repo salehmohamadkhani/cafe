@@ -2,6 +2,8 @@
 
 > Multi-tenant point-of-sale and inventory management system for cafes and restaurants — built for the Iranian market.
 
+> نسخه یکپارچه پروژه است. برای نقشه فارسی معماری، منشأ نسخه‌ها، وضعیت داده‌ها و راهنمای انتخاب فایل‌ها، ابتدا [PROJECT_MAP_FA.md](PROJECT_MAP_FA.md) را بخوانید.
+
 ![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)
 ![Flask](https://img.shields.io/badge/Flask-3.0-000000?logo=flask&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white)
@@ -30,8 +32,9 @@ A production-ready POS platform that runs multiple independent cafes from a sing
 - Central oversight across all tenants
 
 **Auth and roles**
-- Role-based access: master, admin, cashier
-- OTP login over SMS
+- Password-hashed master access plus tenant roles such as admin, cashier, inventory and waiter
+- Central per-cafe module access controlled by the master database
+- SMS/OTP service foundation (not yet connected to the primary login flow)
 - Session-backed auth with persistent secret keys
 
 **Localization**
@@ -61,7 +64,7 @@ A production-ready POS platform that runs multiple independent cafes from a sing
 
 - Python 3.11 or higher
 - PostgreSQL 14+ (or SQLite for local development)
-- A FarazSMS account for OTP delivery
+- A FarazSMS account only if the optional SMS service is enabled
 
 ### Installation
 
@@ -85,7 +88,9 @@ Set the following environment variables (or place them in a `.env` file):
 |---|---|
 | `SECRET_KEY` | Flask session key. Auto-generated into `instance/secret_key` if unset. |
 | `DATABASE_URL` | PostgreSQL connection string. Falls back to local SQLite. |
-| `FARAZSMS_API_KEY` | FarazSMS API key for OTP delivery |
+| `MASTER_USERNAME` | Initial master username; local default is `admin` |
+| `MASTER_PASSWORD` | Initial master password; local default is `admin` and must be changed outside local development |
+| `SMS_API_KEY` | Optional SMS provider API key |
 | `FARAZSMS_PATTERN_CODE` | Approved SMS pattern code |
 | `FLASK_ENV` | `development` or `production` |
 
@@ -96,7 +101,7 @@ See [`FARAZSMS_SETUP.md`](FARAZSMS_SETUP.md) and
 
 ```bash
 flask db upgrade
-python create_master_user.py     # create the master portal account
+python seed_demo_cafes.py        # optional: create the three local demo cafes
 ```
 
 ### Running

@@ -57,6 +57,38 @@ class CafeModule(db.Model):
         return f"<CafeModule cafe_id={self.cafe_id} module_code={self.module_code} enabled={self.is_enabled}>"
 
 
+class CafeWarehouseProfile(db.Model):
+    """Mother-database view of each tenant's inventory topology."""
+    __bind_key__ = 'master'
+    __tablename__ = 'cafe_warehouse_profile'
+
+    id = db.Column(db.Integer, primary_key=True)
+    cafe_id = db.Column(db.Integer, db.ForeignKey('cafe_tenant.id'), nullable=False, unique=True, index=True)
+    mode = db.Column(db.String(24), nullable=False, default='none')  # none, central, multi
+    is_enabled = db.Column(db.Boolean, nullable=False, default=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class CafeWarehouseDefinition(db.Model):
+    """Warehouse names/codes controlled by the master panel for a cafe."""
+    __bind_key__ = 'master'
+    __tablename__ = 'cafe_warehouse_definition'
+
+    id = db.Column(db.Integer, primary_key=True)
+    cafe_id = db.Column(db.Integer, db.ForeignKey('cafe_tenant.id'), nullable=False, index=True)
+    code = db.Column(db.String(64), nullable=False)
+    name = db.Column(db.String(128), nullable=False)
+    position = db.Column(db.Integer, nullable=False, default=0)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (
+        db.UniqueConstraint('cafe_id', 'code', name='uq_cafe_warehouse_code'),
+        db.UniqueConstraint('cafe_id', 'name', name='uq_cafe_warehouse_name'),
+    )
+
+
 class CafeEventLog(db.Model):
     __bind_key__ = 'master'
     __tablename__ = 'cafe_event_log'

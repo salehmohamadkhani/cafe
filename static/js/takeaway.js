@@ -1124,6 +1124,10 @@ window.checkoutTakeawayOrder = async function checkoutTakeawayOrder(orderId, eve
     document.querySelectorAll('.takeaway-order-checkout-options').forEach(opt => opt.classList.remove('active'));
     
     try {
+        // تسویه نباید اطلاعاتی را که کاربر همین حالا در مودال وارد کرده از دست بدهد.
+        if (currentTakeawayId === orderId) {
+            await updateTakeawayCustomer();
+        }
         const response = await fetch(`/takeaway/${orderId}/checkout`, {
             method: 'POST',
             headers: {
@@ -1257,7 +1261,7 @@ function updateTakeawayTotals() {
                 });
             }
             
-            const taxPercent = 12; // می‌توان از تنظیمات خواند
+            const taxPercent = Number(window.CAFE_TAX_PERCENT ?? 9);
             const tax = Math.floor((total - totalDiscount) * taxPercent / 100);
             const final = total - totalDiscount + tax;
             

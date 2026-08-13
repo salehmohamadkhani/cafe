@@ -1,15 +1,17 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, abort, session, current_app
 from flask_login import login_required, current_user
 from sqlalchemy import create_engine
-from models.models import db, Settings, Order, OrderItem, Customer, User, RawMaterial, MaterialPurchase, Table, TableArea, TableItem, SnapSettlement, Warehouse, WarehouseTransfer, RawMaterialUsage, MenuItemMaterial, PreProductionItem, PreProductionItemMaterial, PreProductionStock, PreProductionProduction, PreProductionTransfer, WarehouseMaterialMinStock, calculate_order_amount, convert_unit
+from models.models import db, Settings, Order, OrderItem, Customer, User, RawMaterial, MaterialPurchase, Table, TableArea, TableItem, SnapSettlement, Warehouse, InventoryConfiguration, WarehouseTransfer, RawMaterialUsage, MenuItemMaterial, PreProductionItem, PreProductionItemMaterial, PreProductionStock, PreProductionProduction, PreProductionTransfer, WarehouseMaterialMinStock, calculate_order_amount, convert_unit
 from utils.helpers import to_jalali, categorize_payment_method, PAYMENT_BUCKET_LABELS, restrict_cashier_access
 from sqlalchemy import func, extract, or_, text
-from services.inventory_service import calculate_material_stock_for_period
+from services.inventory_service import calculate_material_stock_for_period, weighted_average_unit_price
 from collections import defaultdict
 from datetime import datetime, timedelta, date
 import pytz
 from utils.seed_inventory import seed_inventory_if_needed
 from werkzeug.security import generate_password_hash
+import re
+import uuid
 
 
 DEFAULT_WAREHOUSES = [
@@ -24,7 +26,19 @@ DEFAULT_WAREHOUSES = [
 
 
 def seed_warehouses_if_needed():
-    """Create default warehouses if they do not exist."""
+    """Seed only legacy tenants; never overwrite a master-managed topology."""
+    if Warehouse.query.count():
+        return
+
+    inventory_config = InventoryConfiguration.query.first()
+    if inventory_config is not None:
+        if not inventory_config.is_enabled or inventory_config.warehouse_mode == 'none':
+            return
+        if inventory_config.warehouse_mode == 'central':
+            db.session.add(Warehouse(code='central', name='انبار مرکزی', is_active=True))
+            db.session.commit()
+        return
+
     created_any = False
     for code, name in DEFAULT_WAREHOUSES:
         existing = Warehouse.query.filter_by(code=code).first()
@@ -73,13 +87,36 @@ def compute_warehouse_stock_for_material(raw_material: RawMaterial, warehouse: W
     """Compute warehouse stock in base unit (raw_material.default_unit)."""
     incoming = warehouse_transfer_sums(warehouse.id, 'in', end_date=end_date).get(raw_material.id, 0.0)
     outgoing = warehouse_transfer_sums(warehouse.id, 'out', end_date=end_date).get(raw_material.id, 0.0)
-    base = 0.0
-    if warehouse.code == 'central':
-        # Central base stock comes from purchases/usages (current_stock), transfers adjust it.
-        base = float(raw_material.current_stock or 0)
+    central = get_central_warehouse()
+    purchases_query = MaterialPurchase.query.filter(MaterialPurchase.raw_material_id == raw_material.id)
+    if end_date:
+        purchases_query = purchases_query.filter(MaterialPurchase.purchase_date <= end_date)
+    purchases = purchases_query.all()
+    base = sum(
+        convert_unit(purchase.quantity, purchase.unit, raw_material.default_unit)
+        for purchase in purchases
+        if purchase.warehouse_id == warehouse.id
+        or (purchase.warehouse_id is None and central and warehouse.id == central.id)
+    )
+    # Existing order consumption is global and is charged to the central warehouse.
+    if central and warehouse.id == central.id:
+        usages_query = RawMaterialUsage.query.filter_by(raw_material_id=raw_material.id)
+        if end_date:
+            usages_query = usages_query.filter(func.date(RawMaterialUsage.created_at) <= end_date)
+        base -= sum(
+            convert_unit(usage.quantity, usage.unit, raw_material.default_unit)
+            for usage in usages_query.all()
+        )
     return max(0.0, base + incoming - outgoing)
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
+
+
+@admin_bp.route('/menu')
+@login_required
+def menu_alias():
+    """Predictable admin URL retained as an alias for menu management."""
+    return redirect(url_for('menu.show_menu'))
 
 
 def parse_date(value: str | None):
@@ -533,7 +570,7 @@ def inventory_dashboard():
             'unit': material.default_unit,
             'current_stock': material.current_stock,  # موجودی فعلی
             'min_stock': material.min_stock or 0,  # حداقل موجودی
-            'base_unit_price': base_unit_price,
+            'base_unit_price': weighted_average_unit_price(material),
             'created_at': material.created_at
         })
 
@@ -573,7 +610,8 @@ def inventory_dashboard():
         material_stock_by_id=material_stock_by_id,
         start_date=start_date,
         end_date=end_date,
-        search_query=search_query
+        search_query=search_query,
+        warehouses=Warehouse.query.filter_by(is_active=True).order_by(Warehouse.name.asc()).all(),
     )
 
 
@@ -611,8 +649,7 @@ def warehouses_management():
 
     rows = []
     for rm in raw_materials:
-        base = float(rm.current_stock or 0) if selected_wh.code == 'central' else 0.0
-        stock = max(0.0, base + float(in_sums.get(rm.id, 0.0)) - float(out_sums.get(rm.id, 0.0)))
+        stock = compute_warehouse_stock_for_material(rm, selected_wh)
         
         # Get min_stock for this warehouse, fallback to global min_stock if not set
         min_stock = warehouse_min_stocks.get(rm.id)
@@ -728,6 +765,50 @@ def warehouses_management():
         pre_production_items=pre_production_items,
         pre_production_stocks=pre_production_stocks,
     )
+
+
+@admin_bp.route('/warehouses/create', methods=['POST'])
+@login_required
+def create_warehouse():
+    """Allow a tenant administrator to extend its warehouse topology."""
+    name = (request.form.get('name') or '').strip()
+    if len(name) < 2:
+        flash('نام انبار باید حداقل دو کاراکتر باشد.', 'warning')
+        return redirect(url_for('admin.warehouses_management'))
+    if Warehouse.query.filter(func.lower(Warehouse.name) == name.lower()).first():
+        flash('انباری با این نام از قبل وجود دارد.', 'warning')
+        return redirect(url_for('admin.warehouses_management'))
+
+    code_seed = re.sub(r'[^a-z0-9]+', '-', (request.form.get('code') or '').strip().lower()).strip('-')
+    code = code_seed or f'warehouse-{uuid.uuid4().hex[:8]}'
+    if Warehouse.query.filter_by(code=code).first():
+        code = f'{code}-{uuid.uuid4().hex[:4]}'
+
+    warehouse = Warehouse(code=code, name=name, is_active=True)
+    db.session.add(warehouse)
+    config = InventoryConfiguration.query.first()
+    if config:
+        config.is_enabled = True
+        config.warehouse_mode = 'multi'
+        config.managed_by_master = False
+
+    tenant_slug = session.get('tenant_slug')
+    if tenant_slug:
+        from models.master_models import CafeTenant, CafeWarehouseDefinition, CafeWarehouseProfile
+        cafe = CafeTenant.query.filter_by(slug=tenant_slug).first()
+        if cafe:
+            profile = CafeWarehouseProfile.query.filter_by(cafe_id=cafe.id).first()
+            if profile:
+                profile.mode = 'multi'
+                profile.is_enabled = True
+            position = CafeWarehouseDefinition.query.filter_by(cafe_id=cafe.id).count()
+            db.session.add(CafeWarehouseDefinition(
+                cafe_id=cafe.id, code=code, name=name, position=position, is_active=True
+            ))
+
+    db.session.commit()
+    flash(f'انبار «{name}» ساخته شد و در دفتر مادر هم ثبت شد.', 'success')
+    return redirect(url_for('admin.warehouses_management', warehouse_id=warehouse.id))
 
 
 @admin_bp.route('/warehouses/transfers', methods=['POST'])
@@ -1160,8 +1241,6 @@ def financial_report():
     )
     
     # دیباگ: چاپ اطلاعات برای بررسی
-    print(f"دوره انتخابی: {period}, از {start_date} تا {end_date}")
-    print(f"تعداد سفارش‌های پیدا شده: {len(orders)}")
     
     # محاسبه اطلاعات آیتم‌های حذف شده برای هر سفارش
     orders_with_deleted_info = []
@@ -1209,19 +1288,6 @@ def financial_report():
     average_ticket = int(total_sales / len(orders)) if orders else 0
 
     # دیباگ: چاپ محاسبات با جزئیات بیشتر
-    print(f"دوره انتخابی: {period}, از {start_date} تا {end_date}")
-    print(f"تعداد سفارش‌های پیدا شده: {len(orders)}")
-    print(f"جمع فروش: {total_sales:,}")
-    print(f"مالیات: {total_tax:,}")
-    print(f"تخفیف: {total_discount:,}")
-    print(f"میانگین سفارش: {average_ticket:,}")
-    if orders:
-        print(f"نمونه سفارش اول:")
-        print(f"   - ID: {orders[0].id}")
-        print(f"   - final_amount: {orders[0].final_amount}")
-        print(f"   - discount: {orders[0].discount}")
-        print(f"   - tax_amount: {orders[0].tax_amount}")
-        print(f"   - created_at: {orders[0].created_at}")
 
     # استفاده از datetime با timezone برای فیلتر کردن payment_rows
     payment_rows = (
@@ -2038,6 +2104,10 @@ def create_material_purchase():
     vendor_phone = (data.get('vendor_phone') or '').strip() or None
     note = (data.get('note') or '').strip() or None
     purchase_date = data.get('purchase_date')
+    warehouse_id = data.get('warehouse_id')
+    warehouse = Warehouse.query.filter_by(id=warehouse_id, is_active=True).first() if warehouse_id else get_central_warehouse()
+    if not warehouse:
+        return jsonify({'status': 'error', 'message': 'انبار مقصد انتخاب‌شده معتبر نیست.'}), 400
 
     try:
         quantity = float(str(quantity).replace(',', '').strip())
@@ -2060,7 +2130,8 @@ def create_material_purchase():
         total_price=total_price,
         vendor_name=vendor_name,
         vendor_phone=vendor_phone,
-        note=note
+        note=note,
+        warehouse_id=warehouse.id,
     )
     db.session.add(purchase)
     db.session.commit()
@@ -2084,6 +2155,10 @@ def update_material_purchase(purchase_id):
     vendor_phone = (data.get('vendor_phone') or '').strip() or None
     note = (data.get('note') or '').strip() or None
     purchase_date_str = data.get('purchase_date')
+    warehouse_id = data.get('warehouse_id')
+    warehouse = Warehouse.query.filter_by(id=warehouse_id, is_active=True).first() if warehouse_id else get_central_warehouse()
+    if not warehouse:
+        return jsonify({'status': 'error', 'message': 'انبار مقصد انتخاب‌شده معتبر نیست.'}), 400
     
     try:
         quantity = float(str(quantity).replace(',', '').strip())
@@ -2114,6 +2189,7 @@ def update_material_purchase(purchase_id):
     purchase.vendor_name = vendor_name
     purchase.vendor_phone = vendor_phone
     purchase.note = note
+    purchase.warehouse_id = warehouse.id
     
     db.session.commit()
     return jsonify({'status': 'success', 'message': 'خرید با موفقیت به‌روزرسانی شد.'})

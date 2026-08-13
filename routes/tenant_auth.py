@@ -4,14 +4,15 @@ import os
 from datetime import datetime
 
 from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for
-from flask_login import login_user
 from werkzeug.security import check_password_hash
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import NullPool
 import pytz
 
 from models.master_models import CafeTenant
 from models.models import User
+from services.tenant_session import establish_tenant_session
 
 iran_tz = pytz.timezone("Asia/Tehran")
 
@@ -26,7 +27,7 @@ def get_tenant_db_session(slug: str):
     if not cafe or not os.path.exists(cafe.db_path):
         return None, None
     
-    engine = create_engine(f"sqlite:///{cafe.db_path}")
+    engine = create_engine(f"sqlite:///{cafe.db_path}", poolclass=NullPool)
     Session = sessionmaker(bind=engine)
     return Session, cafe
 
@@ -64,19 +65,9 @@ def login(slug):
                     flash('حساب کاربری شما غیرفعال است.', 'danger')
                     return render_template('tenant/login.html', cafe=cafe)
                 
-                # Store tenant context in session
-                session['tenant_slug'] = slug
-                session['tenant_db_path'] = cafe.db_path
-                session['tenant_user_id'] = user.id
-                session['tenant_username'] = user.username
-                
                 user.last_login = datetime.now(iran_tz)
                 s.commit()
-                
-                # Also login with Flask-Login so @login_required decorators work
-                # We need to reload user from tenant DB after commit
-                from flask_login import login_user
-                login_user(user, remember=True)
+                establish_tenant_session(cafe=cafe, user=user, remember=True)
                 
                 # Redirect to tenant dashboard (or main dashboard for now)
                 return redirect(url_for('tenant.dashboard', slug=slug))

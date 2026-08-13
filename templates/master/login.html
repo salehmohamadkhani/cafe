@@ -143,27 +143,27 @@
 
       <form method="POST" autocomplete="on" id="loginForm">
         <div class="field">
-          <label for="phone_number">شماره موبایل</label>
+          <label for="username">نام کاربری master</label>
           <input 
-            id="phone_number" 
-            name="phone_number" 
-            type="tel" 
-            required 
-            autocomplete="tel"
-            placeholder="09121148277"
-            value="{{ phone_number or '' }}"
+            id="username"
+            name="username"
+            type="text"
+            required
+            autocomplete="username"
+            placeholder="admin"
+            value="{{ username or '' }}"
           >
         </div>
         
         <div class="field">
           <label for="password">رمز عبور</label>
           <input 
-            id="password" 
-            name="password" 
-            type="text" 
-            required 
-            placeholder="123"
-            autocomplete="off"
+            id="password"
+            name="password"
+            type="password"
+            required
+            placeholder="رمز عبور"
+            autocomplete="current-password"
             style="text-align: center; font-size: 1.1rem;"
           >
         </div>
@@ -173,28 +173,6 @@
         </button>
       </form>
       
-      <script>
-        const phoneInput = document.getElementById('phone_number');
-        const passwordInput = document.getElementById('password');
-        
-        // Format phone number
-        phoneInput.addEventListener('input', function(e) {
-          let value = this.value.replace(/\D/g, '');
-          if (value.startsWith('98')) {
-            value = '0' + value.substring(2);
-          }
-          this.value = value;
-        });
-        
-        // Focus on password after phone number is entered
-        phoneInput.addEventListener('keypress', function(e) {
-          if (e.key === 'Enter' && this.value.length >= 10) {
-            e.preventDefault();
-            passwordInput.focus();
-          }
-        });
-      </script>
-
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
           <div class="alerts">

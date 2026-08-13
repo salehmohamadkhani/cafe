@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
-from models.models import Order, Category, MenuItem, Customer, Table, db
+from models.models import Order, Category, MenuItem, Customer, Table, RawMaterial, MaterialPurchase, Warehouse, PreProductionItem, db
 from flask_login import login_required
 from sqlalchemy import text, func, extract
 from datetime import datetime, timedelta
@@ -7,6 +7,7 @@ from collections import defaultdict
 import pytz
 import jdatetime
 from utils.helpers import categorize_payment_method, PAYMENT_BUCKET_LABELS, restrict_cashier_access
+from services.inventory_service import menu_stock_map
 
 dashboard_bp = Blueprint('dashboard', __name__, url_prefix='/dashboard')
 
@@ -23,6 +24,7 @@ def waiter_dashboard():
     
     # Get all menu items
     menu_items = MenuItem.query.filter_by(is_active=True).order_by(MenuItem.name).all()
+    menu_stocks = menu_stock_map(menu_items)
     
     # Get all categories for menu grouping
     categories = Category.query.filter_by(is_active=True).order_by(Category.order, Category.name).all()
@@ -75,6 +77,7 @@ def waiter_dashboard():
     
     return render_template('dashboard.html', 
                           menu_items=menu_items,
+                          menu_stocks=menu_stocks,
                           categories=categories,
                           customers=customers,
                           tables=tables,
@@ -89,6 +92,7 @@ def waiter_dashboard():
 def dashboard():
     # Get all menu items
     menu_items = MenuItem.query.filter_by(is_active=True).order_by(MenuItem.name).all()
+    menu_stocks = menu_stock_map(menu_items)
     
     # Get all categories for menu grouping
     categories = Category.query.filter_by(is_active=True).order_by(Category.order, Category.name).all()
@@ -140,11 +144,6 @@ def dashboard():
         last_day = 30
     jalali_month_end = jdatetime.datetime(jalali_now.year, jalali_now.month, last_day, 23, 59, 59)
     month_end_naive = jalali_month_end.togregorian().replace(hour=23, minute=59, second=59, microsecond=999999)
-    
-    # دیباگ: چاپ تاریخ‌های محاسبه شده
-    print(f"ديباگ تاريخ شمسي: ماه {jalali_now.month} سال {jalali_now.year}")
-    print(f"شروع ماه ميلادي: {month_start_naive}")
-    print(f"پايان ماه ميلادي: {month_end_naive}")
     
     def summarize_period(key, label, start_dt, end_dt=None):
         query = Order.query.filter(Order.created_at >= start_dt)
@@ -250,6 +249,16 @@ def dashboard():
         Order.type == 'بیرون‌بر',
         Order.status == 'پرداخت نشده'
     ).order_by(Order.created_at.desc()).all()
+
+    menu_with_bom = MenuItem.query.filter(MenuItem.materials.any()).count()
+    setup_journey = [
+        {'label': 'مواد اولیه', 'done': RawMaterial.query.count() > 0, 'href': url_for('admin.inventory_dashboard')},
+        {'label': 'ثبت خرید', 'done': MaterialPurchase.query.count() > 0, 'href': url_for('admin.inventory_dashboard', open='purchase')},
+        {'label': 'انبارها', 'done': Warehouse.query.count() > 0, 'href': url_for('admin.warehouses_management')},
+        {'label': 'پیش‌تولید', 'done': PreProductionItem.query.count() > 0, 'href': url_for('admin.warehouses_management')},
+        {'label': 'منو و BOM', 'done': menu_with_bom > 0, 'href': url_for('menu.show_menu')},
+        {'label': 'اولین سفارش', 'done': Order.query.count() > 0, 'href': url_for('order.new_order_form')},
+    ]
     
     # دیگر نیازی به table_orders نیست چون فقط سفارش فعلی را نمایش می‌دهیم
     # table_orders = {}  # حذف شده - دیگر استفاده نمی‌شود
@@ -257,12 +266,14 @@ def dashboard():
     return render_template('dashboard.html', 
                           orders=Order.query.all(),
                           menu_items=menu_items,
+                          menu_stocks=menu_stocks,
                           categories=categories,
                           customers=customers,
                           tables=tables,
                           table_groups=table_groups,
                           financial=financial_data,
-                          takeaway_orders=takeaway_orders)
+                          takeaway_orders=takeaway_orders,
+                          setup_journey=setup_journey)
 
 # --- تغییر دسته‌ای وضعیت سفارش‌های پرداخت نشده به پرداخت شده ---
 @dashboard_bp.route('/mark-all-unpaid-as-paid', methods=['POST'])

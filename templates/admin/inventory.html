@@ -319,6 +319,11 @@
         color: var(--color-danger);
     }
 
+    .inventory-page .badge-stock-warning {
+        background: rgba(242, 181, 68, 0.16);
+        color: #9a5b00;
+    }
+
     /* Inventory tables: responsive + dark-mode friendly */
     .inventory-page .inventory-table {
         table-layout: auto;
@@ -691,11 +696,13 @@
                             <td class="material-stock">
                                 {% set stock = material_stock_by_id.get(material.id, material.current_stock) if
                                 material_stock_by_id else material.current_stock %}
-                                {% set is_low_stock = material.min_stock and stock < material.min_stock %} <span
+                                {% set is_low_stock = material.min_stock and stock <= material.min_stock %}
+                                {% set is_near_stock = material.min_stock and not is_low_stock and stock <= (material.min_stock * 1.25) %} <span
                                     class="display-value material-stock-display">
                                     <span
-                                        class="badge-pill {{ 'badge-stock-low' if is_low_stock else 'badge-stock-ok' }}">
+                                        class="badge-pill {{ 'badge-stock-low' if is_low_stock else ('badge-stock-warning' if is_near_stock else 'badge-stock-ok') }}">
                                         {{ '%.2f'|format(stock or 0) }} {{ material.unit }}
+                                        {% if is_near_stock %} · نزدیک هشدار{% endif %}
                                     </span>
                                     </span>
                             </td>
@@ -802,7 +809,8 @@
                             <th>مقدار خرید</th>
                             <th>واحد</th>
                             <th>قیمت کل </th>
-                            <th>قیمت واحد </th>
+                            <th>قیمت واحد پایه</th>
+                            <th>انبار مقصد</th>
                             <th>فروشنده</th>
                             <th>توضیحات</th>
                             <th>عملیات</th>
@@ -812,6 +820,7 @@
                         {% if purchases %}
                         {% for purchase in purchases %}
                         <tr class="purchase-row" data-purchase-id="{{ purchase.id }}"
+                            data-warehouse-id="{{ purchase.warehouse_id or '' }}"
                             data-purchase-date="{{ purchase.purchase_date.strftime('%Y-%m-%d') if purchase.purchase_date else '' }}"
                             data-purchase-material="{{ purchase.raw_material.name|lower if purchase.raw_material else '' }}"
                             data-purchase-vendor="{{ (purchase.vendor_name or '')|lower }}"
@@ -822,8 +831,9 @@
                             <td>{{ "{:,.2f}".format(purchase.quantity) }}</td>
                             <td><span class="badge-pill badge-unit">{{ purchase.unit }}</span></td>
                             <td>{{ "{:,.0f}".format(purchase.total_price) }}</td>
-                            <td><span class="badge-pill badge-price">{{ "{:,.0f}".format(purchase.unit_price) }}</span>
+                            <td><span class="badge-pill badge-price">{{ "{:,.0f}".format(purchase.base_unit_price) }} / {{ purchase.raw_material.default_unit }}</span>
                             </td>
+                            <td><span class="badge-pill badge-unit">{{ purchase.warehouse.name if purchase.warehouse else 'انبار مرکزی' }}</span></td>
                             <td>
                                 {{ purchase.vendor_name or '-' }}
                                 {% if purchase.vendor_phone %}<br><small>{{ purchase.vendor_phone }}</small>{% endif %}
@@ -841,7 +851,7 @@
                         {% endfor %}
                         {% else %}
                         <tr>
-                            <td colspan="9" class="inventory-empty">خریدی ثبت نشده است.</td>
+                            <td colspan="10" class="inventory-empty">خریدی ثبت نشده است.</td>
                         </tr>
                         {% endif %}
                     </tbody>
@@ -889,12 +899,23 @@
             <div class="modal-form__grid">
                 <div class="form-field full">
                     <label for="purchase-raw">انتخاب ماده اولیه</label>
+                    <input type="search" id="purchase-material-search" class="ds-input" placeholder="نام ماده را جستجو کنید…" autocomplete="off">
                     <select id="purchase-raw" class="ds-select" required>
                         <option value="">یکی از مواد اولیه را انتخاب کنید</option>
                         {% for material in materials %}
                         <option value="{{ material.id }}">{{ material.name }}</option>
                         {% endfor %}
                     </select>
+                    <button type="button" class="ds-button ghost" id="purchase-add-material" style="margin-top:.5rem;">ماده پیدا نشد؟ همین‌جا بساز</button>
+                </div>
+                <div class="form-field full">
+                    <label for="purchase-warehouse">انتقال خرید به کدام انبار؟</label>
+                    <select id="purchase-warehouse" class="ds-select" required>
+                        {% for warehouse in warehouses %}
+                        <option value="{{ warehouse.id }}" {% if warehouse.code == 'central' %}selected{% endif %}>{{ warehouse.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <small>موجودی خرید مستقیماً در همین انبار ثبت می‌شود.</small>
                 </div>
                 <div class="form-field">
                     <label for="purchase-date">تاریخ خرید</label>
@@ -951,6 +972,8 @@
     const purchaseModal = document.getElementById('inventory-purchase-modal');
     const openRawBtn = document.getElementById('open-raw-modal');
     const openPurchaseBtn = document.getElementById('open-purchase-modal');
+    const purchaseAddMaterialBtn = document.getElementById('purchase-add-material');
+    let returnToPurchaseAfterMaterial = false;
     const toastStack = document.getElementById('inventory-toast-stack');
 
     const LOW_STOCK_STATE_KEY = 'inventoryLowStockState_v1';
@@ -1064,6 +1087,10 @@
     }
 
     if (openRawBtn) openRawBtn.addEventListener('click', () => openModal(rawModal));
+    if (purchaseAddMaterialBtn) purchaseAddMaterialBtn.addEventListener('click', () => {
+        returnToPurchaseAfterMaterial = true;
+        openModal(rawModal);
+    });
     if (openPurchaseBtn) {
         openPurchaseBtn.addEventListener('click', () => {
             const purchaseForm = document.getElementById('purchase-form');
@@ -1077,6 +1104,19 @@
                 if (modalTitle) modalTitle.textContent = 'ثبت خرید / ورود موجودی';
             }
             openModal(purchaseModal);
+        });
+    }
+    const materialSearchForPurchase = document.getElementById('purchase-material-search');
+    if (materialSearchForPurchase) {
+        materialSearchForPurchase.addEventListener('input', () => {
+            const query = materialSearchForPurchase.value.trim().toLowerCase();
+            const select = document.getElementById('purchase-raw');
+            Array.from(select.options).forEach((option, index) => {
+                if (index === 0) return;
+                option.hidden = Boolean(query) && !option.textContent.toLowerCase().includes(query);
+            });
+            const firstMatch = Array.from(select.options).find((option, index) => index > 0 && !option.hidden);
+            if (query && firstMatch) select.value = firstMatch.value;
         });
     }
     if (backdrop) {
@@ -1209,7 +1249,6 @@
             .then(data => {
                 if (data.status === 'success') {
                     // Close modal and reset form
-                    closeModal();
                     rawForm.reset();
 
                     // Create material object from response
@@ -1232,6 +1271,13 @@
                         option.value = newMaterial.id;
                         option.textContent = newMaterial.name;
                         purchaseRawSelect.appendChild(option);
+                        purchaseRawSelect.value = String(newMaterial.id);
+                    }
+                    if (returnToPurchaseAfterMaterial) {
+                        returnToPurchaseAfterMaterial = false;
+                        openModal(purchaseModal);
+                    } else {
+                        closeModal();
                     }
                 } else {
                     alert(data.message || 'ثبت ماده اولیه با خطا مواجه شد.');
@@ -1262,7 +1308,8 @@
                 total_price: document.getElementById('purchase-price').value,
                 vendor_name: document.getElementById('purchase-vendor').value,
                 vendor_phone: document.getElementById('purchase-phone').value,
-                note: document.getElementById('purchase-note').value
+                note: document.getElementById('purchase-note').value,
+                warehouse_id: document.getElementById('purchase-warehouse').value
             };
 
             const url = isEditMode
@@ -1605,7 +1652,7 @@
             const unit = cells[3]?.querySelector('.badge-unit')?.textContent?.trim() || '';
             const totalPrice = cells[4]?.textContent?.replace(/,/g, '').trim() || '';
             const unitPrice = cells[5]?.querySelector('.badge-price')?.textContent?.replace(/,/g, '').trim() || '';
-            const vendorCell = cells[6];
+            const vendorCell = cells[7];
             let vendorName = '';
             let vendorPhone = '';
             if (vendorCell) {
@@ -1618,7 +1665,7 @@
                     vendorName = vendorText;
                 }
             }
-            const note = cells[7]?.textContent?.trim() || '';
+            const note = cells[8]?.textContent?.trim() || '';
 
             // Find material ID from select options
             const materialSelect = document.getElementById('purchase-raw');
@@ -1657,6 +1704,7 @@
             if (document.getElementById('purchase-quantity')) document.getElementById('purchase-quantity').value = quantity;
             if (document.getElementById('purchase-unit')) document.getElementById('purchase-unit').value = unit;
             if (document.getElementById('purchase-price')) document.getElementById('purchase-price').value = totalPrice;
+            if (document.getElementById('purchase-warehouse')) document.getElementById('purchase-warehouse').value = row.dataset.warehouseId || document.getElementById('purchase-warehouse').value;
             if (document.getElementById('purchase-vendor')) document.getElementById('purchase-vendor').value = vendorName === '-' ? '' : vendorName;
             if (document.getElementById('purchase-phone')) document.getElementById('purchase-phone').value = vendorPhone || '';
             if (document.getElementById('purchase-note')) document.getElementById('purchase-note').value = note === '-' ? '' : note;
