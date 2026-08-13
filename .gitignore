@@ -23,6 +23,7 @@ wheels/
 # Virtual Environment
 venv/
 .venv/
+.setup/
 ENV/
 env/
 
@@ -52,10 +53,12 @@ Thumbs.db
 
 # Project specific
 *.bat
+!INSTALL_AND_RUN.bat
 *.zip
 New folder/
 *.txt
 !requirements*.txt
+!QUICK_START_FA.txt
 !DEPLOYMENT.md
 !deploy_instructions.md
 
