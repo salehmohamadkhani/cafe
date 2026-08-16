@@ -172,12 +172,15 @@ try {
         Read-Host 'Press Enter to close this window. The existing server will keep running'
         exit 0
     }
+    $tcp = [System.Net.Sockets.TcpClient]::new()
     try {
-        $tcp = [System.Net.Sockets.TcpClient]::new()
-        $tcp.Connect('127.0.0.1', $port)
+        $connectTask = $tcp.ConnectAsync('127.0.0.1', $port)
+        if ($connectTask.Wait(1500) -and $tcp.Connected) {
+            Stop-WithMessage "Port $port is used by another application. Close it and try again."
+        }
+    } catch { } finally {
         $tcp.Dispose()
-        Stop-WithMessage "Port $port is used by another application. Close it and try again."
-    } catch [System.Net.Sockets.SocketException] { }
+    }
 
     Write-Step 'Starting Cafe Platform'
     Write-Host "URL: http://127.0.0.1:$port" -ForegroundColor Green
