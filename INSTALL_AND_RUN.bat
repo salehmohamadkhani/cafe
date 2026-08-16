@@ -1,18 +1,17 @@
 @echo off
 setlocal
-chcp 65001 >nul
 title Cafe Platform - One Click Setup and Run
 
 echo ============================================================
-echo        Cafe Platform - نصب و اجرای خودکار ویندوز
+echo        Cafe Platform - One Click Windows Setup and Run
 echo ============================================================
 echo.
 
 set "SETUP_SCRIPT=%~dp0scripts\windows_setup.ps1"
 if not exist "%SETUP_SCRIPT%" (
-    echo [خطا] فایل scripts\windows_setup.ps1 پیدا نشد.
-    echo این فایل BAT باید داخل پوشه کامل پروژه باقی بماند.
-    echo لطفاً کل پروژه را از GitHub دانلود و از ZIP خارج کنید.
+    echo [ERROR] scripts\windows_setup.ps1 was not found.
+    echo This BAT file must stay inside the full project folder.
+    echo Please download the whole project from GitHub and extract it from the ZIP.
     echo.
     pause
     exit /b 1
@@ -23,10 +22,10 @@ set "EXIT_CODE=%ERRORLEVEL%"
 
 echo.
 if not "%EXIT_CODE%"=="0" (
-    echo اجرای نصب‌کننده با خطا متوقف شد. پیام بالاتر را بررسی کنید.
+    echo Setup stopped with an error. Check the message above.
 ) else (
-    echo سرور متوقف شد.
+    echo Server stopped.
 )
-echo این پنجره خودکار بسته نمی‌شود.
+echo This window does not close automatically.
 pause
 exit /b %EXIT_CODE%
