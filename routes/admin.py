@@ -4,6 +4,7 @@ from sqlalchemy import create_engine
 from models.models import db, Settings, Order, OrderItem, Customer, User, RawMaterial, MaterialPurchase, Table, TableArea, TableItem, SnapSettlement, Warehouse, InventoryConfiguration, WarehouseTransfer, RawMaterialUsage, MenuItemMaterial, PreProductionItem, PreProductionItemMaterial, PreProductionStock, PreProductionProduction, PreProductionTransfer, WarehouseMaterialMinStock, calculate_order_amount, convert_unit
 from utils.helpers import to_jalali, categorize_payment_method, PAYMENT_BUCKET_LABELS, restrict_cashier_access
 from sqlalchemy import func, extract, or_, text
+from sqlalchemy.orm import joinedload
 from services.inventory_service import calculate_material_stock_for_period, weighted_average_unit_price
 from collections import defaultdict
 from datetime import datetime, timedelta, date
@@ -435,8 +436,16 @@ def orders_report():
         except:
             pass
 
-    orders = orders_query.order_by(Order.created_at.desc()).all()
-    return render_template('admin/orders_report.html', orders=orders)
+    page = max(1, request.args.get('page', 1, type=int) or 1)
+    pagination = (
+        orders_query.options(joinedload(Order.customer))
+        .order_by(Order.created_at.desc(), Order.id.desc())
+        .paginate(page=page, per_page=50, error_out=False)
+    )
+    return render_template(
+        'admin/orders_report.html', orders=pagination.items, pagination=pagination,
+        page_params={key: value for key, value in request.args.items() if key != 'page'},
+    )
 
 
 @admin_bp.route('/customers/leaderboard')

@@ -23,6 +23,11 @@
     .orders-report__row-actions { display: flex; align-items: center; gap: 8px; }
     .orders-report__row-actions form { margin: 0; }
     .orders-report__empty { padding: 24px; text-align: center; color: var(--ds-text-muted); }
+    .order-pagination { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-top: 1.25rem; color: var(--ds-text-muted); }
+    .order-pagination__links { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; }
+    .order-pagination__links a { display: inline-flex; align-items: center; justify-content: center; min-width: 2.4rem; min-height: 2.4rem; padding: .35rem .65rem; border: 1px solid var(--ds-border); border-radius: 9px; color: var(--ds-text); text-decoration: none; }
+    .order-pagination__links a:hover, .order-pagination__links a.is-current { background: var(--ds-brand-700); border-color: var(--ds-brand-700); color: #fff; }
+    .order-pagination__links a:focus-visible { outline: 3px solid var(--ds-focus); outline-offset: 2px; }
     @media (max-width: 800px) { .orders-report__filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
     @media (max-width: 520px) { .orders-report__filters { grid-template-columns: 1fr; } .orders-report__actions > * { flex: 1; } }
 </style>
@@ -46,7 +51,7 @@
     </section>
 
     <section class="ds-card" aria-label="نتایج گزارش سفارش‌ها">
-        <p class="ds-subtitle">{{ orders|length }} سفارش پیدا شد</p>
+        <p class="ds-subtitle">{{ pagination.total }} سفارش پیدا شد</p>
         {% if orders %}
         <div class="ds-table-wrap">
             <table class="orders-report__table">
@@ -72,6 +77,8 @@
             </table>
         </div>
         {% else %}<p class="orders-report__empty">سفارشی با این فیلترها پیدا نشد.</p>{% endif %}
+        {% set endpoint = 'admin.orders_report' %}
+        {% include 'partials/order_pagination.html' %}
     </section>
 </main>
 {% endblock %}

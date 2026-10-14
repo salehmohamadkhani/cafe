@@ -274,6 +274,12 @@
         font-weight: 600;
     }
 
+    .order-pagination { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-top: 1.25rem; color: var(--ds-text-muted); }
+    .order-pagination__links { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; }
+    .order-pagination__links a { display: inline-flex; align-items: center; justify-content: center; min-width: 2.4rem; min-height: 2.4rem; padding: .35rem .65rem; border: 1px solid var(--ds-border); border-radius: 9px; color: var(--ds-text); text-decoration: none; }
+    .order-pagination__links a:hover, .order-pagination__links a.is-current { background: var(--ds-brand-700); border-color: var(--ds-brand-700); color: #fff; }
+    .order-pagination__links a:focus-visible { outline: 3px solid var(--ds-focus); outline-offset: 2px; }
+
     @media (max-width: 768px) {
         .orders-hero {
             padding: 1.5rem;
@@ -298,7 +304,7 @@
             <p>مدیریت کامل سفارش‌ها با امکان جستجو، فیلتر و عملیات سریع</p>
         </div>
         <div class="orders-meta">
-            <span class="orders-badge">کل سفارش‌ها: {{ orders|length }}</span>
+            <span class="orders-badge">سفارش‌های یافت‌شده: {{ pagination.total }}</span>
             {% if status %}
             <span class="orders-badge">وضعیت انتخاب شده: {{ status }}</span>
             {% endif %}
@@ -408,6 +414,8 @@
                 </tbody>
             </table>
         </div>
+        {% set endpoint = 'order.orders_list' %}
+        {% include 'partials/order_pagination.html' %}
     </section>
 </div>
 

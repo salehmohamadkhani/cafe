@@ -1,0 +1,27 @@
+{% if pagination.total %}
+<nav class="order-pagination" aria-label="صفحه‌بندی سفارش‌ها">
+    <span class="order-pagination__summary">
+        نمایش {{ ((pagination.page - 1) * pagination.per_page) + 1 }} تا
+        {{ [pagination.page * pagination.per_page, pagination.total] | min }}
+        از {{ pagination.total }} سفارش
+    </span>
+    {% if pagination.pages > 1 %}
+    <div class="order-pagination__links">
+        {% if pagination.has_prev %}
+        <a href="{{ url_for(endpoint, page=pagination.prev_num, **page_params) }}" aria-label="صفحه قبل">قبلی</a>
+        {% endif %}
+        {% for number in pagination.iter_pages(left_edge=1, left_current=1, right_current=1, right_edge=1) %}
+            {% if number %}
+                <a href="{{ url_for(endpoint, page=number, **page_params) }}"
+                   {% if number == pagination.page %}aria-current="page" class="is-current"{% endif %}>{{ number }}</a>
+            {% else %}
+                <span aria-hidden="true">…</span>
+            {% endif %}
+        {% endfor %}
+        {% if pagination.has_next %}
+        <a href="{{ url_for(endpoint, page=pagination.next_num, **page_params) }}" aria-label="صفحه بعد">بعدی</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</nav>
+{% endif %}

@@ -17,6 +17,7 @@ from models.models import (
     RawMaterialUsage,
 )
 from sqlalchemy import func, or_
+from sqlalchemy.orm import joinedload, selectinload
 from datetime import datetime
 import pytz
 
@@ -48,8 +49,16 @@ def orders_list():
         if q_int is not None:
             filters.append(Order.daily_sequence == q_int)
         orders_query = orders_query.join(Customer).filter(or_(*filters))
-    orders = orders_query.order_by(Order.created_at.desc()).all()
-    return render_template('orders/orders_list.html', orders=orders, q=q, status=status)
+    page = max(1, request.args.get('page', 1, type=int) or 1)
+    pagination = (
+        orders_query.options(joinedload(Order.customer), selectinload(Order.order_items))
+        .order_by(Order.created_at.desc(), Order.id.desc())
+        .paginate(page=page, per_page=50, error_out=False)
+    )
+    return render_template(
+        'orders/orders_list.html', orders=pagination.items, pagination=pagination,
+        q=q, status=status, page_params={key: value for key, value in request.args.items() if key != 'page'},
+    )
 
 # --- ثبت سفارش جدید (فرم) ---
 @order_bp.route('/order/new')
