@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from datetime import datetime
 
-from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
 from werkzeug.security import check_password_hash
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -12,7 +12,8 @@ import pytz
 
 from models.master_models import CafeTenant
 from models.models import User
-from services.tenant_session import establish_tenant_session
+from services.tenant_session import clear_tenant_session, establish_tenant_session
+from services.access_control import is_master_sso
 
 iran_tz = pytz.timezone("Asia/Tehran")
 
@@ -81,11 +82,6 @@ def login(slug):
 @tenant_auth_bp.route('/logout')
 def logout(slug):
     """خروج از کافه"""
-    from flask_login import logout_user
-    logout_user()  # Logout from Flask-Login
-    session.pop('tenant_slug', None)
-    session.pop('tenant_db_path', None)
-    session.pop('tenant_user_id', None)
-    session.pop('tenant_username', None)
+    clear_tenant_session(keep_master=is_master_sso())
     flash('با موفقیت از کافه خارج شدید.', 'info')
     return redirect(url_for('tenant_auth.login', slug=slug))

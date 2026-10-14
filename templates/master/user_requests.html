@@ -34,6 +34,8 @@
                 <span style="color: #fbbf24;">در انتظار</span>
               {% elif req.status == 'approved' %}
                 <span style="color: #22c55e;">تایید شده</span>
+              {% elif req.status == 'deactivated' %}
+                <span style="color: #fbbf24;">غیرفعال</span>
               {% else %}
                 <span style="color: #ef4444;">رد شده</span>
               {% endif %}
@@ -52,8 +54,15 @@
               {% elif req.status == 'approved' %}
                 <div style="background: rgba(34,197,94,0.2); padding: 8px 12px; border-radius: 6px; font-size: 0.9rem;">
                   <strong>نام کاربری:</strong> {{ req.generated_username }}<br>
-                  <strong>رمز عبور:</strong> {{ req.generated_password }}
+                  {% if req.generated_password %}<strong>رمز عبور قدیمی:</strong> {{ req.generated_password }}{% else %}<span>رمز اولیه هنگام تأیید نمایش داده شد.</span>{% endif %}
                 </div>
+                <form method="POST" action="{{ url_for('master.deactivate_user', request_id=req.id) }}">
+                  <button type="submit">غیرفعال‌سازی</button>
+                </form>
+              {% elif req.status == 'deactivated' %}
+                <form method="POST" action="{{ url_for('master.reactivate_user', request_id=req.id) }}">
+                  <button type="submit">فعال‌سازی دوباره</button>
+                </form>
               {% endif %}
             </td>
           </tr>

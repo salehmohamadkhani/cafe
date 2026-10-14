@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 from dataclasses import dataclass
 
 from sqlalchemy import create_engine
@@ -246,29 +247,36 @@ def create_managed_cafe(
         warehouse_mode=normalized_mode,
         warehouses=warehouse_plan,
     )
-    cafe = CafeTenant(
-        name=provisioned.name,
-        slug=provisioned.slug,
-        root_dir=provisioned.root_dir,
-        db_path=provisioned.db_path,
-        is_active=True,
-    )
-    db.session.add(cafe)
-    db.session.flush()
-    selected = set_cafe_modules(cafe, selected_modules)
-    set_cafe_warehouse_profile(cafe, normalized_mode, warehouse_plan)
-    log_cafe_event(
-        cafe,
-        "cafe.created",
-        {
-            "modules": sorted(selected),
-            "primary_username": username,
-            "primary_role": role,
-            "warehouse_mode": normalized_mode,
-            "warehouses": [name for _, name in warehouse_plan],
-        },
-    )
-    db.session.commit()
+    try:
+        cafe = CafeTenant(
+            name=provisioned.name,
+            slug=provisioned.slug,
+            root_dir=provisioned.root_dir,
+            db_path=provisioned.db_path,
+            is_active=True,
+        )
+        db.session.add(cafe)
+        db.session.flush()
+        selected = set_cafe_modules(cafe, selected_modules)
+        set_cafe_warehouse_profile(cafe, normalized_mode, warehouse_plan)
+        log_cafe_event(
+            cafe,
+            "cafe.created",
+            {
+                "modules": sorted(selected),
+                "primary_username": username,
+                "primary_role": role,
+                "warehouse_mode": normalized_mode,
+                "warehouses": [name for _, name in warehouse_plan],
+            },
+        )
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        # Provisioning created this directory in the current call. Do not
+        # leave a database with no matching record in the command center.
+        shutil.rmtree(provisioned.root_dir, ignore_errors=True)
+        raise
     return cafe
 
 

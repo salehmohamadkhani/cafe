@@ -1486,253 +1486,99 @@ def settle_snap():
 @admin_bp.route('/users')
 @login_required
 def users_list():
-    # Force fresh query - use a completely new session to avoid any cache
-    import os
-    from sqlalchemy import create_engine
-    from sqlalchemy.orm import sessionmaker
-    
+    from models.master_models import CafeTenant, UserCreationRequest
+
+    users = User.query.order_by(User.created_at.desc()).all()
+    pending_requests = []
     tenant_slug = session.get('tenant_slug')
     if tenant_slug:
-        from models.master_models import CafeTenant
-        # Query cafe from master DB
-        original_bind = db.session.bind
-        try:
-            from config import Config
-            master_engine = create_engine(Config.MASTER_DB_URI)
-            db.session.bind = master_engine
-            cafe = CafeTenant.query.filter_by(slug=tenant_slug).first()
-        finally:
-            db.session.bind = original_bind
-        
-        if cafe and os.path.exists(cafe.db_path):
-            # Create a completely fresh session for this query
-            tenant_engine = create_engine(f"sqlite:///{cafe.db_path}")
-            TenantSession = sessionmaker(bind=tenant_engine)
-            with TenantSession() as tenant_session:
-                # Query directly from tenant DB with fresh session
-                users_raw = tenant_session.query(User).order_by(User.created_at.desc()).all()
-                # Convert to list of dicts to completely detach from session
-                users_data = []
-                for u in users_raw:
-                    users_data.append({
-                        'id': u.id,
-                        'username': u.username,
-                        'name': u.name,
-                        'phone': u.phone,
-                        'role': u.role,
-                        'is_active': u.is_active,
-                        'created_at': u.created_at,
-                        'password_hash': u.password_hash
-                    })
-                # Create new User objects from the data (completely detached)
-                users = []
-                for u_data in users_data:
-                    u = User()
-                    u.id = u_data['id']
-                    u.username = u_data['username']
-                    u.name = u_data['name']
-                    u.phone = u_data['phone']
-                    u.role = u_data['role']
-                    u.is_active = u_data['is_active']
-                    u.created_at = u_data['created_at']
-                    u.password_hash = u_data['password_hash']
-                    users.append(u)
-        else:
-            # Fallback to normal query
-            db.session.expire_all()
-            users = User.query.order_by(User.created_at.desc()).all()
-    else:
-        # Not in tenant context, use normal query
-        db.session.expire_all()
-        users = User.query.order_by(User.created_at.desc()).all()
-    
-    return render_template('admin/users.html', users=users, role_definitions=USER_ROLE_DEFINITIONS)
+        cafe = CafeTenant.query.filter_by(slug=tenant_slug).first()
+        if cafe:
+            pending_requests = (
+                UserCreationRequest.query
+                .filter_by(cafe_id=cafe.id, status='pending')
+                .order_by(UserCreationRequest.created_at.desc())
+                .all()
+            )
+    return render_template(
+        'admin/users.html',
+        users=users,
+        pending_requests=pending_requests,
+        role_definitions=USER_ROLE_DEFINITIONS,
+    )
+
 
 @admin_bp.route('/users/request', methods=['POST'])
 @login_required
 def request_user_creation():
-    """ارسال درخواست ایجاد کاربر جدید به پنل master"""
-    from flask import session
-    from models.master_models import UserCreationRequest, CafeTenant
-    
+    """Record a pending request centrally; create a tenant user only on approval."""
+    from models.master_models import CafeTenant, UserCreationRequest
+
+    modal = request.form.get('modal') == '1'
+
+    def fail(message, status=400):
+        if modal:
+            return jsonify({'success': False, 'error': message}), status
+        flash(message, 'warning')
+        return redirect(url_for('admin.users_list'))
+
     tenant_slug = session.get('tenant_slug')
     if not tenant_slug:
-        if request.form.get('modal') == '1':
-            return jsonify({'success': False, 'error': 'شما باید ابتدا وارد کافه شوید.'}), 400
-        flash('شما باید ابتدا وارد کافه شوید.', 'danger')
-        return redirect(url_for('admin.users_list'))
-    
-    # Get cafe from master database
-    from config import Config
-    original_bind_for_cafe = db.session.bind
-    try:
-        # Switch to master database to query CafeTenant
-        master_engine = create_engine(Config.MASTER_DB_URI)
-        db.session.bind = master_engine
-        cafe = CafeTenant.query.filter_by(slug=tenant_slug).first()
-    finally:
-        db.session.bind = original_bind_for_cafe
-    
+        return fail('شما باید ابتدا وارد کافه شوید.')
+    cafe = CafeTenant.query.filter_by(slug=tenant_slug, is_active=True).first()
     if not cafe:
-        if request.form.get('modal') == '1':
-            return jsonify({'success': False, 'error': 'کافه یافت نشد.'}), 400
-        flash('کافه یافت نشد.', 'danger')
-        return redirect(url_for('admin.users_list'))
-    
+        return fail('کافه فعال یافت نشد.')
+
     username = (request.form.get('username') or '').strip()
     name = (request.form.get('name') or '').strip() or None
     phone = (request.form.get('phone') or '').strip() or None
-    role = (request.form.get('role', 'cashier') or 'cashier').strip()
-    requested_by = current_user.username if current_user.is_authenticated else None
-    
-    if not username:
-        error_msg = 'نام کاربری الزامی است.'
-        if request.form.get('modal') == '1':
-            return jsonify({'success': False, 'error': error_msg}), 400
-        flash(error_msg, 'danger')
-        return redirect(url_for('admin.users_list'))
-    
-    # Create temporary inactive user in tenant database first
-    # This user will be activated when request is approved in master panel
-    temp_username = f"pending_{username}_{datetime.now().strftime('%Y%m%d%H%M%S')}"
-    temp_user = User(
-        username=temp_username,
-        password_hash=generate_password_hash('temp_password_123'),  # Temporary password
-        name=name,
-        role=role,
-        phone=phone,
-        created_at=datetime.now(pytz.timezone("Asia/Tehran")),
-        is_active=False  # Inactive until approved
-    )
-    db.session.add(temp_user)
-    db.session.flush()  # Get user.id before commit
-    temp_user_id = temp_user.id
-    db.session.commit()
-    
-    # Now switch to master database for UserCreationRequest operations
-    from config import Config
-    original_bind = db.session.bind
+    role = (request.form.get('role') or 'cashier').strip()
+    allowed_roles = {'cashier', 'waiter', 'inventory', 'procurement', 'accountant'}
+    if len(username) < 3 or len(username) > 64 or not re.fullmatch(r'[A-Za-z0-9_.-]+', username):
+        return fail('نام کاربری باید ۳ تا ۶۴ نویسهٔ انگلیسی، عدد، نقطه، خط تیره یا زیرخط باشد.')
+    if role not in allowed_roles:
+        return fail('نقش درخواستی معتبر نیست.')
+    if phone and (len(phone) > 20 or User.query.filter_by(phone=phone).first()):
+        return fail('شماره تماس نامعتبر یا تکراری است.')
+    if User.query.filter_by(username=username).first():
+        return fail('این نام کاربری در کافه ثبت شده است.')
+    if UserCreationRequest.query.filter_by(cafe_id=cafe.id, username=username, status='pending').first():
+        return fail('درخواست مشابهی برای این نام کاربری در حال بررسی است.')
+
     try:
-        # Switch to master database
-        master_engine = create_engine(Config.MASTER_DB_URI)
-        db.session.bind = master_engine
-        
-        # Check if request already exists for this username in this cafe
-        existing_request = UserCreationRequest.query.filter_by(
-            cafe_id=cafe.id,
-            username=username,
-            status='pending'
-        ).first()
-        
-        if existing_request:
-            # Rollback temp user creation - switch back to tenant DB first
-            db.session.bind = original_bind
-            # Need to query temp_user again in tenant DB context
-            temp_user_to_delete = User.query.get(temp_user_id)
-            if temp_user_to_delete:
-                db.session.delete(temp_user_to_delete)
-                db.session.commit()
-            error_msg = 'درخواست مشابهی برای این نام کاربری در حال بررسی است.'
-            if request.form.get('modal') == '1':
-                return jsonify({'success': False, 'error': error_msg}), 400
-            flash(error_msg, 'warning')
-            return redirect(url_for('admin.users_list'))
-        
-        # Create request in master database
         request_obj = UserCreationRequest(
             cafe_id=cafe.id,
-            requested_by=requested_by,
+            requested_by=current_user.username,
             username=username,
             name=name,
             phone=phone,
             role=role,
             status='pending',
-            notes=f"temp_user_id:{temp_user_id}"  # Store temp_user_id for later reference
         )
-        
         db.session.add(request_obj)
         db.session.commit()
-        
-        success_msg = 'درخواست ایجاد کاربر با موفقیت ارسال شد. کاربر در لیست با وضعیت غیرفعال نمایش داده می‌شود تا زمان تایید.'
-        if request.form.get('modal') == '1':
-            return jsonify({'success': True, 'message': success_msg})
-        flash(success_msg, 'success')
-        return redirect(url_for('admin.users_list'))
-    except Exception as e:
-        # If error occurs, try to rollback temp user
-        try:
-            db.session.bind = original_bind
-            # Need to query temp_user again in tenant DB context
-            temp_user_to_delete = User.query.get(temp_user_id)
-            if temp_user_to_delete:
-                db.session.delete(temp_user_to_delete)
-                db.session.commit()
-        except:
-            pass
-        # Re-raise the original exception or return error response
-        import traceback
-        traceback.print_exc()
-        if request.form.get('modal') == '1':
-            return jsonify({'success': False, 'error': f'خطا در ثبت درخواست: {str(e)}'}), 500
-        flash(f'خطا در ثبت درخواست: {str(e)}', 'danger')
-        return redirect(url_for('admin.users_list'))
-    finally:
-        db.session.bind = original_bind
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('Failed to create user request for cafe %s', tenant_slug)
+        return fail('خطا در ثبت درخواست. دوباره تلاش کنید.', 500)
+
+    message = 'درخواست ثبت شد و تا تأیید مدیریت مرکزی حسابی ساخته نمی‌شود.'
+    if modal:
+        return jsonify({'success': True, 'message': message})
+    flash(message, 'success')
+    return redirect(url_for('admin.users_list'))
 
 
 @admin_bp.route('/users/add', methods=['GET', 'POST'])
 @login_required
 def add_user():
+    """Compatibility URL: all new cafe users require central approval."""
     if request.method == 'POST':
-        username = (request.form.get('username') or '').strip()
-        password = request.form.get('password') or ''
-        name = (request.form.get('name') or '').strip() or None
-        role = (request.form.get('role', 'waiter') or 'waiter').strip()
-        phone = (request.form.get('phone') or '').strip() or None
-
-        if not username or not password:
-            error_msg = 'نام کاربری و رمز عبور الزامی است.'
-            if request.form.get('modal') == '1':
-                return jsonify({'success': False, 'error': error_msg}), 400
-            flash(error_msg, 'danger')
-            return redirect(url_for('admin.add_user'))
-
-        if len(password) < 6:
-            error_msg = 'رمز عبور باید حداقل ۶ کاراکتر باشد.'
-            if request.form.get('modal') == '1':
-                return jsonify({'success': False, 'error': error_msg}), 400
-            flash(error_msg, 'danger')
-            return redirect(url_for('admin.add_user'))
-
-        if User.query.filter_by(username=username).first():
-            error_msg = 'این نام کاربری قبلاً ثبت شده است.'
-            if request.form.get('modal') == '1':
-                return jsonify({'success': False, 'error': error_msg}), 400
-            flash(error_msg, 'danger')
-            return redirect(url_for('admin.add_user'))
-        
-        user = User(
-            username=username,
-            password_hash=generate_password_hash(password),
-            name=name,
-            role=role,
-            phone=phone,
-            created_at=datetime.now(pytz.timezone("Asia/Tehran")),
-            is_active=True,
-        )
-        db.session.add(user)
-        db.session.commit()
-        
-        success_msg = 'کاربر جدید با موفقیت اضافه شد.'
-        if request.form.get('modal') == '1':
-            return jsonify({'success': True, 'message': success_msg})
-        flash(success_msg, 'success')
-        return redirect(url_for('admin.users_list'))
-    
-    # اگر modal درخواست شده، فقط HTML modal را برگردان
+        return request_user_creation()
     if request.args.get('modal') == '1':
         return render_template('admin/add_user_modal.html', roles=USER_ROLE_DEFINITIONS)
-    return render_template('admin/add_user.html', roles=USER_ROLE_DEFINITIONS)
+    return redirect(url_for('admin.users_list'))
+
 
 @admin_bp.route('/users/<int:user_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -1746,6 +1592,19 @@ def edit_user(user_id):
         new_role = request.form.get('role', '').strip()
         new_phone = request.form.get('phone', '').strip() or None
         new_password = request.form.get('password', '').strip()
+        from services.access_control import is_master_sso
+        if new_role and new_role != user.role and not is_master_sso():
+            message = 'تغییر نقش کاربران فقط از مدیریت مرکزی مجاز است.'
+            if request.form.get('modal') == '1':
+                return jsonify({'success': False, 'error': message}), 403
+            flash(message, 'danger')
+            return redirect(url_for('admin.users_list'))
+        if new_role and new_role not in USER_ROLE_DEFINITIONS:
+            message = 'نقش انتخاب‌شده معتبر نیست.'
+            if request.form.get('modal') == '1':
+                return jsonify({'success': False, 'error': message}), 400
+            flash(message, 'danger')
+            return redirect(url_for('admin.users_list'))
         
         # Update user fields
         if new_name is not None:
@@ -1775,7 +1634,7 @@ def edit_user(user_id):
             db.session.commit()
             # Refresh user to ensure we have the latest data
             db.session.refresh(user)
-            current_app.logger.info(f"User {user.id} ({user.username}) updated successfully. Password hash: {user.password_hash[:50]}...")
+            current_app.logger.info('User %s (%s) updated successfully', user.id, user.username)
         except Exception as e:
             db.session.rollback()
             current_app.logger.error(f"Error updating user {user.id}: {e}", exc_info=True)
@@ -1801,6 +1660,13 @@ def edit_user(user_id):
 @login_required
 def delete_user(user_id):
     user = User.query.get_or_404(user_id)
+    from services.access_control import is_master_sso
+    if user.role == 'admin' and not is_master_sso():
+        message = 'حذف مدیر کافه فقط از مدیریت مرکزی مجاز است.'
+        if request.form.get('modal') == '1':
+            return jsonify({'success': False, 'error': message}), 403
+        flash(message, 'danger')
+        return redirect(url_for('admin.users_list'))
     
     # Prevent admin from deleting themselves
     if current_user.is_authenticated and current_user.id == user.id:

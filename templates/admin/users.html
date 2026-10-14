@@ -215,13 +215,31 @@
     <section class="users-hero">
         <div>
             <h1>مدیریت کاربران سیستم</h1>
-            <p>کاربران جدید اضافه کنید، نقش‌ها را مدیریت کنید و وضعیت دسترسی را کنترل کنید.</p>
+            <p>کاربران فعال را ببینید و برای ساخت حساب جدید از مدیریت مرکزی تأیید بگیرید.</p>
         </div>
         <div class="users-actions">
-            <a href="#" onclick="openAddUserModal(); return false;">افزودن کاربر جدید</a>
+            <a href="#" onclick="openAddUserModal(); return false;">درخواست کاربر جدید</a>
             <a href="{{ url_for('dashboard.dashboard') }}">بازگشت به داشبورد</a>
         </div>
     </section>
+
+    {% if pending_requests %}
+    <section class="users-table-wrapper" aria-labelledby="pending-users-title">
+        <div style="padding: 1rem 1.25rem; border-bottom: 1px solid var(--ds-border);">
+            <h2 id="pending-users-title" style="margin: 0 0 .3rem; font-size: 1.1rem;">درخواست‌های در انتظار تأیید</h2>
+            <p style="margin: 0; color: var(--ds-text-muted);">تا تأیید مدیریت مرکزی، این افراد امکان ورود ندارند.</p>
+        </div>
+        <table class="users-table">
+            <thead><tr><th>نام کاربری</th><th>نام</th><th>نقش</th><th>زمان درخواست</th></tr></thead>
+            <tbody>{% for pending in pending_requests %}<tr>
+                <td dir="ltr">{{ pending.username }}</td>
+                <td>{{ pending.name or '—' }}</td>
+                <td>{{ role_definitions.get(pending.role, {}).get('label', pending.role) }}</td>
+                <td>{{ pending.created_at.strftime('%Y/%m/%d %H:%M') if pending.created_at else '—' }}</td>
+            </tr>{% endfor %}</tbody>
+        </table>
+    </section>
+    {% endif %}
 
     <section class="users-toolbar">
         <div>

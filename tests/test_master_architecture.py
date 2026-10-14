@@ -6,8 +6,8 @@ import unittest
 
 from app import create_app
 from config import Config
-from models.master_models import CafeEventLog, CafeModule, CafeTenant, CafeWarehouseDefinition, CafeWarehouseProfile, MasterUser
-from models.models import Customer, Order, db
+from models.master_models import CafeEventLog, CafeModule, CafeTenant, CafeWarehouseDefinition, CafeWarehouseProfile, MasterUser, UserCreationRequest
+from models.models import Customer, Order, User, db
 from services.master_service import create_managed_cafe, seed_demo_cafes
 
 
@@ -291,7 +291,9 @@ class MasterArchitectureTest(unittest.TestCase):
         # Cashiers operate from the POS dashboard; management links should not
         # be advertised only to redirect them after the click.
         self.assertNotIn("مشاهده منو", body)
-        self.assertIn("گزارش مالی", body)
+        self.assertIn("مشاهده سفارشات", body)
+        self.assertNotIn("گزارش مالی", body)
+        self.assertEqual(self.client.get('/orders').status_code, 200)
         self.assertNotIn("مدیریت انبارها", body)
         self.assertNotIn("حالت نظارت مرکزی فعال است", body)
 
@@ -312,6 +314,180 @@ class MasterArchitectureTest(unittest.TestCase):
         with self.client.session_transaction() as browser_session:
             self.assertNotIn("tenant_slug", browser_session)
             self.assertNotIn("master_user_id", browser_session)
+
+    def test_new_cafe_user_request_and_approval_are_tenant_scoped(self):
+        self.client.post('/master/login', data={'username': 'admin', 'password': 'admin'})
+        created = self.client.post('/master/cafes/create', data={
+            'name': 'کافه آزمون معماری',
+            'slug': 'architecture-audit',
+            'admin_name': 'مدیر آزمون',
+            'admin_username': 'manager',
+            'admin_password': 'Manager-test-123',
+            'admin_role': 'admin',
+            'modules': ['orders', 'users', 'reports'],
+            'warehouse_mode': 'none',
+        })
+        self.assertEqual(created.status_code, 302)
+        with self.app.app_context():
+            cafe = CafeTenant.query.filter_by(slug='architecture-audit').one()
+            self.assertTrue(os.path.isfile(cafe.db_path))
+            self.assertEqual({m.module_code for m in CafeModule.query.filter_by(cafe_id=cafe.id, is_enabled=True)},
+                             {'orders', 'users', 'reports'})
+
+        self.client.post('/cafe/architecture-audit/login', data={
+            'username': 'manager', 'password': 'Manager-test-123',
+        })
+        self.assertEqual(self.client.get('/master/').status_code, 302)
+        data = {'username': 'cashier_audit', 'name': 'کاربر آزمون', 'role': 'cashier', 'modal': '1'}
+        requested = self.client.post('/admin/users/request', data=data)
+        self.assertEqual(requested.status_code, 200)
+        self.assertTrue(requested.json['success'])
+        self.assertEqual(self.client.post('/admin/users/request', data=data).status_code, 400)
+        self.assertEqual(self.client.post('/admin/users/request', data={**data, 'role': 'admin', 'username': 'bad_admin'}).status_code, 400)
+        with self.app.app_context():
+            req = UserCreationRequest.query.filter_by(username='cashier_audit').one()
+            request_id = req.id
+            connection = sqlite3.connect(cafe.db_path)
+            try:
+                self.assertEqual(connection.execute("select count(*) from user where username='cashier_audit'").fetchone()[0], 0)
+            finally:
+                connection.close()
+        self.assertIn('cashier_audit', self.client.get('/admin/users').get_data(as_text=True))
+
+        # The old direct-create endpoint must also enter the approval queue.
+        direct = self.client.post('/admin/users/add', data={
+            'username': 'waiter_audit', 'password': 'Ignored-123', 'role': 'waiter', 'modal': '1',
+        })
+        self.assertEqual(direct.status_code, 200)
+        with self.app.app_context():
+            self.assertEqual(UserCreationRequest.query.filter_by(username='waiter_audit', status='pending').count(), 1)
+
+        self.client.post('/master/login', data={'username': 'admin', 'password': 'admin'})
+        approved = self.client.post(f'/master/user-requests/{request_id}/approve')
+        self.assertEqual(approved.status_code, 302)
+        with self.app.app_context():
+            req = UserCreationRequest.query.get(request_id)
+            self.assertEqual(req.status, 'approved')
+            self.assertIsNone(req.generated_password)
+            connection = sqlite3.connect(cafe.db_path)
+            try:
+                self.assertEqual(connection.execute("select role, is_active from user where username='cashier_audit'").fetchone(),
+                                 ('cashier', 1))
+            finally:
+                connection.close()
+        with self.client.session_transaction() as browser_session:
+            message = ' '.join(text for _, text in browser_session.get('_flashes', []))
+        self.assertIn('رمز اولیه:', message)
+        password = message.split('رمز اولیه: ', 1)[1].split(' —', 1)[0]
+        self.client.post('/cafe/architecture-audit/login', data={
+            'username': 'cashier_audit', 'password': password,
+        })
+        self.assertEqual(self.client.get('/master/').status_code, 302)
+        self.assertEqual(self.client.post('/admin/users/request', data={**data, 'username': 'escalate_audit'}).status_code, 302)
+        with self.app.app_context():
+            self.assertEqual(UserCreationRequest.query.filter_by(username='escalate_audit').count(), 0)
+        deactivated = self.client.post('/master/login', data={'username': 'admin', 'password': 'admin'})
+        self.assertEqual(deactivated.status_code, 302)
+        self.assertEqual(self.client.post(f'/master/user-requests/{request_id}/deactivate-user').status_code, 302)
+        with self.app.app_context():
+            self.assertEqual(UserCreationRequest.query.get(request_id).status, 'deactivated')
+        self.assertIn('فعال‌سازی دوباره', self.client.get('/master/').get_data(as_text=True))
+        self.assertNotEqual(self.client.post('/cafe/architecture-audit/login', data={
+            'username': 'cashier_audit', 'password': password,
+        }).status_code, 302)
+        self.assertEqual(self.client.post(f'/master/user-requests/{request_id}/reactivate-user').status_code, 302)
+        with self.client.session_transaction() as browser_session:
+            message = ' '.join(text for _, text in browser_session.get('_flashes', []))
+        self.assertIn('رمز جدید:', message)
+        with self.app.app_context():
+            req = UserCreationRequest.query.get(request_id)
+            self.assertEqual(req.status, 'approved')
+            self.assertIsNone(req.generated_password)
+
+    def test_rejected_request_creates_no_tenant_user(self):
+        with self.app.app_context():
+            cafe = create_managed_cafe(
+                tenants_dir=self.app.config['TENANTS_DIR'], name='رد درخواست', slug='reject-audit',
+                modules=['orders', 'users'], username='manager', password='Manager-test-123',
+                role='admin', user_name='مدیر',
+            )
+            cafe_path = cafe.db_path
+        self.client.post('/cafe/reject-audit/login', data={'username': 'manager', 'password': 'Manager-test-123'})
+        self.assertEqual(self.client.post('/admin/users/request', data={
+            'username': 'not_created', 'role': 'waiter', 'modal': '1',
+        }).status_code, 200)
+        with self.app.app_context():
+            request_id = UserCreationRequest.query.filter_by(username='not_created').one().id
+        self.client.post('/master/login', data={'username': 'admin', 'password': 'admin'})
+        self.assertEqual(self.client.post(f'/master/user-requests/{request_id}/reject').status_code, 302)
+        with self.app.app_context():
+            self.assertEqual(UserCreationRequest.query.get(request_id).status, 'rejected')
+        connection = sqlite3.connect(cafe_path)
+        try:
+            self.assertEqual(connection.execute("select count(*) from user where username='not_created'").fetchone()[0], 0)
+        finally:
+            connection.close()
+        with self.app.app_context():
+            cafe = CafeTenant.query.filter_by(slug='reject-audit').one()
+            db.session.add(UserCreationRequest(cafe_id=cafe.id, username='still_pending', role='waiter', status='pending'))
+            db.session.commit()
+        self.assertEqual(self.client.post('/master/user-requests/delete-all').status_code, 302)
+        with self.app.app_context():
+            self.assertEqual(UserCreationRequest.query.filter_by(username='not_created').count(), 0)
+            self.assertEqual(UserCreationRequest.query.filter_by(username='still_pending', status='pending').count(), 1)
+
+    def test_specialist_roles_cannot_open_other_management_sections(self):
+        with self.app.app_context():
+            create_managed_cafe(
+                tenants_dir=self.app.config['TENANTS_DIR'], name='نقش‌ها', slug='roles-audit',
+                modules=['orders', 'inventory', 'accounting', 'reports', 'users', 'menu'],
+                username='manager', password='Manager-test-123', role='admin', user_name='مدیر',
+                warehouse_mode='central',
+            )
+        self.client.post('/cafe/roles-audit/login', data={'username': 'manager', 'password': 'Manager-test-123'})
+        with self.app.app_context():
+            cafe = CafeTenant.query.filter_by(slug='roles-audit').one()
+            connection = sqlite3.connect(cafe.db_path)
+            try:
+                from werkzeug.security import generate_password_hash
+                for username, role in [('accountant_test', 'accountant'), ('procurement_test', 'procurement')]:
+                    connection.execute(
+                        'insert into user (username, password_hash, role, is_active) values (?, ?, ?, 1)',
+                        (username, generate_password_hash('Role-test-123'), role),
+                    )
+                connection.commit()
+            finally:
+                connection.close()
+
+        self.client.post('/cafe/roles-audit/login', data={'username': 'accountant_test', 'password': 'Role-test-123'})
+        self.assertEqual(self.client.get('/admin/financial?period=day').status_code, 200)
+        self.assertEqual(self.client.get('/admin/settings').status_code, 302)
+        self.assertEqual(self.client.get('/admin/users').status_code, 302)
+        self.client.post('/cafe/roles-audit/login', data={'username': 'procurement_test', 'password': 'Role-test-123'})
+        self.assertEqual(self.client.get('/admin/inventory').status_code, 200)
+        self.assertEqual(self.client.get('/admin/settings').status_code, 302)
+        self.assertEqual(self.client.get('/admin/users').status_code, 302)
+
+    def test_deactivated_cafe_expires_existing_employee_session(self):
+        with self.app.app_context():
+            create_managed_cafe(
+                tenants_dir=self.app.config['TENANTS_DIR'], name='کافه تعطیل', slug='inactive-audit',
+                modules=['orders'], username='manager', password='Manager-test-123',
+                role='admin', user_name='مدیر',
+            )
+        self.client.post('/cafe/inactive-audit/login', data={
+            'username': 'manager', 'password': 'Manager-test-123',
+        })
+        with self.app.app_context():
+            cafe = CafeTenant.query.filter_by(slug='inactive-audit').one()
+            cafe.is_active = False
+            db.session.commit()
+        response = self.client.get('/dashboard/', follow_redirects=False)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers['Location'], '/cafe/inactive-audit/login')
+        with self.client.session_transaction() as browser_session:
+            self.assertNotIn('tenant_slug', browser_session)
+            self.assertNotIn('_user_id', browser_session)
 
 
 if __name__ == "__main__":

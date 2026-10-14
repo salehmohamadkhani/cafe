@@ -53,17 +53,25 @@ def load_user(user_id):
                 # Load user from tenant database
                 from models.master_models import CafeTenant
                 cafe = CafeTenant.query.filter_by(slug=tenant_slug).first()
-                if cafe and os.path.exists(cafe.db_path):
-                    tenant_engine = create_engine(f"sqlite:///{cafe.db_path}", poolclass=NullPool)
-                    from sqlalchemy.orm import sessionmaker
+                if not cafe or not cafe.is_active or not os.path.exists(cafe.db_path):
+                    return None
+                tenant_engine = create_engine(f"sqlite:///{cafe.db_path}", poolclass=NullPool)
+                from sqlalchemy.orm import sessionmaker
+                try:
                     Session = sessionmaker(bind=tenant_engine)
                     with Session() as s:
-                        user = s.query(User).get(int(user_id))
-                        if user:
+                        user = s.get(User, int(user_id))
+                        if user and user.is_active:
+                            s.expunge(user)
                             return user
+                    return None
+                finally:
+                    tenant_engine.dispose()
     except Exception:
-        # If anything goes wrong, fall back to default database
-        pass
+        # Never resolve a same-numbered user from the legacy database for a
+        # tenant-scoped session.
+        if has_request_context() and session.get('tenant_slug'):
+            return None
     
     # Fallback to default database
     try:
@@ -280,8 +288,14 @@ def create_app(config_class=Config):
             return None
 
         cafe = CafeTenant.query.filter_by(slug=tenant_slug).first()
-        if not cafe:
-            return None
+        if not cafe or not cafe.is_active:
+            supervisory = is_master_sso()
+            clear_tenant_session(keep_master=supervisory)
+            if supervisory:
+                return redirect(url_for('master.dashboard'))
+            if cafe:
+                return redirect(url_for('tenant_auth.login', slug=tenant_slug))
+            return redirect(url_for('cafe_login_portal'))
 
         # A valid master SSO is a supervisory context. It can inspect every
         # tenant module without changing the cafe's configured module plan.
@@ -328,21 +342,7 @@ def create_app(config_class=Config):
                 cafe = CafeTenant.query.filter_by(slug=tenant_slug).first()
             
             # Check if cafe exists and is active
-            if not cafe:
-                # Cafe doesn't exist, clear session
-                session.pop('tenant_slug', None)
-                session.pop('tenant_db_path', None)
-                session.pop('tenant_user_id', None)
-                session.pop('tenant_username', None)
-            elif not cafe.is_active:
-                # Cafe is inactive, clear session
-                # The route handlers will check and show error page
-                session.pop('tenant_slug', None)
-                session.pop('tenant_db_path', None)
-                session.pop('tenant_user_id', None)
-                session.pop('tenant_username', None)
-                g.original_db_bind = None
-            elif cafe and os.path.exists(cafe.db_path):
+            if cafe and cafe.is_active and os.path.exists(cafe.db_path):
                 # Create engine for tenant database
                 tenant_engine = create_engine(f"sqlite:///{cafe.db_path}", poolclass=NullPool)
                 migrated_paths = app.extensions.setdefault('operational_schema_migrated', set())
@@ -353,6 +353,7 @@ def create_app(config_class=Config):
                 # operational (non-master) models without mutating global binds.
                 g.tenant_engine = tenant_engine
             else:
+                clear_tenant_session(keep_master=False)
                 g.original_db_bind = None
     
     @app.after_request
@@ -367,10 +368,27 @@ def create_app(config_class=Config):
         elif hasattr(g, 'original_db_bind'):
             db.session.bind = g.original_db_bind
         return response
+
+    @app.before_request
+    def restrict_tenant_user_management():
+        """Only a cafe administrator or a central supervisor manages staff."""
+        endpoint = request.endpoint or ''
+        if not endpoint.startswith('admin.'):
+            return None
+        if is_master_sso() or not current_user.is_authenticated:
+            return None
+        protected = endpoint.startswith(('admin.users_', 'admin.request_user', 'admin.add_user',
+                                         'admin.edit_user', 'admin.delete_user'))
+        if protected and current_user.role != 'admin':
+            flash('مدیریت کاربران فقط برای مدیر کافه مجاز است.', 'danger')
+            tenant_slug = session.get('tenant_slug')
+            return redirect(url_for('tenant.dashboard', slug=tenant_slug) if tenant_slug
+                            else url_for('dashboard.dashboard'))
+        return None
     
     @app.before_request
     def check_cashier_access():
-        """Restrict cashier access to only dashboard and financial_report (day only)."""
+        """Allow the cashier's ordering workflow and today's financial report."""
         if is_master_sso():
             return None
         # Skip check for static files and login/logout routes
@@ -381,15 +399,19 @@ def create_app(config_class=Config):
         if current_user.is_authenticated and hasattr(current_user, 'role') and current_user.role == 'cashier':
             allowed_routes = [
                 'dashboard.dashboard', 
+                'dashboard.mark_all_unpaid_as_paid',
                 'admin.financial_report',
+                'admin.orders_report',
+                'admin.search_orders',
+                'admin.invoice',
                 'tenant.dashboard',
                 'tenant.dashboard_full'
             ]
             route_name = request.endpoint
             
             # Check if route is allowed for cashier
-            if route_name not in allowed_routes:
-                flash('شما دسترسی به این صفحه را ندارید. صندوق‌دار فقط به داشبورد و گزارش‌های امروز دسترسی دارد.', 'danger')
+            if route_name not in allowed_routes and not (route_name or '').startswith(('order.', 'table.', 'takeaway.', 'pos.')):
+                flash('این بخش در دسترسی صندوق‌دار نیست.', 'danger')
                 # Try to redirect to tenant dashboard if in tenant context, otherwise main dashboard
                 tenant_slug = session.get('tenant_slug')
                 if tenant_slug:
@@ -468,6 +490,43 @@ def create_app(config_class=Config):
                 flash('شما دسترسی به این صفحه را ندارید. گارسون فقط می‌تواند میزها را ببیند و سفارش ثبت کند.', 'danger')
                 # Redirect to waiter dashboard
                 return redirect(url_for('dashboard.waiter_dashboard'))
+
+    @app.before_request
+    def check_accountant_and_procurement_access():
+        """Prevent specialist roles from reaching unrelated management routes."""
+        if is_master_sso() or not current_user.is_authenticated:
+            return None
+        endpoint = request.endpoint or ''
+        if endpoint.startswith('master.') or endpoint in {
+            'static', 'index', 'cafe_login_portal', 'tenant_auth.login',
+            'tenant_auth.logout', 'auth.logout', 'admin.logout',
+        }:
+            return None
+        role = getattr(current_user, 'role', None)
+        if role == 'accountant':
+            allowed = {
+                'tenant.dashboard', 'tenant.dashboard_full', 'dashboard.dashboard',
+                'admin.financial_report', 'admin.settle_snap', 'admin.orders_report',
+                'admin.search_orders', 'admin.invoice', 'admin.profile',
+                'admin.edit_profile', 'order.invoice',
+            }
+            if endpoint not in allowed:
+                flash('این بخش در دسترسی حسابدار نیست.', 'danger')
+                return redirect(url_for('tenant.dashboard', slug=session.get('tenant_slug')))
+        elif role == 'procurement':
+            allowed = {
+                'tenant.dashboard', 'tenant.dashboard_full',
+                'admin.inventory_dashboard', 'admin.warehouses_management',
+                'admin.check_warehouse_stock', 'admin.create_raw_material',
+                'admin.update_raw_material', 'admin.delete_raw_material',
+                'admin.create_material_purchase', 'admin.update_material_purchase',
+                'admin.delete_material_purchase', 'admin.profile',
+                'admin.edit_profile',
+            }
+            if endpoint not in allowed:
+                flash('این بخش در دسترسی مسئول خرید نیست.', 'danger')
+                return redirect(url_for('admin.inventory_dashboard'))
+        return None
 
     @app.route('/login', methods=['GET', 'POST'])
     def cafe_login_portal():

@@ -690,7 +690,7 @@
     {% set nav_role = effective_tenant_role(current_user) if current_user.is_authenticated else none %}
     {% set nav_is_manager = nav_role in ['admin', 'superadmin'] %}
     {% set nav_can_menu = nav_is_manager %}
-    {% set nav_can_orders = nav_is_manager %}
+    {% set nav_can_orders = nav_is_manager or nav_role == 'cashier' %}
     {% set nav_can_financial = nav_role in ['admin', 'superadmin', 'cashier', 'accountant'] %}
     {% set nav_can_inventory = nav_role in ['admin', 'superadmin', 'inventory', 'procurement'] %}
     {# نمایش هدر فقط اگر مسیر فعلی صفحه لاگین یا صفحه اصلی نباشد #}
@@ -721,11 +721,11 @@
                     </ul>
                 </li>
                 {% endif %}
-                {% if (nav_can_financial and (tenant_module_enabled('reports') or tenant_module_enabled('accounting'))) or (nav_can_inventory and tenant_module_enabled('inventory')) %}
+                {% if (nav_can_financial and tenant_module_enabled('accounting')) or (nav_can_inventory and tenant_module_enabled('inventory')) %}
                 <li class="nav-dropdown">
                     <a href="#" class="dropdown-toggle">گزارش‌ها</a>
                     <ul class="dropdown-menu">
-                        {% if nav_can_financial and (tenant_module_enabled('accounting') or tenant_module_enabled('reports')) %}<li><a href="{{ url_for('admin.financial_report') }}" {% if request.endpoint == 'admin.financial_report' %}class="active" {% endif %}>گزارش مالی</a></li>{% endif %}
+                        {% if nav_can_financial and tenant_module_enabled('accounting') %}<li><a href="{{ url_for('admin.financial_report') }}" {% if request.endpoint == 'admin.financial_report' %}class="active" {% endif %}>گزارش مالی</a></li>{% endif %}
                         {% if nav_can_inventory and tenant_module_enabled('inventory') %}<li><a href="{{ url_for('admin.inventory_dashboard') }}" {% if request.endpoint == 'admin.inventory_dashboard' %}class="active" {% endif %}>انبارداری</a></li>
                         <li><a href="{{ url_for('admin.warehouses_management') }}" {% if request.endpoint == 'admin.warehouses_management' %}class="active" {% endif %}>مدیریت انبارها</a></li>{% endif %}
                     </ul>
@@ -790,11 +790,11 @@
                 </ul>
             </li>
             {% endif %}
-            {% if (nav_can_financial and (tenant_module_enabled('reports') or tenant_module_enabled('accounting'))) or (nav_can_inventory and tenant_module_enabled('inventory')) %}
+            {% if (nav_can_financial and tenant_module_enabled('accounting')) or (nav_can_inventory and tenant_module_enabled('inventory')) %}
             <li class="nav-dropdown">
                 <a href="#" class="dropdown-toggle">گزارش‌ها</a>
                 <ul class="dropdown-menu">
-                    {% if nav_can_financial and (tenant_module_enabled('accounting') or tenant_module_enabled('reports')) %}<li><a href="{{ url_for('admin.financial_report') }}" {% if request.endpoint == 'admin.financial_report' %}class="active" {% endif %}>گزارش مالی</a></li>{% endif %}
+                    {% if nav_can_financial and tenant_module_enabled('accounting') %}<li><a href="{{ url_for('admin.financial_report') }}" {% if request.endpoint == 'admin.financial_report' %}class="active" {% endif %}>گزارش مالی</a></li>{% endif %}
                     {% if nav_can_inventory and tenant_module_enabled('inventory') %}<li><a href="{{ url_for('admin.inventory_dashboard') }}" {% if request.endpoint == 'admin.inventory_dashboard' %}class="active" {% endif %}>انبارداری</a></li>
                     <li><a href="{{ url_for('admin.warehouses_management') }}" {% if request.endpoint == 'admin.warehouses_management' %}class="active" {% endif %}>مدیریت انبارها</a></li>{% endif %}
                 </ul>

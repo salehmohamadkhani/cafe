@@ -29,6 +29,14 @@ master_bp = Blueprint('master', __name__, url_prefix='/master')
 
 # Registry of available modules
 MODULES = list(MODULE_CATALOG)
+ROLE_LABELS = {
+    'admin': 'مدیر کافه',
+    'cashier': 'صندوق‌دار',
+    'inventory': 'انباردار',
+    'procurement': 'مسئول خرید',
+    'accountant': 'حسابدار',
+    'waiter': 'گارسون',
+}
 
 
 def _master_user() -> MasterUser | None:
@@ -156,6 +164,8 @@ def dashboard():
     
     # Get user creation requests for the requests tab
     user_requests = UserCreationRequest.query.order_by(UserCreationRequest.created_at.desc()).all()
+    pending_request_count = sum(req.status == 'pending' for req in user_requests)
+    processed_request_count = len(user_requests) - pending_request_count
     # Get cafe names for each request
     for req in user_requests:
         req.cafe = CafeTenant.query.get(req.cafe_id)
@@ -170,6 +180,9 @@ def dashboard():
         cafe_stats=cafe_stats,
         summary=summary,
         user_requests=user_requests,
+        pending_request_count=pending_request_count,
+        processed_request_count=processed_request_count,
+        role_labels=ROLE_LABELS,
         module_access_by_cafe=module_access_by_cafe,
         warehouse_profiles=warehouse_profiles,
     )
@@ -588,193 +601,145 @@ def user_requests():
 @master_bp.route('/user-requests/<int:request_id>/approve', methods=['POST'])
 @master_login_required
 def approve_user_request(request_id):
-    """تایید درخواست ایجاد کاربر و ساخت کاربر"""
-    from werkzeug.security import generate_password_hash
+    """Approve one request and provision the account in its own cafe database."""
     import secrets
-    import string
-    
+    from werkzeug.security import generate_password_hash
+
     req = UserCreationRequest.query.get_or_404(request_id)
-    
     if req.status != 'pending':
         flash('این درخواست قبلاً پردازش شده است.', 'warning')
         return redirect(url_for('master.dashboard') + '#requests')
-    
-    cafe = CafeTenant.query.get(req.cafe_id)
-    if not cafe or not os.path.exists(cafe.db_path):
-        flash('کافه یا دیتابیس یافت نشد.', 'danger')
+
+    allowed_roles = {'cashier', 'waiter', 'inventory', 'procurement', 'accountant'}
+    if req.role not in allowed_roles:
+        flash('نقش درخواستی معتبر نیست؛ درخواست را رد کنید.', 'danger')
         return redirect(url_for('master.dashboard') + '#requests')
-    
-    # Use requested username (the one admin entered, e.g., "sandoq1")
-    requested_username = req.username
-    if not requested_username:
-        # Generate random username if not provided
-        requested_username = f"user_{secrets.token_hex(4)}"
-    
-    # Generate random password (8 characters)
-    generated_password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(8))
-    
-    # Connect to tenant DB and create user
-    engine = create_engine(f"sqlite:///{cafe.db_path}")
+    cafe = CafeTenant.query.get(req.cafe_id)
+    if not cafe or not cafe.is_active or not os.path.isfile(cafe.db_path):
+        flash('کافه فعال یا دیتابیس آن یافت نشد.', 'danger')
+        return redirect(url_for('master.dashboard') + '#requests')
+
+    password = secrets.token_urlsafe(12)
+    engine = create_engine(f"sqlite:///{cafe.db_path}", poolclass=NullPool)
     Session = sessionmaker(bind=engine)
-    
+    created_user_id = None
+    previous = None
     try:
-        with Session() as s:
-            # Check if there's a temporary user created for this request
-            temp_user_id = None
+        with Session.begin() as tenant_session:
+            if tenant_session.query(TenantUser).filter_by(username=req.username).first():
+                flash('این نام کاربری اکنون در کافه وجود دارد؛ درخواست را بررسی کنید.', 'warning')
+                return redirect(url_for('master.dashboard') + '#requests')
+            if req.phone and tenant_session.query(TenantUser).filter_by(phone=req.phone).first():
+                flash('شماره تماس اکنون در کافه وجود دارد؛ درخواست را بررسی کنید.', 'warning')
+                return redirect(url_for('master.dashboard') + '#requests')
+
+            # Support pending accounts made by older versions without creating
+            # any new placeholder accounts.
+            temp_id = None
             if req.notes and req.notes.startswith('temp_user_id:'):
                 try:
-                    temp_user_id = int(req.notes.split(':')[1])
-                except (ValueError, IndexError):
-                    temp_user_id = None
-            
-            # Check if requested username already exists (excluding temp user)
-            final_username = requested_username
-            existing = s.query(TenantUser).filter_by(username=final_username).first()
-            if existing and (not temp_user_id or existing.id != temp_user_id):
-                # Username exists, append number to make it unique
-                counter = 1
-                while s.query(TenantUser).filter_by(username=f"{final_username}{counter}").first():
-                    counter += 1
-                final_username = f"{final_username}{counter}"
-            
-            if temp_user_id:
-                # Update existing temporary user
-                user = s.query(TenantUser).get(temp_user_id)
-                if user:
-                    user.username = final_username  # Use requested username, not generated one
-                    user.password_hash = generate_password_hash(generated_password)
-                    user.is_active = True  # Activate the user
-                    # Also update name and phone if they were provided in request
-                    if req.name:
-                        user.name = req.name
-                    if req.phone:
-                        user.phone = req.phone
-                    s.commit()
-                else:
-                    # Temp user not found, create new one
-                    user = TenantUser(
-                        username=final_username,
-                        password_hash=generate_password_hash(generated_password),
-                        name=req.name,
-                        role=req.role,
-                        phone=req.phone,
-                        created_at=datetime.now(pytz.timezone("Asia/Tehran")),
-                        is_active=True
-                    )
-                    s.add(user)
-                    s.commit()
+                    temp_id = int(req.notes.split(':', 1)[1].split(';', 1)[0])
+                except ValueError:
+                    pass
+            user = tenant_session.get(TenantUser, temp_id) if temp_id else None
+            if user:
+                previous = (user.id, user.username, user.password_hash, user.name,
+                            user.phone, user.role, user.is_active)
+                user.username = req.username
+                user.password_hash = generate_password_hash(password)
+                user.name = req.name
+                user.phone = req.phone
+                user.role = req.role
+                user.is_active = True
             else:
-                # No temp user, create new one
                 user = TenantUser(
-                    username=final_username,
-                    password_hash=generate_password_hash(generated_password),
+                    username=req.username,
+                    password_hash=generate_password_hash(password),
                     name=req.name,
-                    role=req.role,
                     phone=req.phone,
-                    created_at=datetime.now(pytz.timezone("Asia/Tehran")),
-                    is_active=True
+                    role=req.role,
+                    created_at=datetime.now(pytz.timezone('Asia/Tehran')),
+                    is_active=True,
                 )
-                s.add(user)
-                s.commit()
-        
-        # Update request in master database
-        # Ensure we're using master database for this update
-        from config import Config
-        original_bind = db.session.bind
-        try:
-            # Switch to master database
-            master_engine = create_engine(Config.MASTER_DB_URI)
-            db.session.bind = master_engine
-            
-            # Re-query req from master database to ensure we have the latest version
-            req = UserCreationRequest.query.get(request_id)
-            if not req:
-                flash('درخواست یافت نشد.', 'danger')
-                return redirect(url_for('master.dashboard') + '#requests')
-            
-            master_user = _master_user()
-            req.status = 'approved'
-            req.generated_username = final_username  # Use final_username instead of generated_username
-            req.generated_password = generated_password
-            req.approved_by = master_user.id if master_user else None
-            req.approved_at = datetime.utcnow()
-            db.session.commit()
-        finally:
-            # Restore original bind
-            db.session.bind = original_bind
-        
-        flash(f'کاربر با موفقیت ایجاد شد. نام کاربری: {final_username}, رمز عبور: {generated_password}', 'success')
-    except Exception as e:
+                tenant_session.add(user)
+            tenant_session.flush()
+            created_user_id = user.id
+
+        req.status = 'approved'
+        req.generated_username = req.username
+        # The plaintext password is displayed once in the confirmation,
+        # never stored in the master database.
+        req.generated_password = None
+        req.approved_by = _master_user().id
+        req.approved_at = datetime.utcnow()
+        log_cafe_event(cafe, 'cafe.user_request.approved',
+                       {'request_id': req.id, 'username': req.username, 'role': req.role})
+        db.session.commit()
+        flash(f'کاربر تأیید شد. نام کاربری: {req.username} | رمز اولیه: {password} — همین حالا آن را به مسئول کافه تحویل دهید؛ دوباره نمایش داده نمی‌شود.', 'success')
+    except Exception:
         db.session.rollback()
-        flash(f'خطا در ایجاد کاربر: {str(e)}', 'danger')
-    
+        current_app.logger.exception('Could not approve user request %s', request_id)
+        if created_user_id is not None:
+            try:
+                with Session.begin() as tenant_session:
+                    user = tenant_session.get(TenantUser, created_user_id)
+                    if user:
+                        if previous:
+                            (_, user.username, user.password_hash, user.name,
+                             user.phone, user.role, user.is_active) = previous
+                        else:
+                            tenant_session.delete(user)
+            except Exception:
+                current_app.logger.exception('Could not compensate tenant user for request %s', request_id)
+        flash('تأیید کاربر کامل نشد؛ وضعیت درخواست را دوباره بررسی کنید.', 'danger')
+    finally:
+        engine.dispose()
     return redirect(url_for('master.dashboard') + '#requests')
 
 
 @master_bp.route('/user-requests/<int:request_id>/reject', methods=['POST'])
 @master_login_required
 def reject_user_request(request_id):
-    """رد درخواست ایجاد کاربر"""
+    """Reject a pending request without touching active tenant users."""
     req = UserCreationRequest.query.get_or_404(request_id)
-    
     if req.status != 'pending':
         flash('این درخواست قبلاً پردازش شده است.', 'warning')
         return redirect(url_for('master.dashboard') + '#requests')
-    
-    # Delete temporary user if exists
-    # First, save the original notes to extract temp_user_id
-    original_notes = req.notes or ''
-    temp_user_id = None
-    if original_notes and original_notes.startswith('temp_user_id:'):
+
+    # Older releases created inactive placeholder accounts. Remove only an
+    # inactive account whose ID is explicitly linked to this request.
+    temp_id = None
+    if req.notes and req.notes.startswith('temp_user_id:'):
         try:
-            temp_user_id = int(original_notes.split(':')[1])
-        except (ValueError, IndexError):
-            temp_user_id = None
-    
-    if temp_user_id:
+            temp_id = int(req.notes.split(':', 1)[1].split(';', 1)[0])
+        except ValueError:
+            pass
+    if temp_id:
         cafe = CafeTenant.query.get(req.cafe_id)
-        if cafe and os.path.exists(cafe.db_path):
-            # Connect to tenant DB and delete temp user
-            engine = create_engine(f"sqlite:///{cafe.db_path}")
+        if cafe and os.path.isfile(cafe.db_path):
+            engine = create_engine(f"sqlite:///{cafe.db_path}", poolclass=NullPool)
             Session = sessionmaker(bind=engine)
             try:
-                with Session() as s:
-                    temp_user = s.query(TenantUser).get(temp_user_id)
-                    if temp_user:
-                        s.delete(temp_user)
-                        s.commit()
-                        print(f"✅ Temp user {temp_user_id} deleted successfully")
-                    else:
-                        print(f"⚠️  Temp user {temp_user_id} not found in tenant DB")
-            except Exception as e:
-                current_app.logger.error(f"Error deleting temp user for request {request_id}: {e}", exc_info=True)
-                print(f"❌ Error deleting temp user: {e}")
-    
-    # Update request status
-    # Preserve original notes if it contains temp_user_id, otherwise use form notes
+                with Session.begin() as tenant_session:
+                    temp_user = tenant_session.get(TenantUser, temp_id)
+                    if temp_user and not temp_user.is_active and temp_user.username.startswith('pending_'):
+                        tenant_session.delete(temp_user)
+            except Exception:
+                current_app.logger.exception('Could not remove placeholder for request %s', request_id)
+                flash('حذف حساب موقت قدیمی انجام نشد؛ درخواست هنوز باز است.', 'danger')
+                return redirect(url_for('master.dashboard') + '#requests')
+            finally:
+                engine.dispose()
+
+    reason = (request.form.get('notes') or '').strip()
     req.status = 'rejected'
-    rejection_notes = request.form.get('notes', '').strip()
-    if rejection_notes:
-        # If user provided rejection notes, append to original notes
-        if original_notes and original_notes.startswith('temp_user_id:'):
-            req.notes = f"{original_notes}; rejection_reason: {rejection_notes}"
-        else:
-            req.notes = rejection_notes
-    else:
-        # Keep original notes if no rejection reason provided
-        req.notes = original_notes
-    
-    # Ensure we're using master database for commit
-    from config import Config
-    original_bind = db.session.bind
-    try:
-        master_engine = create_engine(Config.MASTER_DB_URI)
-        db.session.bind = master_engine
-        db.session.commit()
-    finally:
-        db.session.bind = original_bind
-    
-    flash('درخواست رد شد و کاربر موقت حذف شد.', 'info')
+    req.notes = reason or req.notes
+    cafe = CafeTenant.query.get(req.cafe_id)
+    if cafe:
+        log_cafe_event(cafe, 'cafe.user_request.rejected',
+                       {'request_id': req.id, 'username': req.username})
+    db.session.commit()
+    flash('درخواست رد شد.', 'info')
     return redirect(url_for('master.dashboard') + '#requests')
 
 
@@ -813,7 +778,7 @@ def delete_user(request_id):
     """حذف کاربر از دیتابیس کافه"""
     req = UserCreationRequest.query.get_or_404(request_id)
     
-    if req.status != 'approved' or not req.generated_username:
+    if req.status not in {'approved', 'deactivated'} or not req.generated_username:
         flash('این درخواست تایید نشده یا کاربری ایجاد نشده است.', 'warning')
         return redirect(url_for('master.dashboard') + '#requests')
     
@@ -823,7 +788,7 @@ def delete_user(request_id):
         return redirect(url_for('master.dashboard') + '#requests')
     
     # Connect to tenant DB and delete user
-    engine = create_engine(f"sqlite:///{cafe.db_path}")
+    engine = create_engine(f"sqlite:///{cafe.db_path}", poolclass=NullPool)
     Session = sessionmaker(bind=engine)
     
     user_deleted = False
@@ -840,22 +805,15 @@ def delete_user(request_id):
         
         # تغییر وضعیت درخواست به deleted فقط اگر کاربر حذف شد
         if user_deleted:
-            from config import Config
-            original_bind = db.session.bind
-            try:
-                master_engine = create_engine(Config.MASTER_DB_URI)
-                db.session.bind = master_engine
-                req = UserCreationRequest.query.get(request_id)
-                if req:
-                    req.status = 'deleted'
-                    req.generated_username = None  # حذف نام کاربری از نمایش
-                    req.generated_password = None  # حذف رمز عبور از نمایش
-                    db.session.commit()
-            finally:
-                db.session.bind = original_bind
+            req.status = 'deleted'
+            req.generated_password = None
+            db.session.commit()
     except Exception as e:
+        db.session.rollback()
         current_app.logger.error(f"Error deleting user for request {request_id}: {e}", exc_info=True)
         flash(f'خطا در حذف کاربر: {str(e)}', 'danger')
+    finally:
+        engine.dispose()
     
     return redirect(url_for('master.dashboard') + '#requests')
 
@@ -863,173 +821,116 @@ def delete_user(request_id):
 @master_bp.route('/user-requests/<int:request_id>/deactivate-user', methods=['POST'])
 @master_login_required
 def deactivate_user(request_id):
-    """غیرفعال کردن کاربر و حذف رمز عبور"""
-    from werkzeug.security import generate_password_hash
+    """Disable a centrally approved account and revoke its old password."""
     import secrets
-    import string
-    
+    from werkzeug.security import generate_password_hash
+
     req = UserCreationRequest.query.get_or_404(request_id)
-    
     if req.status != 'approved' or not req.generated_username:
-        flash('این درخواست تایید نشده یا کاربری ایجاد نشده است.', 'warning')
+        flash('این حساب در وضعیت قابل غیرفعال‌سازی نیست.', 'warning')
         return redirect(url_for('master.dashboard') + '#requests')
-    
     cafe = CafeTenant.query.get(req.cafe_id)
-    if not cafe or not os.path.exists(cafe.db_path):
-        flash('کافه یا دیتابیس یافت نشد.', 'danger')
+    if not cafe or not os.path.isfile(cafe.db_path):
+        flash('دیتابیس کافه یافت نشد.', 'danger')
         return redirect(url_for('master.dashboard') + '#requests')
-    
-    # Connect to tenant DB and deactivate user
-    engine = create_engine(f"sqlite:///{cafe.db_path}")
+
+    engine = create_engine(f"sqlite:///{cafe.db_path}", poolclass=NullPool)
     Session = sessionmaker(bind=engine)
-    
     try:
-        with Session() as s:
-            user = s.query(TenantUser).filter_by(username=req.generated_username).first()
-            if user:
-                # غیرفعال کردن کاربر و حذف رمز عبور (با قرار دادن یک رمز عبور غیرقابل استفاده)
-                user.is_active = False
-                # ایجاد یک رمز عبور تصادفی طولانی که کاربر نمی‌تواند آن را حدس بزند
-                random_password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(64))
-                user.password_hash = generate_password_hash(random_password)
-                s.commit()
-                
-                # حذف رمز عبور از درخواست
-                from config import Config
-                original_bind = db.session.bind
-                try:
-                    master_engine = create_engine(Config.MASTER_DB_URI)
-                    db.session.bind = master_engine
-                    req = UserCreationRequest.query.get(request_id)
-                    if req:
-                        req.generated_password = None  # حذف رمز عبور از درخواست
-                        db.session.commit()
-                finally:
-                    db.session.bind = original_bind
-                
-                flash(f'کاربر «{req.generated_username}» غیرفعال شد و رمز عبور حذف شد.', 'success')
-            else:
-                flash('کاربر در دیتابیس یافت نشد.', 'warning')
-    except Exception as e:
-        current_app.logger.error(f"Error deactivating user for request {request_id}: {e}", exc_info=True)
-        flash(f'خطا در غیرفعال کردن کاربر: {str(e)}', 'danger')
-    
+        with Session.begin() as tenant_session:
+            user = tenant_session.query(TenantUser).filter_by(username=req.generated_username).first()
+            if not user:
+                flash('کاربر در دیتابیس کافه یافت نشد.', 'warning')
+                return redirect(url_for('master.dashboard') + '#requests')
+            user.is_active = False
+            user.password_hash = generate_password_hash(secrets.token_urlsafe(48))
+        req.status = 'deactivated'
+        req.generated_password = None
+        log_cafe_event(cafe, 'cafe.user.deactivated',
+                       {'request_id': req.id, 'username': req.generated_username})
+        db.session.commit()
+        flash(f'کاربر «{req.generated_username}» غیرفعال شد.', 'success')
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('Could not deactivate request user %s', request_id)
+        flash('غیرفعال‌سازی کامل نشد؛ وضعیت کاربر را بررسی کنید.', 'danger')
+    finally:
+        engine.dispose()
     return redirect(url_for('master.dashboard') + '#requests')
 
 
 @master_bp.route('/user-requests/<int:request_id>/reactivate-user', methods=['POST'])
 @master_login_required
 def reactivate_user(request_id):
-    """فعال کردن مجدد کاربر با رمز عبور جدید"""
-    from werkzeug.security import generate_password_hash
+    """Re-enable an account with a new one-time displayed password."""
     import secrets
-    import string
-    
+    from werkzeug.security import generate_password_hash
+
     req = UserCreationRequest.query.get_or_404(request_id)
-    
-    if req.status != 'approved' or not req.generated_username:
-        flash('این درخواست تایید نشده یا کاربری ایجاد نشده است.', 'warning')
+    if req.status != 'deactivated' or not req.generated_username:
+        flash('این حساب غیرفعال نیست.', 'warning')
         return redirect(url_for('master.dashboard') + '#requests')
-    
     cafe = CafeTenant.query.get(req.cafe_id)
-    if not cafe or not os.path.exists(cafe.db_path):
-        flash('کافه یا دیتابیس یافت نشد.', 'danger')
+    if not cafe or not os.path.isfile(cafe.db_path):
+        flash('دیتابیس کافه یافت نشد.', 'danger')
         return redirect(url_for('master.dashboard') + '#requests')
-    
-    # Generate new password
-    new_password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(8))
-    
-    # Connect to tenant DB and reactivate user
-    engine = create_engine(f"sqlite:///{cafe.db_path}")
+
+    password = secrets.token_urlsafe(12)
+    engine = create_engine(f"sqlite:///{cafe.db_path}", poolclass=NullPool)
     Session = sessionmaker(bind=engine)
-    
     try:
-        with Session() as s:
-            user = s.query(TenantUser).filter_by(username=req.generated_username).first()
-            if user:
-                # فعال کردن کاربر و تنظیم رمز عبور جدید
-                user.is_active = True
-                user.password_hash = generate_password_hash(new_password)
-                s.commit()
-                
-                # به‌روزرسانی رمز عبور در درخواست
-                from config import Config
-                original_bind = db.session.bind
-                try:
-                    master_engine = create_engine(Config.MASTER_DB_URI)
-                    db.session.bind = master_engine
-                    req = UserCreationRequest.query.get(request_id)
-                    if req:
-                        req.generated_password = new_password
-                        db.session.commit()
-                finally:
-                    db.session.bind = original_bind
-                
-                flash(f'کاربر «{req.generated_username}» فعال شد. رمز عبور جدید: {new_password}', 'success')
-            else:
-                flash('کاربر در دیتابیس یافت نشد.', 'warning')
-    except Exception as e:
-        current_app.logger.error(f"Error reactivating user for request {request_id}: {e}", exc_info=True)
-        flash(f'خطا در فعال کردن کاربر: {str(e)}', 'danger')
-    
+        with Session.begin() as tenant_session:
+            user = tenant_session.query(TenantUser).filter_by(username=req.generated_username).first()
+            if not user:
+                flash('کاربر در دیتابیس کافه یافت نشد.', 'warning')
+                return redirect(url_for('master.dashboard') + '#requests')
+            user.password_hash = generate_password_hash(password)
+            user.is_active = True
+        req.status = 'approved'
+        req.generated_password = None
+        log_cafe_event(cafe, 'cafe.user.reactivated',
+                       {'request_id': req.id, 'username': req.generated_username})
+        db.session.commit()
+        flash(f'کاربر «{req.generated_username}» فعال شد. رمز جدید: {password} — همین حالا آن را تحویل دهید؛ دوباره نمایش داده نمی‌شود.', 'success')
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('Could not reactivate request user %s', request_id)
+        flash('بازفعال‌سازی کامل نشد؛ وضعیت کاربر را بررسی کنید.', 'danger')
+    finally:
+        engine.dispose()
     return redirect(url_for('master.dashboard') + '#requests')
 
 
 @master_bp.route('/user-requests/<int:request_id>/delete-request', methods=['POST'])
 @master_login_required
 def delete_request(request_id):
-    """حذف کامل درخواست از master database"""
+    req = UserCreationRequest.query.get_or_404(request_id)
+    if req.status == 'pending':
+        flash('درخواست در انتظار را ابتدا تأیید یا رد کنید.', 'warning')
+        return redirect(url_for('master.dashboard') + '#requests')
     try:
-        # حذف درخواست از master database
-        from config import Config
-        original_bind = db.session.bind
-        try:
-            master_engine = create_engine(Config.MASTER_DB_URI)
-            db.session.bind = master_engine
-            
-            # پیدا کردن درخواست
-            req = UserCreationRequest.query.get(request_id)
-            if not req:
-                flash('درخواست یافت نشد.', 'warning')
-                return redirect(url_for('master.dashboard') + '#requests')
-            
-            # حذف کامل از دیتابیس
-            db.session.delete(req)
-            db.session.commit()
-            
-            flash('درخواست به طور کامل از دیتابیس حذف شد.', 'success')
-        finally:
-            db.session.bind = original_bind
-    except Exception as e:
-        current_app.logger.error(f"Error deleting request {request_id}: {e}", exc_info=True)
-        flash(f'خطا در حذف درخواست: {str(e)}', 'danger')
-    
+        db.session.delete(req)
+        db.session.commit()
+        flash('درخواست حذف شد.', 'success')
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('Could not delete request %s', request_id)
+        flash('حذف درخواست انجام نشد.', 'danger')
     return redirect(url_for('master.dashboard') + '#requests')
 
 
 @master_bp.route('/user-requests/delete-all', methods=['POST'])
 @master_login_required
 def delete_all_requests():
-    """حذف کامل تمام درخواست‌ها از master database"""
+    """Remove processed history while preserving pending decisions."""
     try:
-        from config import Config
-        original_bind = db.session.bind
-        try:
-            master_engine = create_engine(Config.MASTER_DB_URI)
-            db.session.bind = master_engine
-            
-            # شمارش درخواست‌ها قبل از حذف
-            count_before = UserCreationRequest.query.count()
-            
-            # حذف تمام درخواست‌ها
-            UserCreationRequest.query.delete()
-            db.session.commit()
-            
-            flash(f'تمام {count_before} درخواست به طور کامل از دیتابیس حذف شدند.', 'success')
-        finally:
-            db.session.bind = original_bind
-    except Exception as e:
-        current_app.logger.error(f"Error deleting all requests: {e}", exc_info=True)
-        flash(f'خطا در حذف درخواست‌ها: {str(e)}', 'danger')
-    
+        count = (UserCreationRequest.query
+                 .filter(UserCreationRequest.status != 'pending')
+                 .delete(synchronize_session=False))
+        db.session.commit()
+        flash(f'{count} درخواست پردازش‌شده حذف شد؛ درخواست‌های در انتظار باقی ماندند.', 'success')
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('Could not delete processed requests')
+        flash('حذف سابقهٔ درخواست‌ها انجام نشد.', 'danger')
     return redirect(url_for('master.dashboard') + '#requests')

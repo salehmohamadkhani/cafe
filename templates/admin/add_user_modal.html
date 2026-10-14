@@ -2,8 +2,8 @@
   <div class="ds-modal__panel" style="width: min(600px, 95vw);">
     <div class="ds-modal__header">
       <div>
-        <div class="modal-eyebrow">افزودن کاربر</div>
-        <h3>افزودن کاربر جدید</h3>
+        <div class="modal-eyebrow">درخواست دسترسی</div>
+        <h3>درخواست کاربر جدید</h3>
       </div>
       <button class="ds-modal__close" onclick="closeAddUserModal()" aria-label="بستن">×</button>
     </div>
@@ -32,7 +32,7 @@
             onfocus="this.style.borderColor='var(--color-secondary)'"
             onblur="this.style.borderColor='var(--color-border)'"
           >
-          <small style="font-size: 0.8rem; color: var(--text-secondary);">نام کاربری و رمز عبور پس از تایید توسط پنل مرکزی برای شما ارسال می‌شود</small>
+          <small style="font-size: 0.8rem; color: var(--text-secondary);">حساب پس از تأیید مدیریت مرکزی ساخته می‌شود؛ رمز اولیه یک‌بار به مدیر مرکزی نمایش داده خواهد شد.</small>
         </div>
 
         <div class="form-field" style="display: flex; flex-direction: column; gap: 0.5rem;">
@@ -102,8 +102,10 @@
             <option value="waiter">{{ roles['waiter'].label }}</option>
             {% endif %}
             {% if 'inventory' in roles %}
-            <option value="inventory" selected>{{ roles['inventory'].label }}</option>
+            <option value="inventory">{{ roles['inventory'].label }}</option>
             {% endif %}
+            {% if 'procurement' in roles %}<option value="procurement">{{ roles['procurement'].label }}</option>{% endif %}
+            {% if 'accountant' in roles %}<option value="accountant">{{ roles['accountant'].label }}</option>{% endif %}
           </select>
         </div>
 
@@ -121,7 +123,7 @@
             class="btn btn-primary"
             style="padding: 0.65rem 1.25rem; font-size: 0.9rem;"
           >
-            ثبت کاربر
+            ارسال درخواست
           </button>
         </div>
       </form>
