@@ -78,6 +78,7 @@
                 <b>آیتم‌های سفارش</b>
             </div>
             <div class="card-body">
+                <div class="table-scroll" tabindex="0" aria-label="آیتم‌های سفارش؛ برای دیدن ستون‌های بیشتر افقی پیمایش کنید">
                 <table class="table table-striped text-center" id="order-items-table">
                     <thead>
                         <tr>
@@ -92,6 +93,7 @@
                         <!-- با جاوااسکریپت پر می‌شود -->
                     </tbody>
                 </table>
+                </div>
                 <div class="row">
                     <div class="col text-right">
                         <b>جمع کل:</b> <span id="order-total">۰</span>                    </div>
@@ -161,8 +163,8 @@
 <style>
     .search-results {
         position: absolute;
-        background: #fff;
-        border: 1px solid #e0e0e0;
+        background: var(--ds-surface, #fff);
+        border: 1px solid var(--ds-border, #e0e0e0);
         border-radius: 5px;
         max-height: 200px;
         overflow-y: auto;
@@ -174,9 +176,9 @@
 
     /* دکمه‌های منو و سفارش */
     .add-to-order-btn {
-        color: #007bff;
-        background: #e6f0ff;
-        border: 1px solid #007bff;
+        color: var(--ds-brand-700, #0b6b4f);
+        background: var(--ds-brand-50, #e8f6ef);
+        border: 1px solid var(--ds-brand-700, #0b6b4f);
         font-size: 1rem;
         margin-bottom: 0.5rem;
         white-space: normal;
@@ -184,22 +186,22 @@
     }
 
     .add-to-order-btn:hover {
-        background: #007bff;
+        background: var(--ds-brand-700, #0b6b4f);
         color: #fff;
     }
 
     /* نتایج جستجو */
     .customer-result,
     .menu-search-result {
-        color: #222;
-        background: #fff;
+        color: var(--ds-text, #222);
+        background: var(--ds-surface, #fff);
         transition: background 0.2s, color 0.2s;
     }
 
     .customer-result:hover,
     .menu-search-result:hover {
-        background: #f7f7f7;
-        color: #007bff;
+        background: var(--ds-brand-50, #e8f6ef);
+        color: var(--ds-brand-700, #0b6b4f);
     }
 
     /* چیدمان ردیف‌ها */

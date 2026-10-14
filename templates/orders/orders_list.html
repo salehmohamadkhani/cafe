@@ -11,11 +11,11 @@
     }
 
     .orders-hero {
-        background: linear-gradient(135deg, #1d4ed8, #1e3a8a);
+        background: linear-gradient(135deg, var(--ds-brand-900), var(--ds-brand-700));
         color: #fff;
         border-radius: 18px;
         padding: 1.8rem 2rem;
-        box-shadow: 0 18px 40px rgba(29, 78, 216, 0.25);
+        box-shadow: var(--ds-shadow-md);
         display: flex;
         flex-wrap: wrap;
         justify-content: space-between;
@@ -26,6 +26,7 @@
     .orders-hero h1 {
         margin: 0;
         font-size: 1.9rem;
+        color: #fff;
     }
 
     .orders-hero p {
@@ -48,7 +49,8 @@
     }
 
     .orders-filters {
-        background: #fff;
+        background: var(--ds-surface);
+        border: 1px solid var(--ds-border);
         border-radius: 18px;
         padding: 1.5rem;
         box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
@@ -64,7 +66,7 @@
     .filters-grid label {
         font-size: 0.9rem;
         font-weight: 600;
-        color: #4b5563;
+        color: var(--ds-text);
         margin-bottom: 0.35rem;
         display: block;
     }
@@ -72,20 +74,21 @@
     .filters-grid input,
     .filters-grid select {
         width: 100%;
-        border: 1px solid #e5e7eb;
+        border: 1px solid var(--ds-border);
         border-radius: 12px;
         padding: 0.65rem 0.9rem;
         font-size: 0.95rem;
-        background: #f9fafb;
+        background: var(--ds-surface-raised);
+        color: var(--ds-text);
         transition: border 0.2s ease, box-shadow 0.2s ease;
     }
 
     .filters-grid input:focus,
     .filters-grid select:focus {
         outline: none;
-        border-color: #2563eb;
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
-        background: #fff;
+        border-color: var(--ds-brand-600);
+        box-shadow: 0 0 0 3px var(--ds-focus);
+        background: var(--ds-surface);
     }
 
     .filters-actions {
@@ -110,7 +113,7 @@
         align-items: center;
         justify-content: center;
         box-shadow: 0 8px 20px rgba(37, 99, 235, 0.18);
-        background: #2563eb;
+        background: var(--ds-brand-700);
         color: #fff;
         direction: rtl;
     }
@@ -122,13 +125,14 @@
     }
 
     .filters-actions a.btn-reset {
-        background: #f3f4f6;
-        color: #374151;
+        background: var(--ds-neutral-100);
+        color: var(--ds-text);
         box-shadow: none;
     }
 
     .orders-table-card {
-        background: #fff;
+        background: var(--ds-surface);
+        border: 1px solid var(--ds-border);
         border-radius: 18px;
         padding: 1.6rem;
         box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
@@ -150,12 +154,12 @@
         font-size: 0.85rem;
         font-weight: 600;
         text-align: center;
-        color: #6b7280;
+        color: var(--ds-text-muted);
         padding-bottom: 0.8rem;
     }
 
     table.orders-table tbody tr {
-        background: #f9fafb;
+        background: var(--ds-surface-raised);
         border-radius: 16px;
         box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
         transition: transform 0.18s ease, box-shadow 0.18s ease;
@@ -171,7 +175,7 @@
         text-align: center;
         font-size: 0.95rem;
         font-weight: 600;
-        color: #111827;
+        color: var(--ds-text);
     }
 
     table.orders-table td:first-child {
@@ -195,18 +199,18 @@
     }
 
     .status-paid {
-        background: rgba(34, 197, 94, 0.16);
-        color: #15803d;
+        background: var(--ds-brand-100);
+        color: var(--ds-brand-700);
     }
 
     .status-unpaid {
-        background: rgba(250, 204, 21, 0.22);
-        color: #b45309;
+        background: var(--ds-warning-50);
+        color: var(--ds-accent-700);
     }
 
     .status-cancelled {
-        background: rgba(248, 113, 113, 0.25);
-        color: #b91c1c;
+        background: var(--ds-danger-50);
+        color: var(--ds-danger-600);
     }
 
     .orders-actions-col {
@@ -227,7 +231,7 @@
     }
 
     .btn-view {
-        background: #2563eb;
+        background: var(--ds-brand-700);
         color: #fff;
         box-shadow: 0 6px 18px rgba(37, 99, 235, 0.2);
     }
@@ -245,7 +249,7 @@
 
     .timer-cell {
         font-size: 0.9rem;
-        color: #4b5563;
+        color: var(--ds-text-muted);
     }
 
     .timer-text {
@@ -266,7 +270,7 @@
     .empty-state {
         padding: 2rem;
         text-align: center;
-        color: #6b7280;
+        color: var(--ds-text-muted);
         font-weight: 600;
     }
 

@@ -1,50 +1,77 @@
-<!DOCTYPE html>
-<html lang="fa">
+{% extends 'base.html' %}
+{% block title %}گزارش سفارش‌ها{% endblock %}
 
-<head>
-    <meta charset="UTF-8">
-    <title>گزارش سفارش‌ها</title>
-</head>
+{% block head %}
+<style>
+    .orders-report { padding: 24px 0 40px; display: grid; gap: 18px; min-width: 0; }
+    .orders-report > .ds-card { min-width: 0; }
+    .orders-report__heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+    .orders-report__heading h1 { margin: 0; }
+    .orders-report__heading p { margin: 4px 0 0; color: var(--ds-text-muted); }
+    .orders-report__filters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; align-items: end; }
+    .orders-report__filters label { display: block; margin-bottom: 5px; font-weight: 700; }
+    .orders-report__filters input, .orders-report__filters select {
+        width: 100%; min-height: 44px; padding: 8px 12px; background: var(--ds-surface); color: var(--ds-text);
+        border: 1px solid var(--ds-border); border-radius: 10px;
+    }
+    .orders-report__actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .orders-report .ds-table-wrap { max-width: 100%; }
+    .orders-report__table { width: 100%; min-width: 780px; border-collapse: collapse; }
+    .orders-report__table th, .orders-report__table td { padding: 12px; text-align: right; border-bottom: 1px solid var(--ds-border); }
+    .orders-report__table th { color: var(--ds-text-muted); background: var(--ds-neutral-50); }
+    .orders-report__table td { color: var(--ds-text); }
+    .orders-report__row-actions { display: flex; align-items: center; gap: 8px; }
+    .orders-report__row-actions form { margin: 0; }
+    .orders-report__empty { padding: 24px; text-align: center; color: var(--ds-text-muted); }
+    @media (max-width: 800px) { .orders-report__filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 520px) { .orders-report__filters { grid-template-columns: 1fr; } .orders-report__actions > * { flex: 1; } }
+</style>
+{% endblock %}
 
-<body>
-    <h1>لیست سفارش‌ها</h1>
-    <table border="1" cellpadding="8">
-        <thead>
-            <tr>
-                <th>شناسه</th>
-                <th>فاکتور</th>
-                <th>مشتری</th>
-                <th>مبلغ نهایی</th>
-                <th>وضعیت</th>
-                <th>تاریخ</th>
-                <th>عملیات</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for order in orders %}
-            <tr>
-                <td>{{ order.id }}</td>
-                <td>{{ order.invoice_number }}</td>
-                <td>{{ order.customer.name if order.customer else '---' }}</td>
-                <td>{{ "{:,}".format(order.final_amount) }}</td>
-                <td>{{ order.status }}</td>
-                <td>
-                    {% if order.created_at %}
-                    {{ order.created_at | to_jalali }}
-                    {% else %}
-                    -
-                    {% endif %}
-                </td>
+{% block content %}
+<main class="orders-report">
+    <header class="orders-report__heading">
+        <div><h1>گزارش سفارش‌ها</h1><p>جستجو، فیلتر و مشاهدهٔ جزئیات سفارش‌های ثبت‌شده</p></div>
+        <a class="ds-button ghost" href="{{ url_for('dashboard.dashboard') }}">بازگشت به داشبورد</a>
+    </header>
 
-                <td>
-                    <form method="POST" action="{{ url_for('admin.delete_order', order_id=order.id) }}">
-                        <button type="submit">🗑 حذف</button>
-                    </form>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</body>
+    <section class="ds-card" aria-label="فیلتر سفارش‌ها">
+        <form class="orders-report__filters" method="get">
+            <div><label for="report-search">فاکتور یا مشتری</label><input id="report-search" name="q" type="search" value="{{ request.args.get('q', '') }}"></div>
+            <div><label for="report-status">وضعیت</label><select id="report-status" name="status"><option value="">همهٔ وضعیت‌ها</option><option value="پرداخت نشده" {% if request.args.get('status') == 'پرداخت نشده' %}selected{% endif %}>پرداخت نشده</option><option value="پرداخت شده" {% if request.args.get('status') == 'پرداخت شده' %}selected{% endif %}>پرداخت شده</option><option value="لغو شده" {% if request.args.get('status') == 'لغو شده' %}selected{% endif %}>لغو شده</option></select></div>
+            <div><label for="report-from">از تاریخ</label><input id="report-from" name="from" type="date" value="{{ request.args.get('from', '') }}"></div>
+            <div><label for="report-to">تا تاریخ</label><input id="report-to" name="to" type="date" value="{{ request.args.get('to', '') }}"></div>
+            <div class="orders-report__actions"><button class="ds-button primary" type="submit">اعمال فیلتر</button><a class="ds-button ghost" href="{{ url_for('admin.orders_report') }}">پاک کردن</a></div>
+        </form>
+    </section>
 
-</html>
+    <section class="ds-card" aria-label="نتایج گزارش سفارش‌ها">
+        <p class="ds-subtitle">{{ orders|length }} سفارش پیدا شد</p>
+        {% if orders %}
+        <div class="ds-table-wrap">
+            <table class="orders-report__table">
+                <thead><tr><th scope="col">شناسه</th><th scope="col">فاکتور</th><th scope="col">مشتری</th><th scope="col">مبلغ نهایی</th><th scope="col">وضعیت</th><th scope="col">تاریخ</th><th scope="col">عملیات</th></tr></thead>
+                <tbody>
+                {% for order in orders %}
+                <tr>
+                    <td>{{ order.id }}</td>
+                    <td>{{ order.daily_sequence or order.invoice_number }}</td>
+                    <td>{{ order.customer.name if order.customer else '---' }}</td>
+                    <td>{{ "{:,}".format(order.final_amount or 0) }}</td>
+                    <td>{{ order.status }}</td>
+                    <td>{{ order.created_at | to_jalali if order.created_at else '-' }}</td>
+                    <td><div class="orders-report__row-actions">
+                        <a class="ds-button ghost small" href="{{ url_for('order.order_detail', order_id=order.id) }}">جزئیات</a>
+                        <form method="post" action="{{ url_for('admin.delete_order', order_id=order.id) }}" onsubmit="return confirm('سفارش و فاکتور شماره {{ order.daily_sequence or order.invoice_number }} حذف شود؟');">
+                            <button class="ds-button danger small" type="submit">حذف</button>
+                        </form>
+                    </div></td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}<p class="orders-report__empty">سفارشی با این فیلترها پیدا نشد.</p>{% endif %}
+    </section>
+</main>
+{% endblock %}

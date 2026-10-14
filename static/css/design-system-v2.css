@@ -257,6 +257,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--ds-brand-700);
 .ds-stats-grid .stat-card--warning { border-top-color: var(--ds-accent-600) !important; }
 .ds-stats-grid .stat-card--danger { border-top-color: var(--ds-danger-600) !important; }
 .ds-stats-grid .stat-card__value, .ds-stats-grid .stat-card__meta { color: var(--ds-text) !important; }
+.ds-stats-grid .stat-card__meta { background: transparent !important; }
 .ds-stats-grid .stat-card__trend { color: var(--ds-text-muted) !important; background: var(--ds-neutral-50) !important; }
 .ds-stats-grid .stat-card__badge { color: var(--ds-neutral-700) !important; background: var(--ds-neutral-100) !important; }
 

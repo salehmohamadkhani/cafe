@@ -5,6 +5,10 @@
 {% block head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}?v={{ cache_bust() }}">
 <style>
+    #menu-item-form { display: grid; gap: 8px; }
+    #menu-item-form label { color: var(--ds-text); font-weight: 700; margin-top: 4px; }
+    #menu-item-form .ds-modal__actions { margin-top: 12px; }
+
     body.menu-page {
         background: var(--color-bg);
     }
@@ -642,7 +646,7 @@
 </div>
 
 <!-- Modals -->
-<div id="menuItemModal" class="ds-modal" role="dialog" aria-modal="true">
+<div id="menuItemModal" class="ds-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
     <div class="ds-modal__panel">
         <div class="ds-modal__header">
             <h3 id="modal-title">افزودن آیتم منو</h3>
@@ -651,9 +655,13 @@
         <div class="ds-modal__body">
             <form id="menu-item-form">
                 <input type="hidden" id="item-id" name="id">
+                <label for="item-name">نام آیتم</label>
                 <input class="ds-input" type="text" id="item-name" name="name" placeholder="نام آیتم" required>
+                <label for="item-price">قیمت</label>
                 <input class="ds-input" type="number" id="item-price" name="price" placeholder="قیمت " required min="0">
+                <label for="item-stock">موجودی</label>
                 <input class="ds-input" type="number" id="item-stock" name="stock" placeholder="موجودی" min="0">
+                <label for="item-category">دسته‌بندی</label>
                 <select class="ds-input" id="item-category" name="category_id">
                     <option value="">بدون دسته‌بندی</option>
                     {% for category in categories %}

@@ -424,14 +424,19 @@ def add_menu_item():
             flash('مقدار عددی نامعتبر است.', 'danger')
             return redirect(url_for('menu.add_menu_item'))
         
-        menu_item = MenuItem(name=name, price=price, stock=stock)
+        default_category = Category.query.filter_by(name='عمومی').first()
+        if default_category is None:
+            default_category = Category(name='عمومی', description='دسته‌بندی پیش‌فرض', is_active=True)
+            db.session.add(default_category)
+            db.session.flush()
+        menu_item = MenuItem(name=name, price=price, stock=stock, category_id=default_category.id)
         db.session.add(menu_item)
         db.session.commit()
         
         flash('آیتم جدید با موفقیت اضافه شد.', 'success')
         return redirect(url_for('menu.show_menu'))
     
-    return render_template('menu/add_menu_item.html')
+    return redirect(url_for('menu.show_menu'))
 
 @menu_bp.route('/menu/item/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
@@ -462,7 +467,7 @@ def edit_menu_item(id):
         flash('آیتم با موفقیت به‌روزرسانی شد.', 'success')
         return redirect(url_for('menu.show_menu'))
     
-    return render_template('menu/edit_menu_item.html', menu_item=menu_item)
+    return redirect(url_for('menu.show_menu'))
 
 @menu_bp.route('/menu/search')
 @login_required

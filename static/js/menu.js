@@ -41,6 +41,7 @@ document.addEventListener('DOMContentLoaded', function () {
             itemIdInput.value = '';
             modalTitle.textContent = 'افزودن آیتم منو';
             modal.style.display = 'block';
+            itemNameInput.focus();
         });
     }
 
@@ -57,6 +58,13 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         if (materialsModal && event.target === materialsModal) {
             closeMaterialsModal();
+        }
+    });
+
+    modal.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+            modal.style.display = 'none';
+            addNewItemBtn?.focus();
         }
     });
 

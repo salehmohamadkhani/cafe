@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (modal && modalBody) {
                 modal.style.display = 'block';
                 modalBody.innerHTML = 'در حال بارگذاری...';
-                fetch('/order/new')
+                fetch('/order/new', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
                     .then(res => {
                         if (!res.ok) {
                             throw new Error(`HTTP error! status: ${res.status}`);
@@ -61,6 +61,9 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     });
+    if (document.getElementById('new-order-full-page')) {
+        bindCreateOrderEvents();
+    }
 });// اسکریپت‌های پروژه اینجا قرار می‌گیرند.
 // تابع مدیریت رویدادهای فرم سفارش
 function bindCreateOrderEvents() {

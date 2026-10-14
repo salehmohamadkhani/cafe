@@ -59,7 +59,12 @@ def new_order_form():
     settings = Settings.query.first()
     tax_percent = settings.tax_percent if settings else 9.0
 
-    return render_template('orders/create_order.html', menu_items=menu_items, tax_percent=tax_percent)
+    template = (
+        'orders/create_order.html'
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        else 'orders/create_order_full.html'
+    )
+    return render_template(template, menu_items=menu_items, tax_percent=tax_percent)
 
 # --- ثبت سفارش جدید (ذخیره) ---
 @order_bp.route('/order', methods=['POST'])
@@ -151,7 +156,9 @@ def create_order():
 
     db.session.commit()
     flash(f'سفارش با شماره فاکتور روزانه {order.daily_sequence} (شناسه {order.invoice_uid}) با موفقیت ثبت شد!', 'success')
-    return jsonify(success=True, order_id=order.id, daily_invoice_number=order.daily_sequence, invoice_uid=order.invoice_uid)
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json:
+        return jsonify(success=True, order_id=order.id, daily_invoice_number=order.daily_sequence, invoice_uid=order.invoice_uid)
+    return redirect(url_for('order.order_detail', order_id=order.id))
 # --- نمایش جزئیات سفارش ---
 @order_bp.route('/order/<int:order_id>') # Added route for detail page
 @login_required # Added login_required

@@ -50,9 +50,11 @@
     }
     .table {
       width: 100%;
+      min-width: 650px;
       border-collapse: collapse;
       margin-top: 16px;
     }
+    .table-scroll { max-width: 100%; overflow-x: auto; }
     .table thead {
       background: rgba(255,255,255,0.05);
     }
@@ -182,6 +184,7 @@
         {% endif %}
       {% endwith %}
 
+      <div class="table-scroll" tabindex="0" aria-label="لیست کاربران؛ برای دیدن ستون‌های بیشتر افقی پیمایش کنید">
       <table class="table">
         <thead>
           <tr>
@@ -237,6 +240,7 @@
           {% endif %}
         </tbody>
       </table>
+      </div>
     </div>
   </div>
 </body>

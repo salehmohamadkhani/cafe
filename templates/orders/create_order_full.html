@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% block title %}ثبت سفارش جدید{% endblock %}
+
+{% block head %}
+<style>
+    .new-order-page { max-width: 1120px; margin: 0 auto; padding: 24px 0 40px; }
+    .new-order-page > .container { width: 100%; padding: 0; }
+    .new-order-page .card { margin-bottom: 16px; }
+    .new-order-page .card-header { font-weight: 800; padding: 12px 16px; border-bottom: 1px solid var(--ds-border); }
+    .new-order-page .card-body { padding: 16px; }
+    .new-order-page label { display: block; margin-bottom: 6px; color: var(--ds-text); font-weight: 700; }
+    .new-order-page input:not([type="hidden"]), .new-order-page select {
+        max-width: 100%; min-height: 44px; padding: 9px 12px;
+        border: 1px solid var(--ds-border); border-radius: 10px;
+        background: var(--ds-surface); color: var(--ds-text);
+    }
+    .new-order-page .customer-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .new-order-page .customer-field { position: relative; }
+    .new-order-page .customer-field input { width: 100%; }
+    .new-order-page #order-items-table { width: 100%; }
+    .new-order-page .table-scroll { overflow-x: auto; }
+    .new-order-page .search-results { background: var(--ds-surface); color: var(--ds-text); border-color: var(--ds-border); }
+    .new-order-page .customer-result, .new-order-page .menu-search-result { background: var(--ds-surface); color: var(--ds-text); padding: 10px; cursor: pointer; }
+    .new-order-page .customer-result:hover, .new-order-page .menu-search-result:hover { background: var(--ds-brand-50); }
+    @media (max-width: 680px) {
+        .new-order-page { padding: 16px 0 32px; }
+        .new-order-page .customer-fields { grid-template-columns: 1fr; }
+        .new-order-page .row > .col, .new-order-page .row > .col-3, .new-order-page .row > .col-6 { flex: 1 1 100%; }
+        .new-order-page #order-items-table { min-width: 600px; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<main id="new-order-full-page" class="new-order-page">
+    <p><a class="ds-button ghost" href="{{ url_for('dashboard.dashboard') }}">بازگشت به داشبورد</a></p>
+    {% include 'orders/create_order.html' %}
+</main>
+{% endblock %}

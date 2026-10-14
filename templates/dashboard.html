@@ -180,6 +180,8 @@
         box-shadow: 0 14px 28px rgba(31, 58, 95, 0.15);
     }
 
+    .table-card__open { margin-top: auto; width: 100%; }
+
     .table-card__header {
         display: flex;
         justify-content: space-between;
@@ -911,6 +913,9 @@
                             میز آماده پذیرش
                         </div>
                         {% endif %}
+                        <button class="ds-button ghost table-card__open" type="button"
+                                onclick="event.stopPropagation(); openTableModal({{ table.id }}, {{ table.number }})"
+                                aria-label="مدیریت میز {{ table.number }}">مدیریت میز</button>
                     </div>
                     {% endfor %}
                     </div>
@@ -1653,26 +1658,6 @@
             });
         }
 
-        // ✅ باز کردن مدال میز با کلیک روی کارت‌های میز (fallback event delegation)
-        document.addEventListener('click', function(e) {
-            const card = e.target.closest('.table-card');
-            if (!card) return;
-
-            // اگر روی دکمه‌های عملیات کلیک شده، مدال باز نشود
-            if (e.target.closest('.table-actions')) return;
-            if (e.target.classList.contains('btn-settle-table') ||
-                e.target.classList.contains('btn-print-invoice')) {
-                return;
-            }
-
-            const tableId = parseInt(card.getAttribute('data-table-id'));
-            const tableNumber = parseInt(card.getAttribute('data-table-number'));
-
-            if (typeof openTableModal === 'function' && tableId) {
-                e.preventDefault();
-                openTableModal(tableId, tableNumber);
-            }
-        });
     });
 </script>
 {% endblock %}

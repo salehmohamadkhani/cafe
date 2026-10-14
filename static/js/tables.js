@@ -572,6 +572,14 @@ async function submitTableOrder() {
         }
     }
     
+    // The customer form is saved asynchronously on blur. Wait for it here as
+    // well, so a quick submit cannot create an anonymous receipt.
+    try {
+        await updateTableCustomer();
+    } catch (_error) {
+        return;
+    }
+
     try {
         console.log('Submitting table order for table:', currentTableId);
         const birthDateInput = document.getElementById('table-customer-birth-date');

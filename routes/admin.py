@@ -431,7 +431,7 @@ def orders_report():
     if date_to:
         try:
             date_to_dt = datetime.strptime(date_to, '%Y-%m-%d')
-            orders_query = orders_query.filter(Order.created_at <= date_to_dt)
+            orders_query = orders_query.filter(Order.created_at < date_to_dt + timedelta(days=1))
         except:
             pass
 
