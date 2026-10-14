@@ -58,21 +58,22 @@ def login(slug):
             flash('خطا در اتصال به دیتابیس کافه.', 'danger')
             return render_template('tenant/login.html', cafe=cafe)
         
-        with Session_class() as s:
-            user = s.query(User).filter_by(username=username).first()
-            if user and check_password_hash(user.password_hash, password):
-                if not user.is_active:
-                    flash('حساب کاربری شما غیرفعال است.', 'danger')
-                    return render_template('tenant/login.html', cafe=cafe)
-                
-                user.last_login = datetime.now(iran_tz)
-                s.commit()
-                establish_tenant_session(cafe=cafe, user=user, remember=True)
-                
-                # Redirect to tenant dashboard (or main dashboard for now)
-                return redirect(url_for('tenant.dashboard', slug=slug))
-            else:
+        try:
+            with Session_class() as s:
+                user = s.query(User).filter_by(username=username).first()
+                if user and check_password_hash(user.password_hash, password):
+                    if not user.is_active:
+                        flash('حساب کاربری شما غیرفعال است.', 'danger')
+                        return render_template('tenant/login.html', cafe=cafe)
+
+                    user.last_login = datetime.now(iran_tz)
+                    s.commit()
+                    establish_tenant_session(cafe=cafe, user=user, remember=True)
+
+                    return redirect(url_for('tenant.dashboard', slug=slug))
                 flash('نام کاربری یا رمز عبور اشتباه است.', 'danger')
+        finally:
+            Session_class.kw['bind'].dispose()
     
     return render_template('tenant/login.html', cafe=cafe)
 

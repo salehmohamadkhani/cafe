@@ -1010,56 +1010,29 @@ async function copyInvoice(orderId) {
 }
 
 // تسویه میز از داشبورد
-// کپی فاکتور میز به clipboard بدون باز کردن صفحه
+// Send the receipt directly to the local thermal printer.
 async function printTableInvoice(orderId, event) {
     if (event) {
-        event.stopPropagation(); // جلوگیری از باز شدن modal
-        event.preventDefault(); // جلوگیری از رفتار پیش‌فرض
+        event.stopPropagation();
+        event.preventDefault();
     }
-    
+    const button = event && event.currentTarget;
+    if (button) button.disabled = true;
     try {
-        console.log('📋 Fetching invoice text for order:', orderId);
-        // دریافت محتوای فاکتور به صورت متن
-        const response = await fetch(`/orders/${orderId}/invoice/text`);
-        
-        if (!response.ok) {
-            throw new Error(`خطای سرور: ${response.status}`);
+        const response = await fetch(`/orders/${orderId}/invoice/print`, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        });
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+            throw new Error(result.error || 'ارسال فیش به چاپگر انجام نشد.');
         }
-        
-        const data = await response.json();
-        
-        if (data.success && data.text) {
-            // کپی کردن به clipboard
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                await navigator.clipboard.writeText(data.text);
-                alert('✅ فاکتور با موفقیت کپی شد!');
-            } else {
-                // Fallback برای مرورگرهای قدیمی
-                const textArea = document.createElement('textarea');
-                textArea.value = data.text;
-                textArea.style.position = 'fixed';
-                textArea.style.left = '-999999px';
-                textArea.style.top = '-999999px';
-                document.body.appendChild(textArea);
-                textArea.focus();
-                textArea.select();
-                
-                try {
-                    document.execCommand('copy');
-                    alert('✅ فاکتور با موفقیت کپی شد!');
-                } catch (err) {
-                    console.error('❌ خطا در کپی:', err);
-                    alert('خطا در کپی فاکتور. لطفاً محتوا را دستی کپی کنید:\n\n' + data.text);
-                }
-                
-                document.body.removeChild(textArea);
-            }
-        } else {
-            throw new Error('خطا در دریافت محتوای فاکتور');
-        }
+        alert(`فیش به چاپگر ${result.printer} ارسال شد.`);
     } catch (error) {
-        console.error('❌ خطا در کپی فاکتور:', error);
-        alert('❌ خطا در کپی فاکتور: ' + error.message);
+        alert(`چاپ فاکتور انجام نشد: ${error.message}`);
+    } finally {
+        if (button) button.disabled = false;
     }
 }
 

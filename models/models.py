@@ -922,35 +922,3 @@ def backfill_invoice_identifiers():
 
     if changes:
         db.session.commit()
-
-
-def assign_random_birth_dates_to_old_customers():
-    """
-    اختصاص تاریخ تولد تصادفی به مشتریان قدیمی که تاریخ تولد ندارند
-    """
-    from random import randint
-    from datetime import date, timedelta
-    
-    # پیدا کردن مشتریانی که سفارش دارند اما تاریخ تولد ندارند
-    customers_with_orders = (
-        db.session.query(Customer)
-        .join(Order, Order.customer_id == Customer.id)
-        .filter(Customer.birth_date.is_(None))
-        .distinct()
-        .all()
-    )
-    
-    changes = False
-    for customer in customers_with_orders:
-        # تولید تاریخ تولد تصادفی بین 18 تا 80 سال پیش
-        years_ago = randint(18, 80)
-        days_ago = randint(0, 365)
-        birth_date = date.today() - timedelta(days=years_ago * 365 + days_ago)
-        customer.birth_date = birth_date
-        changes = True
-    
-    if changes:
-        db.session.commit()
-        print(f"تاریخ تولد تصادفی به {len(customers_with_orders)} مشتری قدیمی اختصاص داده شد")
-    
-    return len(customers_with_orders)

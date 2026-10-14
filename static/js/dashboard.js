@@ -215,6 +215,14 @@ async function submitOrder(event) {
         tax_percent: taxPercent
     };
 
+    // Open while the click still has user activation; browsers block popups
+    // opened only after the asynchronous order request completes.
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+        printWindow.document.title = 'در حال آماده‌سازی فیش';
+        printWindow.document.body.textContent = 'در حال آماده‌سازی فیش...';
+    }
+
     try {
         const response = await fetch('/orders/create', {
             method: 'POST',
@@ -227,7 +235,6 @@ async function submitOrder(event) {
         const data = await response.json();
 
         if (data.success) {
-            alert('✅ سفارش با موفقیت ثبت شد');
             // Reset form and order items
             const customerNameEl = document.getElementById('customer-name');
             const customerPhoneEl = document.getElementById('customer-phone');
@@ -265,17 +272,21 @@ async function submitOrder(event) {
 
             // باز کردن پنجره چاپ فاکتور پس از ثبت موفق
             if (data.order_id) {
-                console.log(`✅ Order ${data.order_id} submitted. Opening invoice page...`);
-                const printWindow = window.open(`/orders/${data.order_id}/invoice`, '_blank');
-                if (!printWindow) {
-                    console.warn("🛑 Failed to open print window. Check for popup blockers.");
-                    alert("پنجره چاپ باز نشد. لطفاً مسدودکننده پاپ‌آپ را بررسی کنید و دوباره امتحان کنید یا به صورت دستی فاکتور را از لیست سفارشات چاپ کنید.");
+                const invoiceUrl = `/orders/${data.order_id}/invoice`;
+                if (printWindow && !printWindow.closed) {
+                    printWindow.location.replace(invoiceUrl);
+                    printWindow.focus();
+                } else {
+                    // Same-tab fallback still gives access to the receipt.
+                    window.location.assign(invoiceUrl);
                 }
             }
         } else {
+            if (printWindow && !printWindow.closed) printWindow.close();
             alert('❌ خطا در ثبت سفارش: ' + (data.message || 'خطای نامشخص'));
         }
     } catch (error) {
+        if (printWindow && !printWindow.closed) printWindow.close();
         console.error('❌ خطای اتصال:', error);
         alert('❌ خطا در ارتباط با سرور');
     }

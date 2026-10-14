@@ -13,7 +13,7 @@ from sqlalchemy import inspect, text
 from sqlalchemy.pool import NullPool
 import os
 from config import Config
-from models.models import db, User, Settings, backfill_invoice_identifiers, assign_random_birth_dates_to_old_customers
+from models.models import db, User, Settings, backfill_invoice_identifiers
 from models.master_models import MasterUser, CafeModule, CafeTenant  # noqa: F401 (register master tables)
 from services.master_service import MODULE_CODES, ensure_master_admin, module_for_endpoint
 from utils.helpers import register_jinja_filters
@@ -227,9 +227,6 @@ def create_app(config_class=Config):
 
         backfill_invoice_identifiers()
         
-        # اختصاص تاریخ تولد تصادفی به مشتریان قدیمی
-        assign_random_birth_dates_to_old_customers()
-
         # Create the first central administrator once. Existing credentials are
         # never overwritten on subsequent startups.
         ensure_master_admin(

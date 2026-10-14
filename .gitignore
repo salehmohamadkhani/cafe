@@ -39,6 +39,7 @@ instance/secret_key
 
 # Multi-tenant data (generated at runtime)
 tenants/
+runtime/
 
 # IDE
 .vscode/

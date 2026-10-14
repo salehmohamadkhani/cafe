@@ -27,6 +27,8 @@ def establish_tenant_session(
     else:
         session['tenant_auth_source'] = 'password'
         session.pop('tenant_sso_master_user_id', None)
+        # A shared browser must not carry central access into a cafe login.
+        session.pop('master_user_id', None)
 
     login_user(user, remember=remember)
 

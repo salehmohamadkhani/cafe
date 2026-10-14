@@ -7,6 +7,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>فاکتور شماره {{ order.invoice_number }}</title>
     <style>
+        .print-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            padding: 12px;
+        }
+
+        .print-actions button {
+            border: 0;
+            border-radius: 8px;
+            background: #17684d;
+            color: white;
+            font: inherit;
+            padding: 9px 18px;
+            cursor: pointer;
+        }
+
         body {
             font-family: Vazirmatn, Tahoma, sans-serif;
             font-size: 13px;
@@ -14,19 +31,20 @@
             padding: 0;
             background-color: #f4f4f4;
             display: flex;
+            flex-direction: column;
             justify-content: center;
-            align-items: flex-start;
+            align-items: center;
             min-height: 100vh;
         }
 
         .invoice-box {
             width: 72mm;
-            min-height: 100mm;
+            min-height: 0;
             padding: 15px 10px;
             border: 1px solid #eee;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.15);
             background-color: #fff;
-            margin-top: 20px;
+            margin-top: 0;
         }
 
         .invoice-box table {
@@ -120,9 +138,15 @@
         }
 
         @media print {
+            @page { margin: 0; }
+
+            .print-actions { display: none; }
+
             body {
                 background-color: #fff;
                 font-size: 10pt;
+                display: block;
+                min-height: 0;
             }
 
             .invoice-box {
@@ -156,9 +180,12 @@
 </head>
 
 <body>
+    <div class="print-actions">
+        <button type="button" onclick="window.print()">چاپ فیش</button>
+    </div>
     <div class="invoice-box">
         <div class="header">
-            <h1> {{ settings.cafe_name if settings else "Madeline" }}</h1>
+            <h1>{{ cafe_name }}</h1>
             {% if settings and settings.address %}
             <p>{{ settings.address }}</p>
             {% endif %}
@@ -228,16 +255,10 @@
             <p>از خرید شما متشکریم!</p>
         </div>
 
-        <div style="height: 60px;"></div>
     </div>
 
     <script>
-        window.onload = function () {
-            console.log("🖨️ Invoice loaded, printing...");
-            window.print();
-            setTimeout(() => {
-            }, 2000);
-        };
+        window.addEventListener('load', () => window.setTimeout(() => window.print(), 300));
     </script>
 </body>
 

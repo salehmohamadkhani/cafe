@@ -1,3 +1,4 @@
+import gc
 import os
 import sqlite3
 import tempfile
@@ -6,7 +7,7 @@ import unittest
 from app import create_app
 from config import Config
 from models.master_models import CafeEventLog, CafeModule, CafeTenant, CafeWarehouseDefinition, CafeWarehouseProfile, MasterUser
-from models.models import db
+from models.models import Customer, Order, db
 from services.master_service import create_managed_cafe, seed_demo_cafes
 
 
@@ -35,6 +36,7 @@ class MasterArchitectureTest(unittest.TestCase):
             db.session.remove()
             for engine in db.engines.values():
                 engine.dispose()
+        gc.collect()
         self.temp_dir.cleanup()
 
     def test_master_login_is_hashed_and_requires_correct_password(self):
@@ -48,6 +50,40 @@ class MasterArchitectureTest(unittest.TestCase):
         self.assertEqual(wrong.status_code, 200)
         self.assertEqual(correct.status_code, 302)
         self.assertEqual(correct.headers["Location"], "/master/")
+
+    def test_restart_preserves_unknown_customer_birth_date(self):
+        with self.app.app_context():
+            customer = Customer(name="مشتری قدیمی")
+            db.session.add(customer)
+            db.session.flush()
+            db.session.add(Order(
+                invoice_number=876543,
+                customer_id=customer.id,
+                total_amount=100,
+                final_amount=100,
+            ))
+            db.session.commit()
+            customer_id = customer.id
+
+        class ReloadConfig(Config):
+            TESTING = True
+            SECRET_KEY = "test-secret"
+            TENANTS_DIR = self.app.config["TENANTS_DIR"]
+            SQLALCHEMY_DATABASE_URI = self.app.config["SQLALCHEMY_DATABASE_URI"]
+            MASTER_DB_URI = self.app.config["MASTER_DB_URI"]
+            SQLALCHEMY_BINDS = {"master": MASTER_DB_URI}
+            MASTER_BOOTSTRAP_USERNAME = "admin"
+            MASTER_BOOTSTRAP_PASSWORD = "admin"
+
+        reloaded = create_app(ReloadConfig)
+        try:
+            with reloaded.app_context():
+                self.assertIsNone(db.session.get(Customer, customer_id).birth_date)
+        finally:
+            with reloaded.app_context():
+                db.session.remove()
+                for engine in db.engines.values():
+                    engine.dispose()
 
     def test_demo_cafes_use_shared_code_and_isolated_databases(self):
         with self.app.app_context():
@@ -184,6 +220,36 @@ class MasterArchitectureTest(unittest.TestCase):
         with self.app.app_context():
             event = CafeEventLog.query.filter_by(event_type="cafe.master_sso.entered").one()
             self.assertIn('"tenant_username": "admin"', event.payload_json)
+
+    def test_cafe_password_login_clears_central_access_in_shared_browser(self):
+        with self.app.app_context():
+            create_managed_cafe(
+                tenants_dir=self.app.config["TENANTS_DIR"],
+                name="کافه تست",
+                slug="madeline",
+                modules=["orders"],
+                username="admin",
+                password="admin123",
+                role="admin",
+                user_name="مدیر کافه",
+            )
+
+        self.client.post("/master/login", data={"username": "admin", "password": "admin"})
+        self.assertEqual(self.client.get("/master/").status_code, 200)
+
+        login = self.client.post(
+            "/cafe/madeline/login",
+            data={"username": "admin", "password": "admin123"},
+        )
+        self.assertEqual(login.status_code, 302)
+        self.assertEqual(login.headers["Location"], "/cafe/madeline/")
+        with self.client.session_transaction() as browser_session:
+            self.assertEqual(browser_session["tenant_slug"], "madeline")
+            self.assertNotIn("master_user_id", browser_session)
+        central = self.client.get("/master/", follow_redirects=False)
+        self.assertEqual(central.status_code, 302)
+        self.assertTrue(central.headers["Location"].startswith("/master/login"))
+        self.client.get("/cafe/madeline/logout")
 
     def test_master_sso_overrides_local_role_and_module_limits_without_mutating_them(self):
         with self.app.app_context():

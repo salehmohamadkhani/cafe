@@ -19,19 +19,6 @@ from models.models import (
 from sqlalchemy import func, or_
 from datetime import datetime
 import pytz
-import sys
-
-# Import Windows-specific modules only on Windows
-if sys.platform == 'win32':
-    try:
-        import win32print
-        import win32ui
-    except ImportError:
-        win32print = None
-        win32ui = None
-else:
-    win32print = None
-    win32ui = None
 
 order_bp = Blueprint('order', __name__)
 
@@ -163,7 +150,6 @@ def create_order():
     record_order_material_usage(order)
 
     db.session.commit()
-    print_invoice(order)
     flash(f'سفارش با شماره فاکتور روزانه {order.daily_sequence} (شناسه {order.invoice_uid}) با موفقیت ثبت شد!', 'success')
     return jsonify(success=True, order_id=order.id, daily_invoice_number=order.daily_sequence, invoice_uid=order.invoice_uid)
 # --- نمایش جزئیات سفارش ---
@@ -760,8 +746,21 @@ from models.models import Order
 @login_required
 def print_invoice(order_id):
     order = Order.query.get_or_404(order_id)
-    print(f"🧾 Printing invoice for Order ID: {order_id} | Total: {order.final_amount}")
     return render_template('invoice.html', order=order)
+
+
+@order_bp.route('/orders/<int:order_id>/invoice/print', methods=['POST'])
+@login_required
+def print_invoice_direct(order_id):
+    """Send an existing receipt to the local Windows thermal printer."""
+    from services.receipt_printer import ReceiptPrintError, print_receipt
+
+    order = Order.query.get_or_404(order_id)
+    try:
+        printer_name = print_receipt(order, Settings.query.first())
+    except ReceiptPrintError as exc:
+        return jsonify(success=False, error=str(exc)), 503
+    return jsonify(success=True, printer=printer_name)
 
 @order_bp.route('/orders/<int:order_id>/invoice/text')
 @login_required
@@ -776,7 +775,7 @@ def get_invoice_text(order_id):
     
     # ساخت متن فاکتور
     invoice_text = ""
-    invoice_text += f"{settings.cafe_name if settings else 'Madeline'}\n"
+    invoice_text += f"{settings.cafe_name if settings and settings.cafe_name else 'Madeline cafe'}\n"
     if settings and settings.address:
         invoice_text += f"{settings.address}\n"
     if settings and settings.phone:
@@ -825,39 +824,3 @@ def get_invoice_text(order_id):
         'success': True,
         'text': invoice_text
     })
-
-
-
-def print_invoice(order):
-    invoice_text = f"""فاکتور روزانه: {order.daily_sequence or '-'}
-شناسه یکتا: {order.invoice_uid or order.invoice_number}
-تاریخ: {order.created_at.strftime('%Y-%m-%d %H:%M')}
-مشتری: {order.customer.name}
--------------------------------
-"""
-    # فقط آیتم‌های حذف نشده را در فاکتور نمایش بده
-    for item in order.order_items:
-        if not item.is_deleted:
-            invoice_text += f"{item.menu_item.name} x{item.quantity} = {item.total_price}\n"
-    invoice_text += "-------------------------------\n"
-    invoice_text += f"جمع کل: {order.total_amount}\n"
-    invoice_text += f"تخفیف: {order.discount}\n"
-    invoice_text += f"مالیات: {order.tax_amount}\n"
-    invoice_text += f"مبلغ نهایی: {order.final_amount}\n"
-    invoice_text += "\nبا تشکر 🌸"
-
-    # Print only on Windows
-    if sys.platform == 'win32' and win32print:
-        try:
-            printer_name = win32print.GetDefaultPrinter()
-            hprinter = win32print.OpenPrinter(printer_name)
-            hdc = win32ui.CreateDC()
-            hdc.CreatePrinterDC(printer_name)
-            hdc.StartDoc("Cafe Invoice")
-            hdc.StartPage()
-            hdc.TextOut(100, 100, invoice_text)
-            hdc.EndPage()
-            hdc.EndDoc()
-            win32print.ClosePrinter(hprinter)
-        except Exception as e:
-            print(f"خطا در چاپ: {e}")
